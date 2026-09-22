@@ -1,0 +1,201 @@
+import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import { Plus, Send, Trash2, MessageSquare, Square } from 'lucide-react'
+import {
+  listSessions, deleteSession, cancelChat,
+  chatStream, listProviders, getAISettings,
+} from '../api/ai'
+
+export default function AIChat() {
+  const [sessions, setSessions] = useState([])
+  const [activeId, setActiveId] = useState('')
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [streaming, setStreaming] = useState(false)
+  const [providers, setProviders] = useState([])
+  const [aiSettings, setAiSettings] = useState(null)
+  const [provider, setProvider] = useState('openai')
+  const abortRef = useRef(null)
+  const bottomRef = useRef(null)
+
+  const loadSessions = () =>
+    listSessions().then((res) => setSessions(res.data || res || [])).catch(() => {})
+
+  useEffect(() => {
+    loadSessions()
+    listProviders().then((res) => setProviders(res.data?.list || [])).catch(() => {})
+    getAISettings().then((res) => {
+      const s = res.data || res
+      setAiSettings(s)
+      setProvider(s.defaultProvider || 'openai')
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  const openSession = (id) => {
+    setActiveId(id)
+    import('../api/ai').then(({ getSession }) =>
+      getSession(id).then((res) => setMessages(res.data?.messages || [])).catch(() => {}),
+    )
+  }
+
+  const newSession = () => {
+    setActiveId('')
+    setMessages([])
+  }
+
+  const removeSession = async (id) => {
+    await deleteSession(id).catch(() => {})
+    if (id === activeId) newSession()
+    loadSessions()
+  }
+
+  const send = async () => {
+    const content = input.trim()
+    if (!content || streaming) return
+    setInput('')
+    setStreaming(true)
+    setMessages((m) => [...m, { role: 'user', content }, { role: 'assistant', content: '' }])
+
+    let ctrl = null
+    try {
+      // fetch 返回值用于中断流
+      const promise = chatStream(
+        { sessionId: activeId || undefined, message: content, provider },
+        ({ event, data }) => {
+          if (event === 'session') setActiveId(data)
+          else if (event === 'delta')
+            setMessages((m) => {
+              const next = [...m]
+              next[next.length - 1] = { ...next[next.length - 1], content: next[next.length - 1].content + data }
+              return next
+            })
+          else if (event === 'error')
+            setMessages((m) => {
+              const next = [...m]
+              next[next.length - 1] = { ...next[next.length - 1], content: `⚠️ ${data}` }
+              return next
+            })
+        },
+      )
+      abortRef.current = { cancel: () => cancelChat().catch(() => {}) }
+      await promise
+    } catch (e) {
+      setMessages((m) => {
+        const next = [...m]
+        next[next.length - 1] = { ...next[next.length - 1], content: `⚠️ ${e.message}` }
+        return next
+      })
+    } finally {
+      setStreaming(false)
+      abortRef.current = null
+      loadSessions()
+    }
+  }
+
+  const stop = () => abortRef.current?.cancel?.()
+
+  return (
+    <div className="flex h-full">
+      {/* 会话列表 */}
+      <div className="flex w-60 shrink-0 flex-col border-r border-neutral-200 bg-white">
+        <div className="flex items-center justify-between px-4 py-3">
+          <span className="text-sm font-medium text-neutral-700">会话</span>
+          <button onClick={newSession} className="rounded-md p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-primary-600">
+            <Plus size={16} />
+          </button>
+        </div>
+        <div className="flex-1 space-y-1 overflow-y-auto px-2 pb-2">
+          {sessions.map((s) => (
+            <div
+              key={s.id}
+              className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer ${
+                activeId === s.id ? 'bg-primary-50 text-primary-600' : 'text-neutral-600 hover:bg-neutral-100'
+              }`}
+              onClick={() => openSession(s.id)}
+            >
+              <MessageSquare size={14} className="shrink-0" />
+              <span className="flex-1 truncate">{s.title}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); removeSession(s.id) }}
+                className="hidden rounded p-0.5 text-neutral-400 hover:text-red-500 group-hover:block"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+          {sessions.length === 0 && <div className="px-3 py-6 text-center text-xs text-neutral-400">暂无会话</div>}
+        </div>
+      </div>
+
+      {/* 对话区 */}
+      <div className="flex flex-1 flex-col">
+        {/* 顶栏：Provider 选择 */}
+        <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-3">
+          <span className="text-sm font-medium text-neutral-700">AI 问答</span>
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none"
+          >
+            {providers.map((p) => (
+              <option key={p.name} value={p.name}>
+                {p.label}{p.ready ? '' : '（未配置）'}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 消息列表 */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {messages.length === 0 && (
+            <div className="flex h-full items-center justify-center text-sm text-neutral-400">
+              选择会话或直接输入消息开始对话（会自动创建会话）
+            </div>
+          )}
+          {messages.map((m, i) => (
+            <div key={i} className={`mb-4 flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[75%] rounded-xl px-4 py-2.5 text-sm leading-relaxed ${
+                m.role === 'user' ? 'bg-primary-500 text-white' : 'bg-white text-neutral-700 border border-neutral-200'
+              }`}>
+                {m.role === 'assistant' ? (
+                  <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{m.content || '…'}</ReactMarkdown>
+                ) : (
+                  <span className="whitespace-pre-wrap">{m.content}</span>
+                )}
+              </div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* 输入区 */}
+        <div className="border-t border-neutral-200 bg-white p-4">
+          <div className="flex items-end gap-2">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+              }}
+              rows={2}
+              placeholder="输入问题，Enter 发送，Shift+Enter 换行"
+              className="flex-1 resize-none rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:border-primary-400"
+            />
+            {streaming ? (
+              <button onClick={stop} className="flex h-10 items-center gap-1.5 rounded-xl bg-neutral-200 px-4 text-sm text-neutral-600 hover:bg-neutral-300">
+                <Square size={14} /> 停止
+              </button>
+            ) : (
+              <button onClick={send} disabled={!input.trim()} className="flex h-10 items-center gap-1.5 rounded-xl bg-primary-500 px-4 text-sm text-white hover:bg-primary-600 disabled:opacity-40">
+                <Send size={14} /> 发送
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
