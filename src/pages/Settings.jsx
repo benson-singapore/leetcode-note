@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSettings, updateSettings } from '../api/leetcode'
 import { getAISettings, updateAISettings, listProviders } from '../api/ai'
+import { isTauri } from '../api/client'
 
 function Section({ title, children }) {
   return (
@@ -18,12 +19,64 @@ export default function Settings() {
   const [ai, setAi] = useState(null)
   const [providers, setProviders] = useState([])
   const [msg, setMsg] = useState('')
+  const [loginState, setLoginState] = useState('idle') // idle | logging-in | success | failed
 
   useEffect(() => {
     getSettings().then((res) => setSettings(res.data || res)).catch(() => {})
     getAISettings().then((res) => setAi(res.data || res)).catch(() => {})
     listProviders().then((res) => setProviders(res.data?.list || [])).catch(() => {})
   }, [])
+
+  // 监听登录窗口回传的 Cookie 事件（仅 Tauri 环境）
+  useEffect(() => {
+    if (!isTauri()) return
+    let unlisten
+    let cancelled = false
+    import('@tauri-apps/api/event').then(async ({ listen }) => {
+      unlisten = await listen('leetcode-login-result', (event) => {
+        if (cancelled) return
+        const { success, cookie, message } = event.payload
+        if (success && cookie) {
+          setSettings((prev) => ({ ...prev, leetcode_cookie: cookie }))
+          updateSettings({ leetcode_cookie: cookie })
+            .then(() => {
+              setLoginState('success')
+              setMsg('LeetCode 登录成功，Cookie 已自动保存')
+              setTimeout(() => setMsg(''), 3000)
+            })
+            .catch(() => setLoginState('failed'))
+        } else {
+          setLoginState('failed')
+          setMsg(message || '登录未完成，请重试')
+          setTimeout(() => setMsg(''), 3000)
+        }
+      })
+    }).catch(() => {})
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
+  }, [])
+
+  const startLeetCodeLogin = async () => {
+    setLoginState('logging-in')
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('open_leetcode_login')
+    } catch (e) {
+      setLoginState('failed')
+      setMsg(`打开登录窗口失败: ${e}`)
+      setTimeout(() => setMsg(''), 3000)
+    }
+  }
+
+  const cancelLeetCodeLogin = async () => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('close_leetcode_login')
+    } catch {}
+    setLoginState('idle')
+  }
 
   const saveLeetCode = async () => {
     await updateSettings({ leetcode_cookie: settings.leetcode_cookie || '' })
@@ -45,8 +98,28 @@ export default function Settings() {
       {/* LeetCode Cookie（供题目抓取与已同步代码拉取） */}
       <Section title="LeetCode Cookie">
         <p className="mb-3 text-xs text-neutral-400">
-          登录 leetcode.cn 后从浏览器复制 Cookie，用于抓取题目详情和拉取站内已同步代码。
+          点击「一键登录」在弹出的窗口中登录 leetcode.cn，成功后自动抓取并保存 Cookie；也可以手动从浏览器复制 Cookie 粘贴到下方。
         </p>
+
+        {isTauri() && (
+          <div className="mb-4 flex items-center gap-3">
+            <button
+              onClick={startLeetCodeLogin}
+              disabled={loginState === 'logging-in'}
+              className="rounded-lg bg-emerald-500 px-4 py-1.5 text-sm text-white hover:bg-emerald-600 disabled:opacity-60"
+            >
+              {loginState === 'logging-in' ? '等待登录…' : '一键登录 LeetCode'}
+            </button>
+            {loginState === 'logging-in' && (
+              <button onClick={cancelLeetCodeLogin} className="text-xs text-neutral-400 hover:text-neutral-600">
+                取消
+              </button>
+            )}
+            {loginState === 'success' && <span className="text-xs text-emerald-600">✓ 已登录</span>}
+            {loginState === 'failed' && <span className="text-xs text-red-500">登录失败，请重试</span>}
+          </div>
+        )}
+
         <textarea
           rows={3}
           value={settings.leetcode_cookie || ''}
