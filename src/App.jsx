@@ -104,8 +104,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Outlet />}>
             <Route index element={<Dashboard />} />
-            <Route path="problems" element={<Problems />} />
-            <Route path="problems/review" element={<Problems reviewMode />} />
+            <Route path="problems" element={<Problems key="list" />} />
+            <Route path="problems/review" element={<Problems key="review" reviewMode />} />
             <Route path="problems/:id" element={<ProblemDetail />} />
             <Route path="calendar" element={<CalendarStats />} />
             <Route path="ai" element={<AIChat />} />
