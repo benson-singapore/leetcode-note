@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 全局基准字号：Tailwind 全部用 rem，改 html 字号即可整体缩放（默认 14px，Cmd +/- 可调） */
+html {
+  font-size: 14px;
+  /* 与侧边栏菜单一致的系统字体栈，保证全应用统一渲染 */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  /* 中文字体微调：避免字体渲染发虚 */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
 :root {
   color-scheme: light;
 }
@@ -13,7 +24,13 @@ body,
 }
 
 body {
-  @apply bg-neutral-50 text-neutral-800 antialiased;
+  @apply bg-white text-slate-800 antialiased;
+  font-feature-settings: 'tnum' 0; /* 正文默认不用等宽数字，数字展示处单独用 tabular-nums */
+  letter-spacing: 0.01em;
+}
+
+::selection {
+  @apply bg-primary-100 text-primary-900;
 }
 
 /* 滚动条 */
@@ -22,7 +39,10 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-neutral-300 rounded-full;
+  @apply rounded-full bg-slate-200;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-300;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -39,17 +59,28 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+  background: #cbd5e1;
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #16a34a;
+  background: #94a3b8;
+}
+
+/* 统一 focus 可见性（键盘导航友好，且与主题色一致） */
+:focus-visible {
+  @apply outline-none ring-2 ring-primary-300 ring-offset-1;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  @apply ring-0 outline-none;
 }
 
 /* 核心笔记 Markdown 预览（react-markdown 根节点 class） */
 .notes-md-preview {
-  @apply text-slate-800 text-sm leading-relaxed;
+  @apply text-slate-700 text-sm leading-relaxed;
 }
 
 .notes-md-preview > *:first-child {
@@ -63,7 +94,7 @@ body {
 .notes-md-preview h1,
 .notes-md-preview h2,
 .notes-md-preview h3 {
-  @apply font-bold text-slate-900 mt-4 mb-2 first:mt-0;
+  @apply font-semibold text-slate-900 mt-4 mb-2 first:mt-0 tracking-tight;
 }
 
 .notes-md-preview h1 {
@@ -75,7 +106,7 @@ body {
 }
 
 .notes-md-preview h3 {
-  @apply text-xs uppercase tracking-wide;
+  @apply text-[13px];
 }
 
 .notes-md-preview ul {
@@ -87,19 +118,19 @@ body {
 }
 
 .notes-md-preview img {
-  @apply max-w-full h-auto rounded-xl border border-slate-100 shadow-sm my-3;
+  @apply max-w-full h-auto rounded-lg border border-slate-100 shadow-card my-3;
 }
 
 .notes-md-preview a {
-  @apply text-primary-600 underline underline-offset-2 hover:text-primary-700;
+  @apply text-primary-600 underline underline-offset-2 decoration-primary-200 hover:text-primary-700 hover:decoration-primary-400;
 }
 
 .notes-md-preview code {
-  @apply bg-slate-100 text-slate-800 px-1 py-0.5 rounded text-[0.9em] font-mono;
+  @apply bg-slate-100 text-slate-700 px-1 py-0.5 rounded text-[0.9em] font-mono;
 }
 
 .notes-md-preview pre {
-  @apply bg-slate-900 text-emerald-50 p-4 rounded-xl overflow-x-auto text-xs font-mono my-3 border border-slate-800;
+  @apply bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-xs font-mono my-3 border border-slate-800;
 }
 
 .notes-md-preview pre code {
@@ -107,7 +138,7 @@ body {
 }
 
 .notes-md-preview blockquote {
-  @apply border-l-4 border-primary-200 pl-3 italic text-slate-600 my-3;
+  @apply border-l-2 border-primary-300 bg-primary-50/40 rounded-r-md pl-3 pr-2 py-1.5 not-italic text-slate-600 my-3;
 }
 
 .notes-md-preview hr {
@@ -115,7 +146,7 @@ body {
 }
 
 .notes-md-preview strong {
-  @apply font-bold text-slate-900;
+  @apply font-semibold text-slate-900;
 }
 
 /* 代码编辑器：高亮层与 textarea 同步滚动，隐藏重复滚动条 */

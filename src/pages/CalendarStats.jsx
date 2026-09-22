@@ -112,24 +112,26 @@ export default function CalendarStats() {
   }, [])
 
   return (
-    <div className="h-full overflow-y-auto bg-white p-8 md:p-12">
-      <div className="mx-auto max-w-6xl space-y-10 animate-in fade-in duration-700">
+    <div className="h-full overflow-y-auto bg-white p-8 pt-5 md:px-12 md:pt-5">
+      <div className="space-y-8 animate-in fade-in duration-700">
         <header className="space-y-1">
-          <h1 className="text-lg font-black tracking-tight text-slate-900">日历统计</h1>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900">日历统计</h1>
+          <p className="text-xs font-normal tracking-wide text-slate-400">
             复习热力图 · 按日题目列表
           </p>
         </header>
 
-        <div className="rounded-[2.5rem] border border-slate-100 bg-white p-10 shadow-sm space-y-10">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-8 md:p-10 shadow-card space-y-10">
           <div>
-            <div className="mb-4 flex max-w-3xl flex-col items-center gap-2 text-center mx-auto">
-              <h3 className="flex flex-wrap items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                <Calendar size={14} className="shrink-0 text-primary-500" /> 复习热力图
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-5">
+              <h3 className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-slate-900">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+                  <Calendar size={15} />
+                </span>
+                复习热力图
               </h3>
-              <p className="text-[10px] font-bold leading-relaxed text-slate-400">
-                以今天为结束日，向前 {heatmapData.days || 365} 天 · 格子颜色表示当日复习的不重复
-                user_problem 数 · 点击格子同步下方列表日期
+              <p className="text-xs font-normal leading-relaxed text-slate-400">
+                以今天为结束日，向前 {heatmapData.days || 365} 天 · 点击格子同步下方列表日期
               </p>
             </div>
             {heatmapError && (
@@ -157,17 +159,17 @@ export default function CalendarStats() {
           </div>
 
           {!heatmapLoading && heatmapData.startDate && heatmapData.endDate && (
-            <div className="border-t border-slate-100 pt-10">
+            <div className="border-t border-slate-100 pt-8">
               <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                 <div className="flex min-w-0 flex-wrap items-center gap-3">
-                  <h3 className="flex shrink-0 items-center gap-3 text-sm font-black uppercase tracking-wide text-slate-800">
-                    <span className="rounded-lg bg-primary-600 p-1.5 text-white shadow-sm">
+                  <h3 className="flex shrink-0 items-center gap-2.5 text-sm font-semibold tracking-tight text-slate-900">
+                    <span className="rounded-lg bg-primary-600 p-1.5 text-white shadow-card">
                       <LayoutList size={16} />
                     </span>
                     题目列表
                   </h3>
                   <div
-                    className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5"
+                    className="flex rounded-lg border border-slate-200 bg-slate-100/80 p-0.5"
                     role="tablist"
                     aria-label="题目列表类型"
                   >
@@ -176,15 +178,15 @@ export default function CalendarStats() {
                       role="tab"
                       aria-selected={listTab === 'created'}
                       onClick={() => setListTab('created')}
-                      className={`relative rounded-md px-4 py-1.5 text-[11px] font-black uppercase tracking-wide transition-all ${
+                      className={`relative rounded-md px-4 py-1.5 text-xs font-medium transition-all ${
                         listTab === 'created'
-                          ? 'bg-white text-primary-700 shadow-sm'
+                          ? 'bg-white font-semibold text-primary-700 shadow-sm'
                           : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
                       <span className="inline-flex items-center gap-1 pr-2.5">今日题目</span>
                       {createdProblems.length > 0 && (
-                        <span className="pointer-events-none absolute right-1 top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary-600 px-1 text-[9px] font-bold text-white shadow-sm">
+                        <span className="pointer-events-none absolute right-1 top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-medium text-white shadow-sm">
                           {createdProblems.length}
                         </span>
                       )}
@@ -194,22 +196,22 @@ export default function CalendarStats() {
                       role="tab"
                       aria-selected={listTab === 'reviews'}
                       onClick={() => setListTab('reviews')}
-                      className={`relative rounded-md px-4 py-1.5 text-[11px] font-black uppercase tracking-wide transition-all ${
+                      className={`relative rounded-md px-4 py-1.5 text-xs font-medium transition-all ${
                         listTab === 'reviews'
-                          ? 'bg-white text-primary-700 shadow-sm'
+                          ? 'bg-white font-semibold text-primary-700 shadow-sm'
                           : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
                       <span className="inline-flex items-center gap-1 pr-2.5">今日复习</span>
                       {reviewProblems.length > 0 && (
-                        <span className="pointer-events-none absolute right-1 top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold text-white shadow-sm">
+                        <span className="pointer-events-none absolute right-1 top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-medium text-white shadow-sm">
                           {reviewProblems.length}
                         </span>
                       )}
                     </button>
                   </div>
                 </div>
-                <label className="flex flex-col gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-600">
                   按日期筛选
                   <input
                     type="date"
@@ -221,11 +223,11 @@ export default function CalendarStats() {
                       if (!v) return
                       setSelectedDate(clampDateStr(v, heatmapData.startDate, heatmapData.endDate))
                     }}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-normal text-slate-700 shadow-sm outline-none transition-colors focus:border-primary-400 focus:ring-2 focus:ring-primary-50"
                   />
                 </label>
               </div>
-              <p className="mb-4 text-[10px] font-bold text-slate-400">
+              <p className="mb-4 text-xs font-normal text-slate-400">
                 {listTab === 'created'
                   ? '按 problems 创建时间筛选，即该日新创建的题目；与热力图悬停中的「N 道题」一致。'
                   : '按复习记录筛选（按 user_problem_id 去重）；同一 user_problem 当日多条复习合并为一行，次数为当日合计。'}

@@ -209,7 +209,7 @@ export function CodeEditor({ activeProblem, updateProblem }) {
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-2 h-full flex flex-col">
       <div className="rounded-xl overflow-hidden shadow-lg border border-slate-900 border-opacity-10 flex-1 flex flex-col min-h-0">
         {/* 编辑器头部 */}
-        <div className="bg-[#1A1C1E] px-6 py-3 border-b border-white border-opacity-5 flex justify-between items-center text-[9px] font-mono text-slate-500 shrink-0">
+        <div className="bg-[#1A1C1E] px-6 py-3 border-b border-white border-opacity-5 flex justify-between items-center text-[10px] font-mono text-slate-500 shrink-0">
           <div className="flex items-center gap-2">
             <div className="flex gap-1">
               <div className="w-2 h-2 rounded-full bg-rose-500/80"></div>
@@ -234,11 +234,11 @@ export function CodeEditor({ activeProblem, updateProblem }) {
             <button
               onClick={handleSaveCode}
               disabled={isSaving}
-              className="px-2 py-1 bg-primary-600 text-white text-[9px] font-bold rounded hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-2 py-1 bg-primary-600 text-white text-[10px] font-bold rounded hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? '保存中' : '保存'}
             </button>
-            <span className="text-primary-500 font-bold opacity-80 uppercase tracking-widest text-[8px]">
+            <span className="text-primary-500 font-bold opacity-80 uppercase tracking-widest text-[10px]">
               {langLabel}
             </span>
           </div>

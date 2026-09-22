@@ -61,7 +61,7 @@ export function SolutionDemoTab({ activeProblem, updateProblem }) {
       <div className="flex items-center justify-between px-2 shrink-0">
         <div className="flex items-center gap-3 text-primary-600">
           <Pencil size={14} />
-          <label className="text-[10px] font-black text-primary-600 tracking-tight">
+          <label className="text-[10px] font-semibold text-primary-600 tracking-tight">
             HTML 解题演示
           </label>
         </div>
@@ -76,7 +76,7 @@ export function SolutionDemoTab({ activeProblem, updateProblem }) {
               role="tab"
               aria-selected={mode === 'edit'}
               onClick={() => setMode('edit')}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold transition-all ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
                 mode === 'edit'
                   ? 'bg-white text-primary-700 shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
@@ -91,7 +91,7 @@ export function SolutionDemoTab({ activeProblem, updateProblem }) {
               aria-selected={mode === 'preview'}
               onClick={() => (html || '').trim() && setMode('preview')}
               disabled={!(html || '').trim()}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                 mode === 'preview'
                   ? 'bg-white text-primary-700 shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
@@ -114,7 +114,7 @@ export function SolutionDemoTab({ activeProblem, updateProblem }) {
           <button
             onClick={handleSave}
             disabled={saving || loading}
-            className="px-3 py-1.5 bg-primary-600 text-white text-[10px] font-black rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
+            className="px-3 py-1.5 bg-primary-600 text-white text-[10px] font-semibold rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
           >
             {saving ? '保存中' : '保存到文件'}
           </button>

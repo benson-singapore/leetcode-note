@@ -95,25 +95,25 @@ function HeatmapTooltip({ tip }) {
   if (!tip) return null
   return createPortal(
     <div
-      className="fixed z-[200] px-3 py-2 rounded-lg bg-slate-900 text-white text-xs shadow-xl pointer-events-none -translate-x-1/2 -translate-y-full"
+      className="fixed z-[200] px-3 py-2 rounded-lg bg-slate-900 text-white text-xs shadow-overlay pointer-events-none -translate-x-1/2 -translate-y-full"
       style={{ left: tip.x, top: tip.y - 8 }}
       role="tooltip"
     >
-      <div className="font-mono text-[10px] text-slate-400 mb-0.5">{tip.date}</div>
+      <div className="font-mono text-[11px] text-slate-400 mb-0.5">{tip.date}</div>
       {tip.inRange ? (
         <>
           {tip.problems > 0 && (
-            <div className="font-black text-base text-white">{tip.problems} 道新题</div>
+            <div className="font-semibold text-base text-white tabular-nums">{tip.problems} 道新题</div>
           )}
           {tip.reviews > 0 && (
-            <div className="text-[11px] text-slate-300 mt-0.5">{tip.reviews} 条复习记录</div>
+            <div className="text-[11px] text-slate-300 mt-0.5 tabular-nums">{tip.reviews} 条复习记录</div>
           )}
           {tip.reviews === 0 && tip.problems === 0 && (
-            <div className="text-[10px] text-slate-400">无活动</div>
+            <div className="text-[11px] text-slate-400">无活动</div>
           )}
         </>
       ) : (
-        <div className="text-[10px] text-slate-400">不在统计窗口内</div>
+        <div className="text-[11px] text-slate-400">不在统计窗口内</div>
       )}
     </div>,
     document.body
@@ -166,7 +166,7 @@ export function TrainingHeatmap({
       <div className="flex w-full max-w-full justify-center overflow-x-auto pb-1">
         <div className="flex w-max min-w-0 shrink-0 gap-2">
           <div
-            className="flex select-none shrink-0 flex-col gap-1 pt-[24px] pr-1.5 text-[10px] font-bold text-slate-400"
+            className="flex select-none shrink-0 flex-col gap-1 pt-[24px] pr-1.5 text-[10px] font-medium text-slate-400"
             aria-hidden
           >
             {ROW_LABELS.map((lab, i) => (
@@ -179,7 +179,7 @@ export function TrainingHeatmap({
             <div className="mb-1 flex min-h-[18px] items-end gap-1">
               {weeks.map((_, wi) => (
                 <div key={wi} className="w-3.5 flex shrink-0 justify-center">
-                  <span className="whitespace-nowrap text-[10px] font-bold leading-none text-slate-400">
+                  <span className="whitespace-nowrap text-[10px] font-medium leading-none text-slate-400">
                     {monthLabels[wi] || '\u00a0'}
                   </span>
                 </div>
@@ -219,16 +219,16 @@ export function TrainingHeatmap({
           </div>
         </div>
       </div>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-2 text-center text-[9px] font-bold uppercase tracking-widest text-slate-400">
-        <span className="font-medium normal-case tracking-normal text-slate-500">更少</span>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-2 text-center text-xs text-slate-400">
+        <span className="font-normal text-slate-500">更少</span>
         <div className="flex items-center gap-0.5">
           {LEVEL_CLASS.map((cls, i) => (
             <div key={i} className={`h-3.5 w-3.5 rounded-[3px] ${cls}`} />
           ))}
         </div>
-        <span className="font-medium normal-case tracking-normal text-slate-500">更多</span>
-        <span className="w-full basis-full font-black normal-case tracking-tight text-emerald-700 sm:w-auto sm:basis-auto">
-          最近 {days} 天（{startDate} ~ {endDate}）· 复习累计 {total} 条（按 user_problem 逐日计）
+        <span className="font-normal text-slate-500">更多</span>
+        <span className="w-full basis-full font-medium tabular-nums text-slate-500 sm:w-auto sm:basis-auto">
+          最近 {days} 天（{startDate} ~ {endDate}）· 复习累计 <span className="font-semibold text-emerald-700">{total}</span> 条（按 user_problem 逐日计）
         </span>
       </div>
     </div>

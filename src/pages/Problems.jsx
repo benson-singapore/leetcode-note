@@ -69,17 +69,17 @@ function statusMetaFor(p) {
 function CollapsibleSection({ label, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between px-1 text-left text-[10px] font-black uppercase tracking-widest text-slate-500"
+        className="flex w-full items-center justify-between rounded-md px-1 py-0.5 text-left text-xs font-semibold text-slate-700 transition-colors hover:text-primary-700"
       >
         {label}
         <ChevronDown
           size={14}
-          className={`text-slate-300 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'}`}
+          className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'}`}
         />
       </button>
       <div
@@ -305,33 +305,36 @@ export default function Problems({ reviewMode = false }) {
   return (
     <div className="flex h-full bg-white">
       {/* 左侧过滤面板 */}
-      <aside className="w-64 shrink-0 space-y-8 overflow-y-auto border-r border-slate-100 p-6">
-        <div className="space-y-4 rounded-2xl border border-primary-100 bg-primary-50/50 p-5 shadow-inner">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary-800 opacity-60">
-            <Activity size={14} /> 我的基础数据
+      <aside className="w-64 shrink-0 space-y-7 overflow-y-auto border-r border-slate-100 bg-white p-6">
+        <div className="space-y-3.5 rounded-xl border border-primary-100 bg-white p-4 shadow-card">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary-50 text-primary-600">
+              <Activity size={13} />
+            </span>
+            我的基础数据
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-tighter text-slate-400">总计录入</p>
-              <p className="text-xl font-black leading-none text-primary-700">{stats.total}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-primary-50/70 px-3 py-2.5">
+              <p className="text-[11px] font-medium text-slate-500">总计录入</p>
+              <p className="mt-0.5 text-xl font-semibold leading-none tabular-nums text-primary-700">{stats.total}</p>
             </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-tighter text-slate-400">已精通</p>
-              <p className="text-xl font-black leading-none text-slate-800">{stats.mastered}</p>
+            <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+              <p className="text-[11px] font-medium text-slate-500">已精通</p>
+              <p className="mt-0.5 text-xl font-semibold leading-none tabular-nums text-slate-800">{stats.mastered}</p>
             </div>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <label className="px-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+        <div className="space-y-2.5">
+          <label className="px-1 text-xs font-semibold text-slate-700">
             快速检索
           </label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <input
               type="text"
               placeholder="编号/题名"
-              className="w-full rounded-xl border border-slate-100 bg-slate-50 py-2.5 pl-9 pr-3 text-xs outline-none transition-all focus:bg-white focus:ring-2 focus:ring-primary-50"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-primary-300 focus:ring-2 focus:ring-primary-50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -342,22 +345,22 @@ export default function Problems({ reviewMode = false }) {
           label={
             <span className="flex min-w-0 items-center gap-2">
               <span className="shrink-0">难度过滤</span>
-              <span className="truncate text-[9px] font-bold normal-case tracking-normal text-primary-600/70">
+              <span className="truncate rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-medium normal-case text-primary-700">
                 {difficultyLabel}
               </span>
             </span>
           }
         >
-          <div className="flex flex-col gap-1.5 pt-1">
+          <div className="flex flex-col gap-1 pt-1">
             {['All', 'Easy', 'Medium', 'Hard'].map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => setDifficulty(d)}
-                className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-[11px] font-bold transition-all ${
+                className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all ${
                   difficulty === d
-                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-100'
-                    : 'border border-transparent text-slate-500 hover:bg-slate-50'
+                    ? 'bg-primary-600 text-white shadow-card'
+                    : 'border border-transparent text-slate-600 hover:bg-white hover:text-slate-900'
                 }`}
               >
                 <span>{d === 'All' ? '全部' : DIFFICULTIES[d].label}</span>
@@ -372,7 +375,7 @@ export default function Problems({ reviewMode = false }) {
           label={
             <span className="flex min-w-0 items-center gap-2">
               <span className="shrink-0">排序</span>
-              <span className="flex items-center gap-1 truncate text-[9px] font-bold normal-case tracking-normal text-primary-600/70">
+              <span className="flex items-center gap-1 truncate rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-medium normal-case text-primary-700">
                 {sortLabel}
                 <button
                   type="button"
@@ -390,16 +393,16 @@ export default function Problems({ reviewMode = false }) {
             </span>
           }
         >
-          <div className="flex flex-col gap-1.5 pt-1">
+          <div className="flex flex-col gap-1 pt-1">
             {SORT_OPTIONS.map((opt) => (
               <button
                 key={opt.id}
                 type="button"
                 onClick={() => handleSelectSortMode(opt.id)}
-                className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-[11px] font-bold transition-all ${
+                className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all ${
                   sortMode === opt.id
-                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-100'
-                    : 'border border-transparent text-slate-500 hover:bg-slate-50'
+                    ? 'bg-primary-600 text-white shadow-card'
+                    : 'border border-transparent text-slate-600 hover:bg-white hover:text-slate-900'
                 }`}
               >
                 <span>{opt.label}</span>
@@ -414,26 +417,26 @@ export default function Problems({ reviewMode = false }) {
           </div>
         </CollapsibleSection>
 
-        <div className="space-y-4">
-          <label className="px-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+        <div className="space-y-3">
+          <label className="px-1 text-xs font-semibold text-slate-700">
             知识专题
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {allTags.map((tag) => (
               <button
                 key={tag}
                 type="button"
                 onClick={() => toggleTag(tag)}
-                className={`rounded-full border px-3 py-1 text-[10px] transition-all ${
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all ${
                   selectedTags.includes(tag)
-                    ? 'border-primary-300 bg-primary-100 font-bold text-primary-800'
-                    : 'border-slate-100 bg-white text-slate-400 hover:border-primary-200'
+                    ? 'border-primary-300 bg-primary-100 text-primary-800'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-primary-300 hover:text-primary-700'
                 }`}
               >
                 {tag}({tagCounts[tag] ?? 0})
               </button>
             ))}
-            {allTags.length === 0 && <p className="px-1 text-[10px] text-slate-300">暂无标签</p>}
+            {allTags.length === 0 && <p className="px-1 text-[11px] text-slate-400">暂无标签</p>}
           </div>
         </div>
       </aside>
@@ -442,13 +445,13 @@ export default function Problems({ reviewMode = false }) {
       <main className="min-w-0 flex-1 overflow-y-auto bg-white p-8">
         <div className="space-y-6">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="flex min-w-0 items-center gap-3 text-sm font-black uppercase tracking-wide text-slate-800">
+            <h2 className="flex min-w-0 items-center gap-3 text-base font-semibold tracking-tight text-slate-900">
               {randomMode ? (
-                <span className="rounded-lg bg-violet-600 p-1.5 text-white shadow-sm">
+                <span className="rounded-lg bg-violet-600 p-1.5 text-white shadow-card">
                   <RefreshCw size={16} />
                 </span>
               ) : (
-                <span className="rounded-lg bg-primary-600 p-1.5 text-white shadow-sm">
+                <span className="rounded-lg bg-primary-600 p-1.5 text-white shadow-card">
                   <LayoutList size={16} />
                 </span>
               )}
@@ -461,7 +464,7 @@ export default function Problems({ reviewMode = false }) {
                 type="button"
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[11px] font-normal text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
                 title="从服务器重新加载列表"
               >
                 <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> 刷新
@@ -473,7 +476,7 @@ export default function Problems({ reviewMode = false }) {
                     setModalOpen(true)
                     setMsg('')
                   }}
-                  className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-1.5 text-[11px] font-bold text-white shadow-lg shadow-primary-100 transition-all hover:bg-primary-700 active:scale-95"
+                  className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-1.5 text-[11px] font-normal text-white shadow-lg shadow-primary-100 transition-all hover:bg-primary-700 active:scale-95"
                 >
                   <Plus size={12} /> 新增题目
                 </button>
@@ -481,8 +484,8 @@ export default function Problems({ reviewMode = false }) {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200/50 bg-white shadow-xl">
-            <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-8 py-3.5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+          <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card">
+            <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-8 py-3.5 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-400">
               <div className="col-span-1">#</div>
               <div className={randomMode ? 'col-span-3' : 'col-span-4'}>题名</div>
               <div className="col-span-1 text-center">通过率</div>
@@ -518,7 +521,7 @@ export default function Problems({ reviewMode = false }) {
                         isMastered ? 'border-transparent' : 'border-transparent'
                       }`}
                     >
-                      <div className="col-span-1 flex min-w-0 items-center gap-1 font-mono text-[11px] font-bold text-slate-300 group-hover:text-primary-500">
+                      <div className="col-span-1 flex min-w-0 items-center gap-1 font-mono text-[11px] font-normal text-slate-300 group-hover:text-primary-500">
                         <span className="truncate">{p.lcId}</span>
                         {p.hasHtmlDemo ? (
                           <span
@@ -535,7 +538,7 @@ export default function Problems({ reviewMode = false }) {
                           randomMode ? 'col-span-3' : 'col-span-4'
                         }`}
                       >
-                        <span className="min-w-0 truncate text-[13px] font-bold text-slate-700 transition-colors group-hover:text-primary-800">
+                        <span className="min-w-0 truncate text-[13px] font-normal text-slate-700 transition-colors group-hover:text-primary-800">
                           {p.translatedTitle || p.title}
                         </span>
                       </div>
@@ -544,7 +547,7 @@ export default function Problems({ reviewMode = false }) {
                       </div>
                       <div className="col-span-1 flex justify-center">
                         <span
-                          className={`rounded border px-2 py-0.5 text-[8px] font-black tracking-tighter ${
+                          className={`rounded border px-2 py-0.5 text-[10px] font-medium tracking-tighter ${
                             DIFFICULTIES[p.difficulty]?.color || 'text-slate-500 bg-slate-50 border-slate-100'
                           }`}
                         >
@@ -553,7 +556,7 @@ export default function Problems({ reviewMode = false }) {
                       </div>
                       <div className="col-span-2 flex justify-center">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[9px] font-black tracking-widest ${meta.light}`}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-widest ${meta.light}`}
                         >
                           {meta.label}
                         </span>
@@ -568,7 +571,7 @@ export default function Problems({ reviewMode = false }) {
                       </div>
                       <div className="col-span-2 flex items-center justify-end gap-4">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[9px] font-black tracking-widest ${statusM.light}`}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-widest ${statusM.light}`}
                         >
                           {statusM.label}
                         </span>
@@ -593,7 +596,7 @@ export default function Problems({ reviewMode = false }) {
                   type="button"
                   onClick={() => load(page - 1)}
                   disabled={page === 1}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -607,7 +610,7 @@ export default function Problems({ reviewMode = false }) {
                       key={p}
                       type="button"
                       onClick={() => load(p)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                      className={`rounded-lg px-3 py-1.5 text-xs font-normal transition-all ${
                         p === page
                           ? 'bg-primary-600 text-white shadow-sm'
                           : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -621,7 +624,7 @@ export default function Problems({ reviewMode = false }) {
                   type="button"
                   onClick={() => load(page + 1)}
                   disabled={page === totalPages}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <ChevronRight size={14} />
                 </button>
@@ -637,14 +640,14 @@ export default function Problems({ reviewMode = false }) {
               className="absolute inset-0 bg-primary-900/10 backdrop-blur-md animate-in fade-in duration-300"
               onClick={() => !fetching && setModalOpen(false)}
             ></div>
-            <div className="relative w-full max-w-sm rounded-[2.5rem] border border-primary-50 bg-white p-10 shadow-2xl animate-in zoom-in-95 duration-300">
-              <div className="mx-auto mb-8 flex h-14 w-14 items-center justify-center rounded-3xl bg-primary-50 text-sm font-black tracking-tighter text-primary-600 shadow-inner">
+            <div className="relative w-full max-w-sm rounded-2xl border border-slate-100 bg-white p-10 shadow-overlay animate-in zoom-in-95 duration-300">
+              <div className="mx-auto mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-sm font-semibold tracking-tight text-primary-600 shadow-inner">
                 LC
               </div>
-              <h3 className="mb-1 text-center text-lg font-black tracking-tighter text-slate-800">
+              <h3 className="mb-1 text-center text-lg font-semibold tracking-tight text-slate-900">
                 从 LeetCode 同步
               </h3>
-              <p className="mb-6 text-center text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">
+              <p className="mb-6 text-center text-xs font-normal tracking-wide text-slate-400">
                 {inputType === 'frontendId' ? '输入编号 (1, 2, 14)' : '输入 Slug (two-sum)'}
               </p>
 
@@ -655,7 +658,7 @@ export default function Problems({ reviewMode = false }) {
                     setInputType('frontendId')
                     setInputValue('')
                   }}
-                  className={`flex-1 rounded-lg py-2 text-[9px] font-black tracking-widest transition-all ${
+                  className={`flex-1 rounded-lg py-2 text-xs font-medium transition-all ${
                     inputType === 'frontendId'
                       ? 'bg-primary-100 text-primary-700'
                       : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -669,7 +672,7 @@ export default function Problems({ reviewMode = false }) {
                     setInputType('titleSlug')
                     setInputValue('')
                   }}
-                  className={`flex-1 rounded-lg py-2 text-[9px] font-black tracking-widest transition-all ${
+                  className={`flex-1 rounded-lg py-2 text-xs font-medium transition-all ${
                     inputType === 'titleSlug'
                       ? 'bg-primary-100 text-primary-700'
                       : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -689,7 +692,7 @@ export default function Problems({ reviewMode = false }) {
                   type="text"
                   autoFocus
                   placeholder={inputType === 'frontendId' ? '题号' : '题目 Slug'}
-                  className="mb-8 w-full rounded-2xl bg-slate-50 px-4 py-4 text-center font-mono text-3xl shadow-sm outline-none transition-all ring-primary-50 focus:bg-white focus:ring-4 disabled:opacity-50"
+                  className="mb-8 w-full rounded-xl bg-slate-50 px-4 py-4 text-center font-mono text-2xl tracking-wide shadow-sm outline-none transition-all ring-primary-50 focus:bg-white focus:ring-4 disabled:opacity-50"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   disabled={fetching}
@@ -699,14 +702,14 @@ export default function Problems({ reviewMode = false }) {
                     type="button"
                     onClick={() => setModalOpen(false)}
                     disabled={fetching}
-                    className="flex-1 py-4 text-[10px] font-black tracking-widest text-slate-300 transition-colors hover:text-slate-500 disabled:opacity-50"
+                    className="flex-1 py-3 text-sm font-medium text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50"
                   >
                     取消
                   </button>
                   <button
                     type="submit"
                     disabled={fetching || !inputValue.trim()}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary-600 py-4 text-[10px] font-black tracking-widest text-white shadow-xl shadow-primary-50 transition-all hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 py-3 text-sm font-medium text-white shadow-card transition-all hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {fetching ? (
                       <>

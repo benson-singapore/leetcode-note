@@ -54,8 +54,8 @@ export default function App() {
           <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary-400 to-primary-700" />
           {!collapsed && (
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-neutral-900">LeetCode 笔记</div>
-              <div className="text-[11px] text-neutral-400">本地学习助手</div>
+              <div className="truncate text-sm font-semibold text-slate-900">LeetCode 笔记</div>
+              <div className="text-[11px] text-slate-400">本地学习助手</div>
             </div>
           )}
         </div>
@@ -83,7 +83,7 @@ export default function App() {
         </nav>
         <div className={collapsed ? 'py-4 text-center' : 'px-5 py-4'}>
           {collapsed ? (
-            <div className="text-[9px] text-neutral-300">v0.1.0</div>
+            <div className="text-[10px] text-neutral-300">v0.1.0</div>
           ) : (
             <div className="text-[11px] text-neutral-400">v0.1.0 · Tauri2 + Go</div>
           )}

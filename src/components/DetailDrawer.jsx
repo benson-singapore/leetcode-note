@@ -212,14 +212,14 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
               <div className="flex items-center gap-6 min-w-0">
                 <div className="min-w-0">
                   <div className="flex items-center gap-3 mb-0.5">
-                    <span className="text-[10px] font-black bg-primary-600 text-white px-2 py-0.5 rounded-md font-mono tracking-tighter shrink-0">
+                    <span className="text-[10px] font-semibold bg-primary-600 text-white px-2 py-0.5 rounded-md font-mono tracking-tighter shrink-0">
                       #{activeProblem.lcId}
                     </span>
-                    <h2 className="font-black text-lg text-slate-800 tracking-tight uppercase leading-none truncate">
+                    <h2 className="font-semibold text-lg text-slate-800 tracking-tight uppercase leading-none truncate">
                       {activeProblem.translatedTitle || activeProblem.title}
                     </h2>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[8px] font-black tracking-widest border shadow-sm shrink-0 ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-widest border shadow-sm shrink-0 ${
                         STATUS_MAP[activeProblem.status]?.light ||
                         'bg-slate-50 text-slate-600'
                       }`}
@@ -231,25 +231,25 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                   </div>
                   <div className="flex items-center gap-6 mt-1.5 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
                         通过率:
                       </span>
-                      <span className="text-xs font-black text-slate-600 font-mono tracking-tighter">
+                      <span className="text-xs font-semibold text-slate-600 font-mono tracking-tighter">
                         {activeProblem.passRate}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
                         出题频率:
                       </span>
                       <FrequencyBars score={activeProblem.frequency} />
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
                         官方难度:
                       </span>
                       <span
-                        className={`text-[9px] font-black uppercase ${
+                        className={`text-[10px] font-semibold uppercase ${
                           (
                             OFFICIAL_DIFFICULTIES[activeProblem.difficulty]?.color ||
                             'text-slate-400'
@@ -267,7 +267,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                   href={`https://leetcode.cn/problems/${activeProblem.titleSlug || activeProblem.title}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 px-4 py-2 bg-primary-50 text-primary-700 text-[11px] font-black rounded-full hover:bg-primary-100 transition-all shadow-sm"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-primary-50 text-primary-700 text-[11px] font-semibold rounded-full hover:bg-primary-100 transition-all shadow-sm"
                 >
                   VIEW_LEETCODE <ExternalLink size={14} />
                 </a>
@@ -275,7 +275,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                   onClick={handleDelete}
                   disabled={deleting}
                   title={confirmingDelete ? '再点一次确认删除' : '删除此题目'}
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-semibold transition-all ${
                     confirmingDelete
                       ? 'bg-rose-50 text-rose-600 hover:bg-rose-100'
                       : 'text-slate-200 hover:text-rose-500'
@@ -299,7 +299,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                     <button
                       key={tab.id}
                       onClick={() => setDetailTab(tab.id)}
-                      className={`h-full flex items-center gap-2.5 text-xs font-black transition-all border-b-4 px-1 uppercase tracking-widest shrink-0 ${
+                      className={`h-full flex items-center gap-2.5 text-xs font-semibold transition-all border-b-4 px-1 uppercase tracking-widest shrink-0 ${
                         detailTab === tab.id
                           ? 'text-primary-600 border-primary-600'
                           : 'text-slate-400 border-transparent hover:text-slate-600'
@@ -399,7 +399,7 @@ function DescriptionTab({ activeProblem }) {
       <div className="space-y-3">
         {(activeProblem.examples || []).map((ex, i) => (
           <div key={i} className="space-y-1.5">
-            <p className="text-[11px] font-black text-slate-800 tracking-tight">示例 {i + 1}:</p>
+            <p className="text-[11px] font-semibold text-slate-800 tracking-tight">示例 {i + 1}:</p>
             <div className="bg-slate-100/60 border border-slate-100 rounded-lg p-3 font-mono text-[11px] space-y-1 text-slate-700 shadow-inner">
               <p>
                 <span className="font-bold text-slate-400">输入:</span> {ex.input}
@@ -419,7 +419,7 @@ function DescriptionTab({ activeProblem }) {
 
       {(constraints || []).length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-black text-slate-800 tracking-tight">提示：</p>
+          <p className="text-[11px] font-semibold text-slate-800 tracking-tight">提示：</p>
           <div className="border-l-4 border-primary-500/20 pl-4 space-y-1">
             {constraints.map((c, i) => (
               <p key={i} className="font-mono text-[11px] text-slate-500">
@@ -542,7 +542,7 @@ function NotesTab({ activeProblem, updateProblem }) {
       <div className="flex items-center justify-between px-2 mb-2 flex-wrap gap-2 shrink-0">
         <div className="flex items-center gap-3 text-primary-600">
           <Quote size={16} />
-          <label className="text-[10px] font-black text-primary-600 tracking-tight">
+          <label className="text-[10px] font-semibold text-primary-600 tracking-tight">
             核心算法笔记
           </label>
         </div>
@@ -557,7 +557,7 @@ function NotesTab({ activeProblem, updateProblem }) {
               role="tab"
               aria-selected={notesMode === 'edit'}
               onClick={() => setNotesMode('edit')}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold transition-all ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
                 notesMode === 'edit'
                   ? 'bg-white text-primary-700 shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
@@ -573,7 +573,7 @@ function NotesTab({ activeProblem, updateProblem }) {
               onClick={() => (notes || '').trim() && setNotesMode('preview')}
               disabled={!(notes || '').trim()}
               title={!(notes || '').trim() ? '有内容后可预览 Markdown' : '预览 Markdown'}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                 notesMode === 'preview'
                   ? 'bg-white text-primary-700 shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
@@ -591,7 +591,7 @@ function NotesTab({ activeProblem, updateProblem }) {
                 setImageModalOpen(true)
                 setImageSourceTab('file')
               }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-[9px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 shrink-0"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 shrink-0"
               title="插入图片（图床）"
             >
               <ImagePlus size={12} />
@@ -656,7 +656,7 @@ function NotesTab({ activeProblem, updateProblem }) {
             <div className="flex items-start justify-between gap-3 mb-4">
               <h3
                 id="notes-image-modal-title"
-                className="text-sm font-black text-slate-800 tracking-tight"
+                className="text-sm font-semibold text-slate-800 tracking-tight"
               >
                 插入图片
               </h3>
@@ -761,7 +761,7 @@ function PersonalRatingSection({ activeProblem, updateProblem }) {
 
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest flex items-center gap-2">
         <BrainCircuit size={12} /> 个人手感难度自评
       </label>
       <div className="grid grid-cols-5 gap-1 p-0.5 bg-slate-50 rounded-xl border border-slate-100">
@@ -776,7 +776,7 @@ function PersonalRatingSection({ activeProblem, updateProblem }) {
             }`}
           >
             <span className="text-sm">{config.icon}</span>
-            <span className="text-[5px] font-black uppercase mt-0.5">{config.label}</span>
+            <span className="text-[10px] font-semibold uppercase mt-0.5">{config.label}</span>
           </button>
         ))}
       </div>
@@ -812,7 +812,7 @@ function ProgressStatusSection({ activeProblem, updateProblem }) {
 
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">
+      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest block">
         完成状态
       </label>
       <div className="grid grid-cols-3 gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100">
@@ -821,7 +821,7 @@ function ProgressStatusSection({ activeProblem, updateProblem }) {
             key={opt.key}
             type="button"
             onClick={() => updateProgress(opt.key)}
-            className={`py-2 rounded-lg text-[10px] font-black transition-all ${
+            className={`py-2 rounded-lg text-[10px] font-semibold transition-all ${
               current === opt.key
                 ? 'bg-white text-primary-700 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
@@ -838,14 +838,14 @@ function ProgressStatusSection({ activeProblem, updateProblem }) {
 function TagsSection({ activeProblem }) {
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">
+      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest block">
         知识标签映射
       </label>
       <div className="flex flex-wrap gap-2">
         {(activeProblem.tags || []).map((t) => (
           <span
             key={t}
-            className="px-3 py-1 bg-slate-50 text-slate-400 text-[9px] font-bold rounded-lg border border-slate-100 uppercase tracking-tighter"
+            className="px-3 py-1 bg-slate-50 text-slate-400 text-[10px] font-bold rounded-lg border border-slate-100 uppercase tracking-tighter"
           >
             #{t}
           </span>
@@ -868,7 +868,7 @@ function ReviewSection({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-2">
+        <label className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest flex items-center gap-2">
           <History size={16} className="text-primary-500" /> 复习训练打卡
         </label>
         <button
@@ -885,7 +885,7 @@ function ReviewSection({
 
       {newReview.showForm && (
         <div className="bg-primary-50/50 p-5 rounded-2xl border-2 border-primary-100 space-y-4 animate-in zoom-in-95 duration-200">
-          <label className="text-[9px] font-black text-primary-700 uppercase block tracking-tight">
+          <label className="text-[10px] font-semibold text-primary-700 uppercase block tracking-tight">
             本次训练后的掌握度
           </label>
           <div className="grid grid-cols-3 gap-1.5 p-1 bg-white rounded-xl">
@@ -921,7 +921,7 @@ function ReviewSection({
           />
           <button
             onClick={handleAddReview}
-            className="w-full bg-primary-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-primary-700 transition-all shadow-lg tracking-widest"
+            className="w-full bg-primary-600 text-white py-2.5 rounded-xl text-[10px] font-semibold uppercase hover:bg-primary-700 transition-all shadow-lg tracking-widest"
           >
             RECORD_JOURNEY
           </button>
@@ -939,7 +939,7 @@ function ReviewSection({
               </div>
               <div className="bg-white p-4 rounded-xl border border-slate-50 shadow-sm group-hover:border-primary-100 transition-all">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-[9px] font-black text-slate-500 uppercase font-mono">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase font-mono">
                     {new Date(rev.review_date).toLocaleString('zh-CN', {
                       year: 'numeric',
                       month: '2-digit',
@@ -949,7 +949,7 @@ function ReviewSection({
                     })}
                   </span>
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                       STATUS_MAP[rev.status]?.light || 'bg-slate-50 text-slate-600'
                     }`}
                   >
@@ -991,7 +991,7 @@ function SimilarQuestionsSection({ activeProblem }) {
 
   return (
     <div className="space-y-2">
-      <label className="mt-[25px] text-[10px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
+      <label className="mt-[25px] text-[10px] font-semibold text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
         <Link2 size={12} className="text-primary-500" /> 相似题目
       </label>
       <div className="space-y-1.5">
@@ -1007,10 +1007,10 @@ function SimilarQuestionsSection({ activeProblem }) {
               <p className="text-[11px] font-bold text-slate-700 group-hover:text-primary-700 truncate">
                 {q.translatedTitle || q.title}
               </p>
-              <p className="text-[9px] text-slate-400 truncate">{q.title}</p>
+              <p className="text-[10px] text-slate-400 truncate">{q.title}</p>
             </div>
             <span
-              className={`ml-2 text-[8px] font-black px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+              className={`ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
                 q.difficulty === 'Easy'
                   ? 'bg-emerald-100 text-emerald-700'
                   : q.difficulty === 'Medium'
