@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/binaries/*
+!src-tauri/binaries/.gitkeep
+server/leetcode_note.db
+server/leetcode_note.db-*
+server/html-demos/
+*.db
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Go sidecar 本地开发数据
+server/data/
