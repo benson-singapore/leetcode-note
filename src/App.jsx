@@ -5,6 +5,8 @@ import {
   ChevronRight,
   LayoutDashboard,
   BookOpen,
+  History,
+  CalendarDays,
   Settings,
 } from 'lucide-react'
 import Dashboard from './pages/Dashboard.jsx'
@@ -15,9 +17,10 @@ import AIChat from './pages/AIChat.jsx'
 import SettingsPage from './pages/Settings.jsx'
 
 const navItems = [
-  { to: '/', label: '复习看板', icon: LayoutDashboard, end: true },
+  { to: '/', label: '数据看板', icon: LayoutDashboard, end: true },
   { to: '/problems', label: '题库', icon: BookOpen, end: true },
-  { to: '/ai', label: 'AI 问答', icon: Settings },
+  { to: '/problems/review', label: '复习', icon: History, end: true },
+  { to: '/calendar', label: '日历统计', icon: CalendarDays, end: true },
   { to: '/settings', label: '设置', icon: Settings },
 ]
 
@@ -102,8 +105,9 @@ export default function App() {
           <Route path="/" element={<Outlet />}>
             <Route index element={<Dashboard />} />
             <Route path="problems" element={<Problems />} />
-            <Route path="calendar" element={<CalendarStats />} />
+            <Route path="problems/review" element={<Problems reviewMode />} />
             <Route path="problems/:id" element={<ProblemDetail />} />
+            <Route path="calendar" element={<CalendarStats />} />
             <Route path="ai" element={<AIChat />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Dashboard />} />
