@@ -1,5 +1,12 @@
+import { useState } from 'react'
 import { NavLink, Outlet, Route, Routes } from 'react-router-dom'
-import { LayoutDashboard, BookOpen, Sparkles, Settings } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  BookOpen,
+  Settings,
+} from 'lucide-react'
 import Dashboard from './pages/Dashboard.jsx'
 import Problems from './pages/Problems.jsx'
 import ProblemDetail from './pages/ProblemDetail.jsx'
@@ -8,43 +15,84 @@ import SettingsPage from './pages/Settings.jsx'
 
 const navItems = [
   { to: '/', label: '复习看板', icon: LayoutDashboard, end: true },
-  { to: '/problems', label: '题库', icon: BookOpen },
-  { to: '/ai', label: 'AI 问答', icon: Sparkles },
+  { to: '/problems', label: '题库', icon: BookOpen, end: true },
+  { to: '/ai', label: 'AI 问答', icon: Settings },
   { to: '/settings', label: '设置', icon: Settings },
 ]
 
+const COLLAPSED_KEY = 'sidebar.collapsed'
+
 export default function App() {
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(COLLAPSED_KEY) === '1'
+  )
+
+  const toggleCollapsed = () => {
+    setCollapsed((v) => {
+      localStorage.setItem(COLLAPSED_KEY, v ? '0' : '1')
+      return !v
+    })
+  }
+
   return (
     <div className="flex h-full">
       {/* 侧边栏 */}
-      <aside className="flex w-56 shrink-0 flex-col border-r border-neutral-200 bg-white">
-        <div className="flex items-center gap-2 px-5 py-5">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-400 to-red-600" />
-          <div>
-            <div className="text-sm font-semibold text-neutral-900">LeetCode 笔记</div>
-            <div className="text-[11px] text-neutral-400">本地学习助手</div>
-          </div>
+      <aside
+        className={`flex shrink-0 flex-col border-r border-neutral-200 bg-white transition-[width] duration-300 ${
+          collapsed ? 'w-16' : 'w-56'
+        }`}
+      >
+        <div
+          className={`flex items-center py-5 ${
+            collapsed ? 'flex-col justify-center gap-2 px-0' : 'gap-2 px-5'
+          }`}
+        >
+          <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary-400 to-primary-700" />
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-neutral-900">LeetCode 笔记</div>
+              <div className="text-[11px] text-neutral-400">本地学习助手</div>
+            </div>
+          )}
         </div>
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className={`flex-1 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
           {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
+              title={collapsed ? label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                `flex items-center rounded-lg text-sm transition-colors ${
+                  collapsed ? 'justify-center px-0 py-2' : 'gap-3 px-3 py-2'
+                } ${
                   isActive
                     ? 'bg-primary-50 font-medium text-primary-600'
                     : 'text-neutral-600 hover:bg-neutral-100'
                 }`
               }
             >
-              <Icon size={18} />
-              {label}
+              <Icon size={18} className="shrink-0" />
+              {!collapsed && <span className="truncate">{label}</span>}
             </NavLink>
           ))}
         </nav>
-        <div className="px-5 py-4 text-[11px] text-neutral-400">v0.1.0 · Tauri2 + Go</div>
+        <div className={collapsed ? 'py-4 text-center' : 'px-5 py-4'}>
+          {collapsed ? (
+            <div className="text-[9px] text-neutral-300">v0.1.0</div>
+          ) : (
+            <div className="text-[11px] text-neutral-400">v0.1.0 · Tauri2 + Go</div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          title={collapsed ? '展开菜单' : '收起菜单'}
+          aria-label={collapsed ? '展开菜单' : '收起菜单'}
+          className="group relative -mt-1 mb-3 flex h-7 w-full items-center justify-center border-t border-neutral-100 text-neutral-300 transition-colors hover:bg-neutral-50 hover:text-primary-600"
+        >
+          {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+        </button>
       </aside>
 
       {/* 内容区 */}
