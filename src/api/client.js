@@ -9,7 +9,7 @@ export function isTauri() {
   return typeof window !== 'undefined' && !!window.__TAURI_INTERNALS__
 }
 
-async function resolveBase() {
+export async function resolveBase() {
   if (!isTauri()) return ''
   if (serverInfo) return serverInfo.base_url
   if (!pending) {

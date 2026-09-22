@@ -27,3 +27,103 @@ body {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* 抽屉内细滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #16a34a;
+}
+
+/* 核心笔记 Markdown 预览（react-markdown 根节点 class） */
+.notes-md-preview {
+  @apply text-slate-800 text-sm leading-relaxed;
+}
+
+.notes-md-preview > *:first-child {
+  margin-top: 0;
+}
+
+.notes-md-preview p {
+  @apply mb-3 last:mb-0;
+}
+
+.notes-md-preview h1,
+.notes-md-preview h2,
+.notes-md-preview h3 {
+  @apply font-bold text-slate-900 mt-4 mb-2 first:mt-0;
+}
+
+.notes-md-preview h1 {
+  @apply text-base;
+}
+
+.notes-md-preview h2 {
+  @apply text-sm;
+}
+
+.notes-md-preview h3 {
+  @apply text-xs uppercase tracking-wide;
+}
+
+.notes-md-preview ul {
+  @apply list-disc pl-5 mb-3 space-y-1;
+}
+
+.notes-md-preview ol {
+  @apply list-decimal pl-5 mb-3 space-y-1;
+}
+
+.notes-md-preview img {
+  @apply max-w-full h-auto rounded-xl border border-slate-100 shadow-sm my-3;
+}
+
+.notes-md-preview a {
+  @apply text-primary-600 underline underline-offset-2 hover:text-primary-700;
+}
+
+.notes-md-preview code {
+  @apply bg-slate-100 text-slate-800 px-1 py-0.5 rounded text-[0.9em] font-mono;
+}
+
+.notes-md-preview pre {
+  @apply bg-slate-900 text-emerald-50 p-4 rounded-xl overflow-x-auto text-xs font-mono my-3 border border-slate-800;
+}
+
+.notes-md-preview pre code {
+  @apply bg-transparent p-0 text-inherit;
+}
+
+.notes-md-preview blockquote {
+  @apply border-l-4 border-primary-200 pl-3 italic text-slate-600 my-3;
+}
+
+.notes-md-preview hr {
+  @apply my-4 border-slate-200;
+}
+
+.notes-md-preview strong {
+  @apply font-bold text-slate-900;
+}
+
+/* 代码编辑器：高亮层与 textarea 同步滚动，隐藏重复滚动条 */
+.code-editor-highlight-layer {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.code-editor-highlight-layer::-webkit-scrollbar {
+  display: none;
+}
