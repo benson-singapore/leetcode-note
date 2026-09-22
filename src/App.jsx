@@ -10,6 +10,7 @@ import {
 import Dashboard from './pages/Dashboard.jsx'
 import Problems from './pages/Problems.jsx'
 import ProblemDetail from './pages/ProblemDetail.jsx'
+import CalendarStats from './pages/CalendarStats.jsx'
 import AIChat from './pages/AIChat.jsx'
 import SettingsPage from './pages/Settings.jsx'
 
@@ -101,6 +102,7 @@ export default function App() {
           <Route path="/" element={<Outlet />}>
             <Route index element={<Dashboard />} />
             <Route path="problems" element={<Problems />} />
+            <Route path="calendar" element={<CalendarStats />} />
             <Route path="problems/:id" element={<ProblemDetail />} />
             <Route path="ai" element={<AIChat />} />
             <Route path="settings" element={<SettingsPage />} />

@@ -25,6 +25,7 @@ export const getReviews = (userProblemId) => get(`/api/v1/reviews/user-problem/$
 export const createReview = (data) => post('/api/v1/reviews', data)
 export const updateReview = (id, data) => put(`/api/v1/reviews/${id}`, data)
 export const deleteReview = (id) => del(`/api/v1/reviews/${id}`)
+export const getUserProblemsOnDate = (date) => get(`/api/v1/user-problems/on-date`, { date })
 export const getHeatmap = () => get('/api/v1/reviews/activity-heatmap')
 export const getActivityDay = (params) => get('/api/v1/reviews/activity-day', params)
 
