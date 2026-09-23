@@ -71,7 +71,7 @@ func ListSessions() ([]AISession, error) {
 	}
 	defer rows.Close()
 
-	var sessions []AISession
+	sessions := []AISession{}
 	for rows.Next() {
 		s, err := scanSession(rows.Scan)
 		if err != nil {

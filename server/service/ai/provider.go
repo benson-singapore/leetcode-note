@@ -2,6 +2,28 @@ package ai
 
 import "context"
 
+// OpenAIProviderConfig OpenAI 兼容服务配置
+type OpenAIProviderConfig struct {
+	APIKey  string `json:"apiKey"`
+	BaseURL string `json:"baseURL"`
+	Model   string `json:"model"`
+}
+
+// AnthropicProviderConfig Anthropic Claude 配置
+type AnthropicProviderConfig struct {
+	APIKey  string `json:"apiKey"`
+	BaseURL string `json:"baseURL"`
+	Model   string `json:"model"`
+}
+
+// CLIProviderConfig 本地 CLI 配置
+type CLIProviderConfig struct {
+	Command string   `json:"command"`  // 如 codex / claude
+	Args    []string `json:"args"`     // 命令参数模板（generic 模式）
+	CliKind string   `json:"cliKind"`  // 预置适配类型：codex / claude / generic
+	Model   string   `json:"model"`
+}
+
 // ChatMessage 统一的消息结构（Provider 无关）
 type ChatMessage struct {
 	Role    string `json:"role"` // user / assistant / system
