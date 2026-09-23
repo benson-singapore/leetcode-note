@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
@@ -191,8 +192,10 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end overflow-hidden antialiased">
+  // 挂载到 body，避免被页面内 animate-in 等祖先的 stacking context 困住，
+  // 同时 z-[60] 盖过顶部 macOS 拖拽条，消除遮罩顶部的留白
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex justify-end overflow-hidden antialiased">
       <div
         className="absolute inset-0 bg-slate-900/40 animate-in fade-in duration-300"
         onClick={onClose}
@@ -363,7 +366,8 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
