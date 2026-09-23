@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LeetCode Note Drawer
 // @namespace    http://tampermonkey.net/
-// @version      2026-03-22.2
+// @version      2026-09-23.1
 // @description  Add a note drawer to LeetCode problem pages
 // @author       You
 // @match        https://leetcode.cn/problems/**
@@ -105,6 +105,33 @@
                 onDone('', '', 0);
             }
         });
+    }
+
+    /**
+     * 从 LeetCode 页面的 Monaco 编辑器获取当前默认代码
+     * 优先通过 monaco 全局实例取完整代码（不受虚拟滚动丢行影响），
+     * 失败时回退为解析 .view-lines 的可见行文本
+     */
+    function getPageEditorCode() {
+        // 1) Monaco 实例方式
+        try {
+            const models = window.monaco && window.monaco.editor && window.monaco.editor.getModels && window.monaco.editor.getModels();
+            if (models && models.length) {
+                let best = '';
+                for (const m of models) {
+                    const v = (m.getValue && m.getValue()) || '';
+                    if (v.trim() && v.length > best.length) best = v;
+                }
+                if (best) return best;
+            }
+        } catch (e) { /* ignore */ }
+
+        // 2) DOM 视图行回退（nbsp 还原为空格）
+        const viewLines = document.querySelectorAll('.monaco-editor .view-lines .view-line');
+        if (!viewLines.length) return '';
+        return Array.from(viewLines)
+            .map((line) => (line.textContent || '').replace(/\u00a0/g, ' '))
+            .join('\n');
     }
 
     // 创建按钮
@@ -633,7 +660,8 @@
                 const prevText = loadCodeBtn.textContent;
                 loadCodeBtn.textContent = '加载中…';
                 loadCodeBtn.disabled = true;
-                fetchUserSyncedCode(titleSlug, DEFAULT_LANG_SLUG, (code) => {
+
+                const finish = (code, source) => {
                     loadCodeBtn.textContent = prevText;
                     loadCodeBtn.disabled = false;
                     const codeTextarea = iframeDoc.querySelector('#pane-code .tm-code-editor');
@@ -642,8 +670,21 @@
                         if (code) iframeWin.__originalCode = code;
                     }
                     if (!code) {
-                        console.warn('[LeetCode Note] 未获取到已同步代码，请确认后端已配置 LEETCODE_COOKIE 且该题 java 有同步记录');
+                        console.warn('[LeetCode Note] 未获取到代码（后端无已同步记录，页面编辑器也为空）');
+                    } else {
+                        console.log(`[LeetCode Note] 已加载代码（来源: ${source}，长度 ${code.length}）`);
                     }
+                };
+
+                // 1) 优先取本地后端的力扣已同步代码
+                fetchUserSyncedCode(titleSlug, DEFAULT_LANG_SLUG, (code) => {
+                    if (code) {
+                        finish(code, '后端已同步');
+                        return;
+                    }
+                    // 2) 回退：直接读取页面 Monaco 编辑器中的默认代码
+                    const pageCode = getPageEditorCode();
+                    finish(pageCode, '页面Monaco编辑器');
                 });
             };
         }
@@ -817,15 +858,16 @@
                             iframeDoc.defaultView.__originalCode = code;
                             console.log('[LeetCode Note] 代码已填充');
 
-                            // 本地未保存代码时，从后端拉取力扣已同步完整代码
+                            // 本地未保存代码时，先从后端拉取力扣已同步完整代码，仍为空则读取页面编辑器默认代码
                             if (!code) {
                                 fetchUserSyncedCode(titleSlug, DEFAULT_LANG_SLUG, (synced) => {
-                                    if (!synced) return;
+                                    const finalCode = synced || getPageEditorCode();
+                                    if (!finalCode) return;
                                     const ta = iframeDoc.querySelector('#pane-code .tm-code-editor');
                                     if (ta) {
-                                        ta.value = synced;
-                                        iframeDoc.defaultView.__originalCode = synced;
-                                        console.log('[LeetCode Note] 已用力扣已同步代码填充（长度 %d）', synced.length);
+                                        ta.value = finalCode;
+                                        iframeDoc.defaultView.__originalCode = finalCode;
+                                        console.log('[LeetCode Note] 已自动填充默认代码（长度 %d，来源: %s）', finalCode.length, synced ? '后端已同步' : '页面Monaco编辑器');
                                     }
                                 });
                             }
@@ -850,14 +892,16 @@
                         }
 
                         // 设置完成状态（progressStatus）；默认复习中
-                        const progressVal = problemData.progressStatus || 'Reviewing';
-                        const progressBtn = iframeDoc.querySelector(`#progress-status-list [data-val="${progressVal}"]`);
-                        if (progressBtn) {
-                            progressBtn.classList.add('active');
-                            console.log('[LeetCode Note] 完成状态已设置:', progressVal);
-                        } else {
-                            const defaultBtn = iframeDoc.querySelector('#progress-status-list [data-val="Reviewing"]');
-                            if (defaultBtn) defaultBtn.classList.add('active');
+                        // 注意：先清掉 setupIframeUI 里设置的默认高亮，避免双高亮
+                        const progressList = iframeDoc.getElementById('progress-status-list');
+                        if (progressList) {
+                            progressList.querySelectorAll('.tm-mastery-btn.active').forEach((b) => b.classList.remove('active'));
+                            const progressVal = problemData.progressStatus || 'Reviewing';
+                            const progressBtn = progressList.querySelector(`[data-val="${progressVal}"]`) || progressList.querySelector('[data-val="Reviewing"]');
+                            if (progressBtn) {
+                                progressBtn.classList.add('active');
+                                console.log('[LeetCode Note] 完成状态已设置:', progressVal);
+                            }
                         }
 
                     } else {
