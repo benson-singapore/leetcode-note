@@ -39,15 +39,21 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="relative flex h-full">
+      {/* macOS 标题栏拖拽区（Overlay 模式，覆盖在内容顶部） */}
+      <div
+        data-tauri-drag-region
+        className="absolute inset-x-0 top-0 z-50 h-7"
+      />
       {/* 侧边栏 */}
       <aside
         className={`flex shrink-0 flex-col border-r border-neutral-200 bg-white transition-[width] duration-300 ${
-          collapsed ? 'w-16' : 'w-56'
+          collapsed ? 'w-[84px]' : 'w-56'
         }`}
       >
+        {/* macOS 红绿灯悬浮在左上角，顶部留出安全区 */}
         <div
-          className={`flex items-center py-5 ${
+          className={`flex items-center pb-5 pt-12 ${
             collapsed ? 'flex-col justify-center gap-2 px-0' : 'gap-2 px-5'
           }`}
         >
