@@ -37,7 +37,12 @@ export async function request(path, { method = 'GET', body, headers, ...rest } =
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`[${res.status}] ${text || res.statusText}`)
+    let message = text || res.statusText
+    try {
+      const parsed = JSON.parse(text)
+      if (parsed?.message) message = parsed.message
+    } catch {}
+    throw new Error(message)
   }
   return res.json()
 }
