@@ -11,6 +11,7 @@ import {
   MonitorPlay,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
 } from 'lucide-react'
 import {
@@ -338,14 +339,14 @@ export default function Problems({ reviewMode = false }) {
         {/* 我的基础数据 */}
         <section className="space-y-3">
           <h3 className="text-sm font-semibold text-slate-600">我的基础数据</h3>
-          <div className="grid grid-cols-2 gap-3 rounded-2xl bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 p-3">
-            <div className="rounded-xl bg-white px-3 py-3 text-center shadow-sm">
-              <p className="text-xs font-medium text-slate-500">总计录入</p>
-              <p className="mt-1 text-2xl font-bold leading-none tabular-nums text-emerald-600">{stats.total}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative flex min-h-[88px] flex-col justify-between overflow-hidden rounded-2xl bg-primary-600 p-4 text-white shadow-card">
+              <p className="relative z-[1] text-xs font-medium tracking-wide text-white/80">总计录入</p>
+              <p className="relative z-[1] text-3xl font-semibold tracking-tight tabular-nums">{stats.total}</p>
             </div>
-            <div className="rounded-xl bg-white px-3 py-3 text-center shadow-sm">
-              <p className="text-xs font-medium text-slate-500">已精通</p>
-              <p className="mt-1 text-2xl font-bold leading-none tabular-nums text-slate-800">{stats.mastered}</p>
+            <div className="relative flex min-h-[88px] flex-col justify-between overflow-hidden rounded-2xl bg-white p-4 text-slate-800 shadow-card ring-1 ring-slate-100">
+              <p className="relative z-[1] text-xs font-medium tracking-wide text-slate-500">已精通</p>
+              <p className="relative z-[1] text-3xl font-semibold tracking-tight tabular-nums text-emerald-600">{stats.mastered}</p>
             </div>
           </div>
         </section>
@@ -402,7 +403,6 @@ export default function Problems({ reviewMode = false }) {
         {/* 排序方式 */}
         <section className="space-y-3">
           <CollapsibleSection
-            defaultOpen
             label={
               <span className="flex min-w-0 items-center gap-2">
                 <span className="shrink-0 text-sm font-semibold text-slate-700">排序方式</span>
@@ -482,7 +482,7 @@ export default function Problems({ reviewMode = false }) {
             <h2 className="flex min-w-0 items-center gap-3 text-base font-semibold tracking-tight text-slate-900">
               {randomMode ? (
                 <span className="rounded-lg bg-violet-600 p-1.5 text-white shadow-card">
-                  <RefreshCw size={16} />
+                  <RotateCcw size={16} />
                 </span>
               ) : (
                 <span className="rounded-lg bg-primary-600 p-1.5 text-white shadow-card">
