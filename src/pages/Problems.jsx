@@ -21,6 +21,7 @@ import {
   getTagSummary,
   fetchLeetCodeProblem,
   deleteProblem,
+  getSettings,
 } from '../api/leetcode'
 import { DetailDrawer } from '../components/DetailDrawer'
 
@@ -54,7 +55,12 @@ const SORT_OPTIONS = [
   { id: 'difficulty', label: '难度' },
 ]
 
-const PAGE_SIZE = 16
+const DEFAULT_PAGE_SIZE = 16
+
+function clampPageSize(n) {
+  if (!Number.isFinite(n) || n <= 0) return 0
+  return Math.min(100, Math.max(8, Math.round(n)))
+}
 
 function statusMeta(p) {
   const key = p.progressStatus || p.status
@@ -106,6 +112,8 @@ export default function Problems({ reviewMode = false }) {
   const [refreshing, setRefreshing] = useState(false)
 
   // 过滤状态
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [showPassRate, setShowPassRate] = useState(true)
   const [randomMode, setRandomMode] = useState(reviewMode)
   const [searchQuery, setSearchQuery] = useState('')
   const [difficulty, setDifficulty] = useState('All')
@@ -138,7 +146,7 @@ export default function Problems({ reviewMode = false }) {
       try {
         const params = {
           page: nextPage,
-          page_size: PAGE_SIZE,
+          page_size: pageSize,
           difficulty,
           sort_mode: sortMode,
           sort_direction: sortDirection,
@@ -161,8 +169,26 @@ export default function Problems({ reviewMode = false }) {
         setLoading(false)
       }
     },
-    [randomMode, searchQuery, difficulty, sortMode, sortDirection, selectedTags]
+    [randomMode, searchQuery, difficulty, sortMode, sortDirection, selectedTags, pageSize]
   )
+
+  // 读取设置中的分页大小 / 通过率显示开关
+  useEffect(() => {
+    getSettings()
+      .then((res) => {
+        const s = res?.data || res || {}
+        const n = clampPageSize(Number(s.page_size))
+        if (n && n !== DEFAULT_PAGE_SIZE) setPageSize(n)
+        setShowPassRate(s.show_pass_rate !== 'false')
+      })
+      .catch(() => {})
+  }, [])
+
+  // 分页大小变化时回到第 1 页重新加载
+  useEffect(() => {
+    load(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageSize])
 
   // 筛选条件变化回到第 1 页
   useEffect(() => {
@@ -284,8 +310,8 @@ export default function Problems({ reviewMode = false }) {
   const sortLabel = SORT_OPTIONS.find((o) => o.id === sortMode)?.label || '题号'
   const difficultyLabel = difficulty === 'All' ? '全部' : DIFFICULTIES[difficulty]?.label || difficulty
 
-  const startIndex = (page - 1) * PAGE_SIZE
-  const endIndex = Math.min(startIndex + PAGE_SIZE, total)
+  const startIndex = (page - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, total)
   const showPagination = !randomMode && totalPages > 1
 
   const pageNumbers = useMemo(() => {
@@ -496,7 +522,7 @@ export default function Problems({ reviewMode = false }) {
             <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-8 py-3.5 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-400">
               <div className="col-span-1">#</div>
               <div className={randomMode ? 'col-span-3' : 'col-span-4'}>题名</div>
-              <div className="col-span-1 text-center">通过率</div>
+              {showPassRate && <div className="col-span-1 text-center">通过率</div>}
               <div className="col-span-1 text-center">难度</div>
               <div className="col-span-2 text-center">完成状态</div>
               {randomMode && <div className="col-span-1 text-center">复习次数</div>}
@@ -550,9 +576,11 @@ export default function Problems({ reviewMode = false }) {
                           {p.translatedTitle || p.title}
                         </span>
                       </div>
-                      <div className="col-span-1 text-center font-mono text-[11px] text-slate-400">
-                        {p.passRate}
-                      </div>
+                      {showPassRate && (
+                        <div className="col-span-1 text-center font-mono text-[11px] text-slate-400">
+                          {p.passRate}
+                        </div>
+                      )}
                       <div className="col-span-1 flex justify-center">
                         <span
                           className={`rounded border px-2 py-0.5 text-[10px] font-medium tracking-tighter ${
