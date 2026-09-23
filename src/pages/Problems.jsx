@@ -210,7 +210,7 @@ export default function Problems({ reviewMode = false }) {
   useEffect(() => {
     Promise.all([getProblemStats(), getUserProblemStats()])
       .then(([p, u]) => {
-        setStats({ total: u?.data?.total ?? p?.data?.total ?? 0, mastered: u?.data?.mastered ?? 0 })
+        setStats({ total: p?.data?.total ?? u?.data?.total ?? 0, mastered: u?.data?.mastered ?? 0 })
       })
       .catch(() => {})
     getTagSummary()

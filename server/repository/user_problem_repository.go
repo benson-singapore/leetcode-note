@@ -110,12 +110,12 @@ func (r *UserProblemRepository) GetStats() (*models.StatsResponse, error) {
 	stats := &models.StatsResponse{}
 
 	r.db.QueryRow("SELECT COUNT(*) FROM user_problems").Scan(&stats.Total)
-	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE status = ?", "Mastered").Scan(&stats.Mastered)
+	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE COALESCE(progress_status, 'Unpracticed') = ?", "Mastered").Scan(&stats.Mastered)
 	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE status = ?", "New").Scan(&stats.New)
 	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE status = ?", "Struggling").Scan(&stats.Struggling)
-	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE status = ?", "Reviewing").Scan(&stats.Reviewing)
+	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE COALESCE(progress_status, 'Unpracticed') = ?", "Reviewing").Scan(&stats.Reviewing)
 	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE status = ?", "Confused").Scan(&stats.Confused)
-	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE status = ?", "Unpracticed").Scan(&stats.Unpracticed)
+	r.db.QueryRow("SELECT COUNT(*) FROM user_problems WHERE COALESCE(progress_status, 'Unpracticed') = ?", "Unpracticed").Scan(&stats.Unpracticed)
 
 	return stats, nil
 }
