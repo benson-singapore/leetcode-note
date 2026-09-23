@@ -67,6 +67,15 @@ body {
   background: #94a3b8;
 }
 
+/* 隐藏滚动条但保留滚动能力 */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 /* 统一 focus 可见性（键盘导航友好，且与主题色一致） */
 :focus-visible {
   @apply outline-none ring-2 ring-primary-300 ring-offset-1;
