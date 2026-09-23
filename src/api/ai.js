@@ -3,7 +3,20 @@ import { request, get, post, put, del, isTauri } from './client'
 // ============ Provider / 设置 ============
 export const listProviders = () => get('/api/v1/ai/providers')
 export const getAISettings = () => get('/api/v1/ai/settings')
-export const updateAISettings = (data) => put('/api/v1/ai/settings', data)
+
+// ============ AI 助手（多实例，可自定义 API / CLI）============
+export const listAssistants = () => get('/api/v1/ai/assistants')
+export const createAssistant = (data) => post('/api/v1/ai/assistants', data)
+export const updateAssistant = (id, data) => put(`/api/v1/ai/assistants/${id}`, data)
+export const deleteAssistant = (id) => del(`/api/v1/ai/assistants/${id}`)
+export const setDefaultAssistant = (id) => put(`/api/v1/ai/assistants/${id}/default`, {})
+export const toggleAssistant = (id, enabled) => put(`/api/v1/ai/assistants/${id}/enabled`, { enabled })
+export const toggleModel = (assistantId, modelId, enabled) =>
+  put(`/api/v1/ai/assistants/${assistantId}/models/${encodeURIComponent(modelId)}/enabled`, { enabled })
+// 从 CLI 本地配置尽力发现可用模型（codex / claude）
+export const listCLIModels = (kind) => get(`/api/v1/ai/cli/models?kind=${encodeURIComponent(kind)}`)
+// 连通性测速：默认取第一个启用模型发一条最小消息
+export const testAssistant = (id) => post(`/api/v1/ai/assistants/${id}/test`, {})
 
 // ============ 会话 ============
 export const listSessions = () => get('/api/v1/ai/sessions')
