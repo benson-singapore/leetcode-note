@@ -28,8 +28,9 @@ fn get_server_info(state: tauri::State<ServerInfo>) -> ServerInfo {
 
 /// 打开 LeetCode 登录窗口：用户在窗口内正常登录，
 /// 成功跳转回主站后自动抓取 Cookie，通过事件 `leetcode-login-result` 回传给主窗口
+/// region: "cn" 力扣中国 (leetcode.cn)，"com" 国际站 (leetcode.com)，默认 cn
 #[tauri::command]
-fn open_leetcode_login(app: tauri::AppHandle) -> Result<(), String> {
+fn open_leetcode_login(app: tauri::AppHandle, region: Option<String>) -> Result<(), String> {
     // 若已存在登录窗口则直接聚焦复用
     if let Some(win) = app.get_webview_window("leetcode-login") {
         win.show().ok();
@@ -37,7 +38,15 @@ fn open_leetcode_login(app: tauri::AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    let login_url = "https://leetcode.cn/accounts/login/".parse().map_err(|e| format!("无效 URL: {e}"))?;
+    let is_com = matches!(region.as_deref(), Some("com"));
+    let domain: &str = if is_com { "leetcode.com" } else { "leetcode.cn" };
+    let login_url: tauri::Url = if is_com {
+        "https://leetcode.com/accounts/login/"
+    } else {
+        "https://leetcode.cn/accounts/login/"
+    }
+    .parse()
+    .map_err(|e| format!("无效 URL: {e}"))?;
 
     let app_handle = app.clone();
     let window = tauri::WebviewWindowBuilder::new(
@@ -50,7 +59,7 @@ fn open_leetcode_login(app: tauri::AppHandle) -> Result<(), String> {
     .center()
     .on_navigation(move |url| {
         // 登录成功后 LeetCode 会跳转回主站；此时 csrftoken / LEETCODE_SESSION 已写入
-        let is_leetcode_domain = url.domain() == Some("leetcode.cn");
+        let is_leetcode_domain = url.domain() == Some(domain);
         let is_logged_in = is_leetcode_domain
             && url.path() != "/accounts/login/"
             && url.path() != "/accounts/signup/";
