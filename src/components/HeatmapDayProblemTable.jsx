@@ -44,15 +44,15 @@ export function HeatmapDayProblemTable({
 
   if (!problems || problems.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 py-14 text-center text-sm text-slate-400">
+      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 py-14 text-center text-sm text-slate-400">
         {emptyText}
       </div>
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-card">
-      <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-8 py-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card">
+      <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-8 py-3.5 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-400">
         <div className="col-span-1">#</div>
         <div className="col-span-4">题名</div>
         <div className="col-span-1 text-center">通过率</div>
@@ -79,11 +79,11 @@ export function HeatmapDayProblemTable({
               activeProblemId === p.id ? 'bg-primary-50/60 border-primary-600' : 'border-transparent'
             }`}
           >
-            <div className="col-span-1 font-mono text-[11px] font-semibold tabular-nums text-slate-400 group-hover:text-primary-500">
+            <div className="col-span-1 font-mono text-[11px] font-normal tabular-nums text-slate-300 group-hover:text-primary-500">
               {p.lcId}
             </div>
             <div className="col-span-4 flex items-center overflow-hidden pr-4">
-              <span className="truncate text-[13px] font-medium text-slate-700 transition-colors group-hover:text-primary-800">
+              <span className="truncate text-[13px] font-normal text-slate-700 transition-colors group-hover:text-primary-800">
                 {p.translatedTitle || p.title}
               </span>
             </div>
@@ -92,7 +92,7 @@ export function HeatmapDayProblemTable({
             </div>
             <div className="col-span-1 flex justify-center">
               <span
-                className={`rounded-md border px-2 py-0.5 text-[10px] font-medium ${
+                className={`rounded border px-2 py-0.5 text-[10px] font-medium tracking-tighter ${
                   OFFICIAL_DIFFICULTIES[p.difficulty]?.color ||
                   'text-slate-500 bg-slate-50 border-slate-100'
                 }`}
@@ -113,7 +113,7 @@ export function HeatmapDayProblemTable({
             </div>
             <div className="col-span-2 flex items-center justify-end gap-4">
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-widest ${
                   STATUS_MAP[p.status]?.light || 'bg-slate-50 text-slate-600'
                 }`}
               >
@@ -121,7 +121,7 @@ export function HeatmapDayProblemTable({
               </span>
               <ChevronRight
                 size={14}
-                className="text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-primary-500"
+                className="text-slate-200 transition-all group-hover:translate-x-1 group-hover:text-primary-500"
               />
             </div>
           </div>

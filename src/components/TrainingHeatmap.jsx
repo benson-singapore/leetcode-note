@@ -161,7 +161,7 @@ export function TrainingHeatmap({
   const hideTip = useCallback(() => setTip(null), [])
 
   return (
-    <div className="flex w-full flex-col items-center">
+    <div className="flex w-full flex-col">
       <HeatmapTooltip tip={tip} />
       <div className="flex w-full max-w-full justify-center overflow-x-auto pb-1">
         <div className="flex w-max min-w-0 shrink-0 gap-2">
@@ -202,13 +202,13 @@ export function TrainingHeatmap({
                       }}
                       tabIndex={0}
                       role={cell.inRange ? 'button' : undefined}
-                      className={`h-3.5 w-3.5 rounded-[3px] transition-transform outline-none focus:ring-2 focus:ring-emerald-400 ${
+                      className={`h-3.5 w-3.5 rounded-[3px] transition-transform outline-none focus:ring-2 focus:ring-primary-400 ${
                         cell.inRange
-                          ? 'cursor-pointer hover:z-10 hover:ring-2 hover:ring-emerald-300/80'
+                          ? 'cursor-pointer hover:z-10 hover:ring-2 hover:ring-primary-300/80'
                           : ''
                       } ${
                         cell.inRange && cell.date === selectedDate
-                          ? 'z-20 ring-2 ring-emerald-700 ring-offset-1 ring-offset-white'
+                          ? 'z-20 ring-2 ring-primary-700 ring-offset-1 ring-offset-white'
                           : ''
                       } ${cellClass(cell)}`}
                     />
@@ -219,17 +219,20 @@ export function TrainingHeatmap({
           </div>
         </div>
       </div>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-2 text-center text-xs text-slate-400">
-        <span className="font-normal text-slate-500">更少</span>
-        <div className="flex items-center gap-0.5">
-          {LEVEL_CLASS.map((cls, i) => (
-            <div key={i} className={`h-3.5 w-3.5 rounded-[3px] ${cls}`} />
-          ))}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-2 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-normal text-slate-500">更少</span>
+          <div className="flex items-center gap-0.5">
+            {LEVEL_CLASS.map((cls, i) => (
+              <div key={i} className={`h-3.5 w-3.5 rounded-[3px] ${cls}`} />
+            ))}
+          </div>
+          <span className="font-normal text-slate-500">更多</span>
         </div>
-        <span className="font-normal text-slate-500">更多</span>
-        <span className="w-full basis-full font-medium tabular-nums text-slate-500 sm:w-auto sm:basis-auto">
-          最近 {days} 天（{startDate} ~ {endDate}）· 复习累计 <span className="font-semibold text-emerald-700">{total}</span> 条（按 user_problem 逐日计）
-        </span>
+        <p className="font-normal tabular-nums text-slate-400">
+          最近 {days} 天（{startDate} ~ {endDate}）· 复习累计{' '}
+          <span className="font-semibold text-primary-700">{total}</span> 条（按 user_problem 逐日计）
+        </p>
       </div>
     </div>
   )
