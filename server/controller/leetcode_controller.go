@@ -1,11 +1,15 @@
 package controller
 
 import (
+	"leetcode-note-sidecar/config"
 	"leetcode-note-sidecar/models"
 	"leetcode-note-sidecar/service"
 	"leetcode-note-sidecar/utils"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -359,4 +363,129 @@ func (c *LeetCodeController) GetLeetCodeSyncedCode(ctx *gin.Context) {
 		Code:      synced.Code,
 		Timestamp: synced.Timestamp,
 	})
+}
+
+// GetLeetCodeUserProfile 拉取当前登录账号的力扣公开资料（头像、昵称等）
+// @Summary 查询力扣账号资料
+// @Description 使用当前登录用户绑定的 LeetCode Cookie 调用 globalData GraphQL，返回头像 / 用户名
+// @Tags LeetCode
+// @Produce json
+// @Success 200 {object} utils.Response{data=service.LeetCodeUserProfile}
+// @Failure 400 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /leetcode/user-profile [get]
+func (c *LeetCodeController) GetLeetCodeUserProfile(ctx *gin.Context) {
+	profile, err := c.graphql.FetchUserProfile()
+	if err != nil {
+		log.Printf("[Controller] 拉取力扣账号资料失败: %v\n", err)
+		utils.InternalError(ctx, "拉取账号资料失败: "+err.Error())
+		return
+	}
+
+	utils.Success(ctx, profile)
+}
+
+// GetLeetCodeSolvedStats 拉取当前绑定账号的刷题进度统计（按难度分组的已通过 / 失败 / 未做）
+// @Summary 查询刷题进度统计
+// @Description 调用 userProfileUserQuestionProgress GraphQL，返回按难度分组的刷题进度
+// @Tags LeetCode
+// @Produce json
+// @Success 200 {object} utils.Response{data=service.UserQuestionProgress}
+// @Failure 500 {object} utils.Response
+// @Router /leetcode/solved-stats [get]
+func (c *LeetCodeController) GetLeetCodeSolvedStats(ctx *gin.Context) {
+	progress, err := c.graphql.FetchUserQuestionProgress()
+	if err != nil {
+		log.Printf("[Controller] 拉取刷题进度统计失败: %v\n", err)
+		utils.InternalError(ctx, "拉取刷题进度统计失败: "+err.Error())
+		return
+	}
+	utils.Success(ctx, progress)
+}
+
+// GetLeetCodeSolvedList 拉取当前绑定账号的全部已通过题目列表
+// @Summary 查询已刷题目列表
+// @Description 调用 /api/problems/all/ 并过滤 ac 状态，返回全部已通过题目的 slug / 标题 / 难度
+// @Tags LeetCode
+// @Produce json
+// @Success 200 {object} utils.Response{data=service.SolvedListResult}
+// @Failure 500 {object} utils.Response
+// @Router /leetcode/solved-list [get]
+func (c *LeetCodeController) GetLeetCodeSolvedList(ctx *gin.Context) {
+	list, err := c.graphql.FetchSolvedQuestions()
+	if err != nil {
+		log.Printf("[Controller] 拉取已刷题目列表失败: %v\n", err)
+		utils.InternalError(ctx, "拉取已刷题目列表失败: "+err.Error())
+		return
+	}
+	utils.Success(ctx, list)
+}
+
+// ImportSolvedRequest 批量导入已刷题目请求
+type ImportSolvedRequest struct {
+	Slugs []string `json:"slugs" binding:"required"`
+}
+
+// ImportSolvedResult 批量导入结果
+type ImportSolvedResult struct {
+	Imported      int    `json:"imported"`      // 本次新增到题库的数量
+	Skipped       int    `json:"skipped"`       // 题库中已存在的数量
+	Failed        int    `json:"failed"`        // 抓取失败的数量
+	ImportedTotal string `json:"importedTotal"` // 累计从 LeetCode 导入的题数（settings）
+}
+
+// ImportSolved 批量导入已刷题目到本地题库
+// @Summary 批量导入已刷题目
+// @Description 按 slug 批量同步 LeetCode 题目到本地题库，并累计 leetcode_imported_count 设置
+// @Tags LeetCode
+// @Accept json
+// @Produce json
+// @Param request body ImportSolvedRequest true "题目 slug 列表"
+// @Success 200 {object} utils.Response{data=ImportSolvedResult}
+// @Failure 400 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /leetcode/import-solved [post]
+func (c *LeetCodeController) ImportSolved(ctx *gin.Context) {
+	var req ImportSolvedRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(ctx, "请求参数错误: "+err.Error())
+		return
+	}
+
+	result := ImportSolvedResult{}
+	for _, slug := range req.Slugs {
+		if slug == "" {
+			continue
+		}
+		// 题库中已存在则跳过
+		if existing, err := c.problem.GetProblemByTitleSlug(slug); err == nil && existing != nil {
+			result.Skipped++
+			continue
+		}
+
+		// 从 LeetCode 抓取并同步到题库
+		if _, err := c.sync.SyncAndFetch(slug); err != nil {
+			log.Printf("[Controller] 导入已刷题目失败: %s, %v\n", slug, err)
+			result.Failed++
+			continue
+		}
+		result.Imported++
+	}
+
+	// 累计从 LeetCode 导入的题数（用于前端展示来源统计）
+	if result.Imported > 0 {
+		current, _ := config.GetSetting("leetcode_imported_count")
+		config.SetSetting("leetcode_imported_count", fmt.Sprintf("%d", parseIntOrZero(current)+result.Imported))
+	}
+
+	importedTotal, _ := config.GetSetting("leetcode_imported_count")
+	result.ImportedTotal = fmt.Sprintf("%d", parseIntOrZero(importedTotal))
+
+	utils.Success(ctx, result)
+}
+
+// parseIntOrZero 安全解析整数，失败返回 0
+func parseIntOrZero(s string) int {
+	n, _ := strconv.Atoi(strings.TrimSpace(s))
+	return n
 }

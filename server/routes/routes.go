@@ -86,6 +86,10 @@ func RegisterRoutes(r *gin.Engine) {
 		{
 			leetcode.GET("/fetch", leetcodeCtrl.FetchProblem)
 			leetcode.GET("/user-synced-code", leetcodeCtrl.GetLeetCodeSyncedCode)
+			leetcode.GET("/user-profile", leetcodeCtrl.GetLeetCodeUserProfile)
+			leetcode.GET("/solved-stats", leetcodeCtrl.GetLeetCodeSolvedStats)
+			leetcode.GET("/solved-list", leetcodeCtrl.GetLeetCodeSolvedList)
+			leetcode.POST("/import-solved", leetcodeCtrl.ImportSolved)
 
 			// 油猴脚本数据端点（本地免鉴权）
 			userProblem := leetcode.Group("/user-problem")

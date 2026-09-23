@@ -305,3 +305,138 @@ func (g *LeetCodeGraphQL) FetchSyncedUserCode(questionSlug, langSlug string) (*S
 	}
 	return out, nil
 }
+
+// LeetCodeUserProfile 力扣当前登录账号的公开资料（头像 / 用户名等）
+type LeetCodeUserProfile struct {
+	SignedIn bool   `json:"signedIn"`
+	Username string `json:"username"`
+	RealName string `json:"realName"`
+	Avatar   string `json:"avatar"`
+	UserSlug string `json:"userSlug"`
+}
+
+type userProfileGraphQLData struct {
+	UserStatus *struct {
+		IsSignedIn bool   `json:"isSignedIn"`
+		Username   string `json:"username"`
+		RealName   string `json:"realName"`
+		Avatar     string `json:"avatar"`
+		UserSlug   string `json:"userSlug"`
+	} `json:"userStatus"`
+}
+
+const userProfileQuery = `
+query globalData {
+  userStatus {
+    isSignedIn
+    username
+    realName
+    avatar
+    userSlug
+  }
+}
+`
+
+// FetchUserProfile 使用已配置的 Cookie 拉取当前登录账号的资料（头像、昵称等）
+func (g *LeetCodeGraphQL) FetchUserProfile() (*LeetCodeUserProfile, error) {
+	cookie, err := config.GetSetting("leetcode_cookie")
+	if err != nil {
+		return nil, err
+	}
+
+	if cookie == "" {
+		return nil, fmt.Errorf("未配置 LeetCode Cookie，请先在设置中绑定账号")
+	}
+
+	csrf := config.ExtractLeetCodeCSRF(cookie)
+
+	reqBody := GraphQLRequest{
+		Query:         userProfileQuery,
+		Variables:     map[string]interface{}{},
+		OperationName: "globalData",
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", "https://leetcode.cn/graphql/", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+
+	// 请求头需与真实浏览器一致（与 leetcode_curl.go 保持相同指纹），
+	// 否则阿里云 WAF / Cloudflare 会返回 JS 挑战页导致解析失败
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", cookie)
+	if csrf != "" {
+		req.Header.Set("x-csrftoken", csrf)
+	}
+	req.Header.Set("operation-name", "globalData")
+	req.Header.Set("Origin", "https://leetcode.cn")
+	req.Header.Set("Referer", "https://leetcode.cn/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+
+	resp, err := g.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateForLog(body))
+	}
+
+	// 被 WAF/风控拦截时会返回 HTML 挑战页而非 JSON
+	if !bytes.HasPrefix(bytes.TrimSpace(body), []byte("{")) {
+		return nil, fmt.Errorf("LeetCode 返回了非 JSON 响应（可能被风控拦截），请重新绑定账号后重试")
+	}
+
+	var graphqlResp GraphQLResponse
+	if err := json.Unmarshal(body, &graphqlResp); err != nil {
+		return nil, fmt.Errorf("解析响应失败: %w, body=%s", err, truncateForLog(body))
+	}
+
+	if len(graphqlResp.Errors) > 0 {
+		return nil, fmt.Errorf("GraphQL 错误: %v", graphqlResp.Errors)
+	}
+
+	var data userProfileGraphQLData
+	if err := json.Unmarshal(graphqlResp.Data, &data); err != nil {
+		return nil, err
+	}
+
+	profile := &LeetCodeUserProfile{}
+	if data.UserStatus != nil {
+		profile.SignedIn = data.UserStatus.IsSignedIn
+		profile.Username = data.UserStatus.Username
+		profile.RealName = data.UserStatus.RealName
+		profile.Avatar = data.UserStatus.Avatar
+		profile.UserSlug = data.UserStatus.UserSlug
+	}
+
+	if !profile.SignedIn {
+		return nil, fmt.Errorf("Cookie 已失效，请重新绑定账号")
+	}
+
+	return profile, nil
+}
+
+// truncateForLog 截断响应体，避免把 WAF 挑战页的完整 HTML 写进错误信息
+func truncateForLog(body []byte) string {
+	const max = 200
+	s := string(body)
+	if len(s) > max {
+		s = s[:max] + "..."
+	}
+	return s
+}
