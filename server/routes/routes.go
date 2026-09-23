@@ -112,7 +112,18 @@ func RegisterRoutes(r *gin.Engine) {
 		{
 			ai.GET("/providers", aiCtrl.ListProviders)
 			ai.GET("/settings", aiCtrl.GetAISettings)
-			ai.PUT("/settings", aiCtrl.UpdateAISettings)
+
+			// 助手 CRUD 与状态管理
+			ai.GET("/assistants", aiCtrl.ListAssistants)
+			ai.GET("/cli/models", aiCtrl.ListCLIModels)
+			ai.POST("/assistants", aiCtrl.CreateAssistant)
+			ai.PUT("/assistants/:id", aiCtrl.UpdateAssistant)
+			ai.DELETE("/assistants/:id", aiCtrl.DeleteAssistant)
+			ai.PUT("/assistants/:id/default", aiCtrl.SetDefaultAssistant)
+			ai.PUT("/assistants/:id/enabled", aiCtrl.ToggleAssistant)
+			ai.PUT("/assistants/:id/models/:modelId/enabled", aiCtrl.ToggleModel)
+			ai.POST("/assistants/:id/test", aiCtrl.TestAssistant)
+
 			ai.POST("/chat", aiCtrl.Chat)            // SSE 流式对话
 			ai.POST("/chat/cancel", aiCtrl.CancelChat) // 取消当前生成
 			ai.GET("/sessions", aiCtrl.ListSessions)
