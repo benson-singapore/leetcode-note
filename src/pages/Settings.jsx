@@ -23,6 +23,7 @@ import {
   Brain,
   Star,
   Gauge,
+  X,
 } from 'lucide-react'
 import { getSettings, updateSettings, fetchLeetCodeProblem, getLeetCodeUserProfile, getLeetCodeSolvedStats, getLeetCodeSolvedList, importLeetCodeSolved } from '../api/leetcode'
 import {
