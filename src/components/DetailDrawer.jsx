@@ -208,66 +208,60 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
         ) : (
           <>
             {/* 头部 */}
-            <div className="h-20 px-8 border-b border-slate-50 flex items-center justify-between shrink-0 bg-white sticky top-0 z-10">
-              <div className="flex items-center gap-6 min-w-0">
+            <div className="px-8 py-5 border-b border-slate-100 bg-gradient-to-br from-primary-50/60 via-white to-white flex items-center justify-between gap-4 shrink-0 sticky top-0 z-10">
+              <div className="flex items-center gap-4 min-w-0">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 font-mono text-sm font-bold text-white shadow-lg shadow-primary-200">
+                  #{activeProblem.lcId}
+                </span>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-3 mb-0.5">
-                    <span className="text-[10px] font-semibold bg-primary-600 text-white px-2 py-0.5 rounded-md font-mono tracking-tighter shrink-0">
-                      #{activeProblem.lcId}
-                    </span>
-                    <h2 className="font-semibold text-lg text-slate-800 tracking-tight uppercase leading-none truncate">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="font-bold text-lg text-slate-800 tracking-tight leading-none truncate">
                       {activeProblem.translatedTitle || activeProblem.title}
                     </h2>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-widest border shadow-sm shrink-0 ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider border shadow-sm shrink-0 ${
                         STATUS_MAP[activeProblem.status]?.light ||
                         'bg-slate-50 text-slate-600'
                       }`}
                     >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
                       {STATUS_MAP[activeProblem.status]?.label ||
                         activeProblem.status ||
                         '未知'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-6 mt-1.5 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-                        通过率:
+                  <div className="flex items-center gap-2 mt-2 min-w-0">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm ${
+                        OFFICIAL_DIFFICULTIES[activeProblem.difficulty]?.color ||
+                        'text-slate-400 bg-slate-50 border-slate-100'
+                      }`}
+                    >
+                      {activeProblem.difficulty || '—'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-100 bg-white px-2 py-0.5 shadow-sm">
+                      <span className="text-[10px] font-bold text-slate-300 tracking-widest">
+                        通过率
                       </span>
                       <span className="text-xs font-semibold text-slate-600 font-mono tracking-tighter">
                         {activeProblem.passRate}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-                        出题频率:
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-100 bg-white px-2 py-0.5 shadow-sm">
+                      <span className="text-[10px] font-bold text-slate-300 tracking-widest">
+                        出题频率
                       </span>
                       <FrequencyBars score={activeProblem.frequency} />
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-                        官方难度:
-                      </span>
-                      <span
-                        className={`text-[10px] font-semibold uppercase ${
-                          (
-                            OFFICIAL_DIFFICULTIES[activeProblem.difficulty]?.color ||
-                            'text-slate-400'
-                          ).split(' ')[0]
-                        }`}
-                      >
-                        {activeProblem.difficulty || '—'}
-                      </span>
-                    </div>
+                    </span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 shrink-0">
                 <a
                   href={`https://leetcode.cn/problems/${activeProblem.titleSlug || activeProblem.title}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 px-4 py-2 bg-primary-50 text-primary-700 text-[11px] font-semibold rounded-full hover:bg-primary-100 transition-all shadow-sm"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 text-white text-[11px] font-semibold rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-lg shadow-primary-200"
                 >
                   VIEW_LEETCODE <ExternalLink size={14} />
                 </a>
@@ -275,13 +269,13 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                   onClick={handleDelete}
                   disabled={deleting}
                   title={confirmingDelete ? '再点一次确认删除' : '删除此题目'}
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-semibold transition-all ${
+                  className={`flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-all active:scale-90 ${
                     confirmingDelete
-                      ? 'bg-rose-50 text-rose-600 hover:bg-rose-100'
-                      : 'text-slate-200 hover:text-rose-500'
+                      ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
+                      : 'border-slate-100 bg-white text-slate-300 hover:border-rose-100 hover:bg-rose-50 hover:text-rose-500'
                   }`}
                 >
-                  {confirmingDelete ? (deleting ? '删除中…' : '确认删除？') : <Trash2 size={18} />}
+                  {confirmingDelete ? (deleting ? '删除中…' : '确认删除？') : <Trash2 size={16} />}
                 </button>
               </div>
             </div>
@@ -289,25 +283,31 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
             <div className="flex-1 overflow-hidden flex min-w-0">
               {/* 左侧工作区 */}
               <div className="flex-1 overflow-hidden flex flex-col bg-[#FAFAFA] min-w-0">
-                <div className="px-10 h-14 bg-white border-b border-slate-50 flex items-center gap-10 shrink-0 overflow-x-auto">
+                <div className="px-10 py-3 bg-white border-b border-slate-100 flex items-center gap-2 shrink-0 overflow-x-auto">
                   {[
-                    { id: 'desc', label: '题目内容', icon: <FileText size={16} /> },
-                    { id: 'notes', label: '核心笔记', icon: <StickyNote size={16} /> },
-                    { id: 'code', label: '代码实现', icon: <Terminal size={16} /> },
-                    { id: 'solutionDemo', label: '解题演示', icon: <MonitorPlay size={16} /> },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setDetailTab(tab.id)}
-                      className={`h-full flex items-center gap-2.5 text-xs font-semibold transition-all border-b-4 px-1 uppercase tracking-widest shrink-0 ${
-                        detailTab === tab.id
-                          ? 'text-primary-600 border-primary-600'
-                          : 'text-slate-400 border-transparent hover:text-slate-600'
-                      }`}
-                    >
-                      {tab.icon} {tab.label}
-                    </button>
-                  ))}
+                    { id: 'desc', label: '题目内容', icon: <FileText size={15} /> },
+                    { id: 'notes', label: '核心笔记', icon: <StickyNote size={15} /> },
+                    { id: 'code', label: '代码实现', icon: <Terminal size={15} /> },
+                    { id: 'solutionDemo', label: '解题演示', icon: <MonitorPlay size={15} /> },
+                  ].map((tab) => {
+                    const active = detailTab === tab.id
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setDetailTab(tab.id)}
+                        className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+                          active
+                            ? 'bg-primary-600 text-white shadow-lg shadow-primary-100'
+                            : 'text-slate-400 bg-transparent hover:bg-slate-50 hover:text-slate-600'
+                        }`}
+                      >
+                        <span className={active ? 'text-white/90' : 'text-slate-300 transition-colors group-hover:text-slate-400'}>
+                          {tab.icon}
+                        </span>
+                        {tab.label}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 <div className="flex-1 overflow-hidden flex flex-col min-w-0">
