@@ -109,8 +109,8 @@ export default function Problems({ reviewMode = false }) {
   const [randomMode, setRandomMode] = useState(reviewMode)
   const [searchQuery, setSearchQuery] = useState('')
   const [difficulty, setDifficulty] = useState('All')
-  const [sortMode, setSortMode] = useState('createdAt')
-  const [sortDirection, setSortDirection] = useState('desc')
+  const [sortMode, setSortMode] = useState('lcId')
+  const [sortDirection, setSortDirection] = useState('asc')
   const [selectedTags, setSelectedTags] = useState([])
 
   // 侧边栏数据
@@ -281,7 +281,7 @@ export default function Problems({ reviewMode = false }) {
     }
   }
 
-  const sortLabel = SORT_OPTIONS.find((o) => o.id === sortMode)?.label || '创建时间'
+  const sortLabel = SORT_OPTIONS.find((o) => o.id === sortMode)?.label || '题号'
   const difficultyLabel = difficulty === 'All' ? '全部' : DIFFICULTIES[difficulty]?.label || difficulty
 
   const startIndex = (page - 1) * PAGE_SIZE
