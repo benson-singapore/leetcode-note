@@ -57,7 +57,7 @@ export default function App() {
             collapsed ? 'flex-col justify-center gap-2 px-0' : 'gap-2 px-5'
           }`}
         >
-          <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary-400 to-primary-700" />
+          <img src="/logo.png" alt="LeetCode 笔记" className="h-8 w-8 shrink-0 rounded-lg" />
           {!collapsed && (
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-slate-900">LeetCode 笔记</div>
