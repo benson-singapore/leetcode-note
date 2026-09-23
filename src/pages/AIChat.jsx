@@ -4,7 +4,7 @@ import rehypeHighlight from 'rehype-highlight'
 import { Plus, Send, Trash2, MessageSquare, Square } from 'lucide-react'
 import {
   listSessions, deleteSession, cancelChat,
-  chatStream, listProviders, getAISettings,
+  chatStream, listProviders,
 } from '../api/ai'
 
 export default function AIChat() {
@@ -14,23 +14,38 @@ export default function AIChat() {
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [providers, setProviders] = useState([])
-  const [aiSettings, setAiSettings] = useState(null)
-  const [provider, setProvider] = useState('openai')
+  const [provider, setProvider] = useState('')
+  const [model, setModel] = useState('')
   const abortRef = useRef(null)
   const bottomRef = useRef(null)
 
   const loadSessions = () =>
-    listSessions().then((res) => setSessions(res.data || res || [])).catch(() => {})
+    listSessions().then((res) => {
+      const d = res?.data ?? res
+      setSessions(Array.isArray(d) ? d : [])
+    }).catch(() => {})
 
   useEffect(() => {
     loadSessions()
-    listProviders().then((res) => setProviders(res.data?.list || [])).catch(() => {})
-    getAISettings().then((res) => {
-      const s = res.data || res
-      setAiSettings(s)
-      setProvider(s.defaultProvider || 'openai')
+    listProviders().then((res) => {
+      const d = res.data || res
+      const list = d?.list || []
+      setProviders(list)
+      const def = list.find((p) => p.name === d?.default) || list[0]
+      if (def) {
+        setProvider(def.name)
+        const defModel = (def.models || []).find((m) => m.default) || (def.models || [])[0]
+        if (defModel?.id) setModel(defModel.id)
+      }
     }).catch(() => {})
   }, [])
+
+  const changeProvider = (name) => {
+    setProvider(name)
+    const p = providers.find((x) => x.name === name)
+    const defModel = (p?.models || []).find((m) => m.default) || (p?.models || [])[0]
+    setModel(defModel?.id || '')
+  }
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -63,7 +78,7 @@ export default function AIChat() {
     try {
       // fetch 返回值用于中断流
       const promise = chatStream(
-        { sessionId: activeId || undefined, message: content, provider },
+        { sessionId: activeId || undefined, message: content, provider, model },
         ({ event, data }) => {
           if (event === 'session') setActiveId(data)
           else if (event === 'delta')
@@ -132,20 +147,33 @@ export default function AIChat() {
 
       {/* 对话区 */}
       <div className="flex flex-1 flex-col">
-        {/* 顶栏：Provider 选择 */}
+        {/* 顶栏：助手与模型选择 */}
         <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-3">
           <span className="text-sm font-medium text-neutral-700">AI 问答</span>
-          <select
-            value={provider}
-            onChange={(e) => setProvider(e.target.value)}
-            className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none"
-          >
-            {providers.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.label}{p.ready ? '' : '（未配置）'}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <select
+              value={provider}
+              onChange={(e) => changeProvider(e.target.value)}
+              className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none"
+            >
+              {providers.length === 0 && <option value="">未配置 AI 助手</option>}
+              {providers.map((p) => (
+                <option key={p.name} value={p.name}>
+                  {p.label}{p.default ? '（默认）' : ''}
+                </option>
+              ))}
+            </select>
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              disabled={!provider}
+              className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none disabled:opacity-50"
+            >
+              {(providers.find((p) => p.name === provider)?.models || []).map((m) => (
+                <option key={m.id} value={m.id}>{m.id}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* 消息列表 */}
