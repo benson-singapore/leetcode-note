@@ -22,11 +22,15 @@ import {
   Eye,
   MonitorPlay,
   Loader2,
+  Sparkles,
+  Undo2,
+  Square,
 } from 'lucide-react'
 import { FrequencyBars } from './FrequencyBars'
 import { CodeEditor } from './CodeEditor'
 import { SolutionDemoTab } from './SolutionDemoTab'
 import { uploadImageFile, uploadImageFromUrl } from '../api/images'
+import { chatStream, cancelChat } from '../api/ai'
 import {
   updateUserProblem,
   createReview,
@@ -47,6 +51,17 @@ const PERSONAL_RATINGS = {
   4: { label: '烧脑', color: 'text-orange-500', icon: '🤯' },
   5: { label: '地狱', color: 'text-rose-600', icon: '💀' },
 }
+
+// AI 优化笔记：剥离 HTML 标签，仅保留纯文本用于拼 prompt
+const stripHtml = (html) => {
+  if (!html) return ''
+  const el = document.createElement('div')
+  el.innerHTML = html
+  return (el.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+const AI_OPTIMIZE_SYSTEM_PROMPT =
+  '你是一位资深算法教练，擅长为 LeetCode 题目撰写清晰、结构化的中文核心笔记。请严格只输出 Markdown 格式的笔记正文，不要输出任何解释、前言或寒暄。'
 
 const STATUS_MAP = {
   Unpracticed: {
@@ -452,6 +467,13 @@ function NotesTab({ activeProblem, updateProblem }) {
   const [imageSourceTab, setImageSourceTab] = useState('file') // 'file' | 'url'
   const fileInputRef = useRef(null)
 
+  // ===== AI 优化笔记 =====
+  const [aiState, setAiState] = useState('idle') // idle | streaming | done | error
+  const [aiError, setAiError] = useState('')
+  const [aiSnapshot, setAiSnapshot] = useState(null) // AI 生成前的笔记快照，用于撤销
+  const [aiStreamText, setAiStreamText] = useState('')
+  const aiAbortRef = useRef(false)
+
   useEffect(() => {
     const next = activeProblem.notes || ''
     setNotes(next)
@@ -460,6 +482,11 @@ function NotesTab({ activeProblem, updateProblem }) {
     setImageModalOpen(false)
     setImageSourceTab('file')
     setNotesMode(next.trim() ? 'preview' : 'edit')
+    // 切换题目时重置 AI 状态与撤销快照
+    setAiState('idle')
+    setAiError('')
+    setAiSnapshot(null)
+    setAiStreamText('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProblem.id])
 
@@ -531,6 +558,9 @@ function NotesTab({ activeProblem, updateProblem }) {
         code: activeProblem.code || '',
       })
       setSaveStatus('已保存')
+      // 保存落库后，清除 AI 撤销快照（不可再撤销）
+      setAiSnapshot(null)
+      setAiState('idle')
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (error) {
       console.error('保存笔记失败:', error)
@@ -539,6 +569,112 @@ function NotesTab({ activeProblem, updateProblem }) {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  // ===== AI 优化笔记 =====
+  const buildAIOptimizePrompt = () => {
+    const title = activeProblem.translatedTitle || activeProblem.title || ''
+    const content = stripHtml(
+      activeProblem.translatedContent || activeProblem.content || '',
+    ).slice(0, 8000)
+    const code = (activeProblem.code || '').trim().slice(0, 6000)
+    const currentNotes = (notes || '').trim().slice(0, 8000)
+
+    let task
+    if (!currentNotes) {
+      task =
+        '当前核心笔记内容为空。请根据题目内容和代码实现，自动总结生成一篇结构清晰的「核心笔记」，建议包含：解题思路、关键步骤、代码讲解、复杂度分析、易错点等。'
+    } else if (!code) {
+      task =
+        '当前没有代码实现。请先为这道题设计一个合适、可读性强的代码实现方案（附完整代码块）并进行讲解，再结合现有笔记内容，生成一篇优化后的「核心笔记」。'
+    } else {
+      task =
+        '题目内容、代码实现和核心笔记三者俱全。请着重基于当前核心笔记的内容做优化：保留笔记中已有的个人思路与重点，修正错误、补全逻辑、让表达与结构更清晰，并结合代码实现适当补充讲解。'
+    }
+
+    return [
+      `# 题目：${title}`,
+      `## 题目内容\n${content || '（暂无）'}`,
+      `## 代码实现\n${code ? '```' + '\n' + code + '\n```' : '（暂无）'}`,
+      `## 当前核心笔记\n${currentNotes || '（暂无）'}`,
+      `## 任务\n${task}`,
+      '## 输出要求\n直接输出 Markdown 格式的笔记正文（可使用标题、列表、代码块等），不要输出任何额外解释、前后缀或寒暄。',
+    ].join('\n\n')
+  }
+
+  const handleStopAI = () => {
+    if (!aiAbortRef.current) return
+    aiAbortRef.current = true
+    cancelChat().catch(() => {})
+  }
+
+  const handleAIOptimize = async () => {
+    if (aiState === 'streaming') return
+    const content = stripHtml(
+      activeProblem.translatedContent || activeProblem.content || '',
+    )
+    const currentNotes = (notes || '').trim()
+    if (!content && !currentNotes) {
+      setAiError('暂无题目内容，无法进行 AI 优化')
+      return
+    }
+
+    setAiSnapshot(notes || '') // 记录生成前快照，供撤销
+    setAiState('streaming')
+    setAiError('')
+    setAiStreamText('')
+    setNotesMode('preview')
+    aiAbortRef.current = false
+
+    let buffer = ''
+    let errText = ''
+    try {
+      await chatStream(
+        {
+          message: buildAIOptimizePrompt(),
+          systemPrompt: AI_OPTIMIZE_SYSTEM_PROMPT,
+          // 不指定 provider/model，走设置中的「默认模型链」（含 failover）
+        },
+        ({ event, data }) => {
+          if (event === 'delta') {
+            buffer += data
+            setAiStreamText(buffer)
+          } else if (event === 'error') {
+            errText = String(data)
+            setAiError(errText)
+          }
+        },
+      )
+
+      if (buffer.trim()) {
+        setNotes(buffer)
+        updateProblem({ ...activeProblem, notes: buffer })
+        setAiState(errText ? 'error' : 'done')
+      } else {
+        setAiSnapshot(null)
+        setAiState('error')
+        if (!errText) setAiError('AI 未返回内容')
+      }
+    } catch (e) {
+      console.error('AI 优化失败:', e)
+      setAiError(e.message || 'AI 优化失败')
+      setAiState('error')
+      if (!buffer.trim()) {
+        setAiSnapshot(null)
+      }
+    }
+  }
+
+  const handleUndoAI = () => {
+    if (aiSnapshot === null) return
+    const prev = aiSnapshot
+    setNotes(prev)
+    updateProblem({ ...activeProblem, notes: prev })
+    setAiSnapshot(null)
+    setAiStreamText('')
+    setAiError('')
+    setAiState('idle')
+    setNotesMode(prev.trim() ? 'preview' : 'edit')
   }
 
   return (
@@ -602,6 +738,50 @@ function NotesTab({ activeProblem, updateProblem }) {
               插入图片
             </button>
           )}
+          {/* AI 优化 / 停止 */}
+          {aiState === 'streaming' ? (
+            <button
+              type="button"
+              onClick={handleStopAI}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-300 shrink-0"
+              title="停止生成"
+            >
+              <Square size={10} fill="currentColor" />
+              停止
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={imageUploading}
+              onClick={handleAIOptimize}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary-600 text-white text-[10px] font-bold hover:from-violet-700 hover:to-primary-700 transition-all disabled:opacity-50 shrink-0 shadow-sm"
+              title="让 AI 根据题目内容、代码实现和当前笔记优化核心笔记"
+            >
+              <Sparkles size={12} />
+              AI 优化
+            </button>
+          )}
+          {/* 撤销：AI 生成后可回滚，保存落库后消失 */}
+          {aiSnapshot !== null && (
+            <button
+              type="button"
+              disabled={aiState === 'streaming'}
+              onClick={handleUndoAI}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-[10px] font-bold text-amber-600 hover:bg-amber-100 disabled:opacity-50 shrink-0"
+              title="撤销 AI 生成的结果，恢复到优化前的笔记"
+            >
+              <Undo2 size={12} />
+              撤销
+            </button>
+          )}
+          {aiError && (
+            <span
+              className="text-[10px] font-bold flex items-center gap-1 text-rose-600 max-w-[180px] truncate"
+              title={aiError}
+            >
+              ⚠ {aiError}
+            </span>
+          )}
           {saveStatus && (
             <span
               className={`text-[10px] font-bold flex items-center gap-1 ${
@@ -614,7 +794,7 @@ function NotesTab({ activeProblem, updateProblem }) {
           )}
           <button
             onClick={handleSaveNotes}
-            disabled={isSaving}
+            disabled={isSaving || aiState === 'streaming'}
             className="px-3 py-1.5 bg-primary-600 text-white text-[10px] font-bold rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? '保存中...' : '保存'}
@@ -629,10 +809,18 @@ function NotesTab({ activeProblem, updateProblem }) {
           onChange={handleNotesChange}
         />
       ) : (
-        <div className="flex-1 w-full min-h-[12rem] p-6 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-y-auto custom-scrollbar text-sm">
+        <div className="flex-1 w-full min-h-[12rem] p-6 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-y-auto custom-scrollbar text-sm relative">
           <div className="notes-md-preview">
-            <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{notes}</ReactMarkdown>
+            <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+              {aiState === 'streaming' ? aiStreamText || ' ' : notes}
+            </ReactMarkdown>
           </div>
+          {aiState === 'streaming' && (
+            <span className="sticky bottom-0 right-0 flex justify-end px-1 py-1 text-[10px] font-bold text-violet-600 items-center gap-1 bg-gradient-to-t from-white via-white/80 to-transparent">
+              <Loader2 size={11} className="animate-spin" />
+              AI 生成中…
+            </span>
+          )}
         </div>
       )}
 
