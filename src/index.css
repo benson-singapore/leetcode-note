@@ -158,6 +158,23 @@ select:focus-visible {
   @apply font-semibold text-slate-900;
 }
 
+.notes-md-preview table {
+  @apply w-full my-3 border-collapse text-xs;
+}
+
+.notes-md-preview th,
+.notes-md-preview td {
+  @apply border border-slate-200 px-2.5 py-1.5 text-left align-top;
+}
+
+.notes-md-preview th {
+  @apply bg-slate-50 font-semibold text-slate-800;
+}
+
+.notes-md-preview table code {
+  @apply text-[0.9em];
+}
+
 /* 代码编辑器：高亮层与 textarea 同步滚动，隐藏重复滚动条 */
 .code-editor-highlight-layer {
   scrollbar-width: none;

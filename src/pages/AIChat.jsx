@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { Plus, Send, Trash2, MessageSquare, Square } from 'lucide-react'
 import {
@@ -189,7 +190,7 @@ export default function AIChat() {
                 m.role === 'user' ? 'bg-primary-500 text-white' : 'bg-white text-neutral-700 border border-neutral-200'
               }`}>
                 {m.role === 'assistant' ? (
-                  <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{m.content || '…'}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{m.content || '…'}</ReactMarkdown>
                 ) : (
                   <span className="whitespace-pre-wrap">{m.content}</span>
                 )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
 import {
@@ -811,7 +812,7 @@ function NotesTab({ activeProblem, updateProblem }) {
       ) : (
         <div className="flex-1 w-full min-h-[12rem] p-6 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-y-auto custom-scrollbar text-sm relative">
           <div className="notes-md-preview">
-            <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
               {aiState === 'streaming' ? aiStreamText || ' ' : notes}
             </ReactMarkdown>
           </div>
