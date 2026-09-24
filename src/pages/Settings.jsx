@@ -24,6 +24,8 @@ import {
   Star,
   Gauge,
   X,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 import { getSettings, updateSettings, fetchLeetCodeProblem, getLeetCodeUserProfile, getLeetCodeSolvedStats, getLeetCodeSolvedList, importLeetCodeSolved } from '../api/leetcode'
 import {
@@ -36,6 +38,8 @@ import {
   toggleModel,
   listCLIModels,
   testAssistant,
+  getDefaultChain,
+  updateDefaultChain,
 } from '../api/ai'
 import { get, post, isTauri, resolveBase } from '../api/client'
 import pluginScriptRaw from '../../tamper-monkey/leetcode-note-drawer.user.js?raw'
@@ -102,6 +106,234 @@ function Field({ label, hint, children }) {
 }
 
 // ============ AI 助手相关组件 ============
+
+// DefaultChainSection 系统默认模型链配置（failover）
+// 链上第一个为系统默认模型；请求失败自动切换下一个，失败模型进入冷却期后恢复
+function DefaultChainSection({ assistants }) {
+  const [chain, setChain] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [cooldownMinutes, setCooldownMinutes] = useState(10)
+
+  useEffect(() => {
+    getDefaultChain()
+      .then((res) => {
+        const d = res?.data ?? res
+        setChain(Array.isArray(d?.chain) ? d.chain : [])
+        if (d?.cooldownMinutes) setCooldownMinutes(d.cooldownMinutes)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  // 可用供应商：已启用的助手
+  const enabledAssistants = assistants.filter((a) => a.enabled)
+
+  const modelsOf = (assistantId) => {
+    const a = enabledAssistants.find((x) => x.id === assistantId)
+    return (a?.models || []).filter((m) => m.id)
+  }
+
+  const firstEnabledAssistant = enabledAssistants[0]
+
+  const addEntry = () => {
+    if (!firstEnabledAssistant) return
+    const model = modelsOf(firstEnabledAssistant.id)[0]?.id || ''
+    setChain((c) => [...c, { assistantId: firstEnabledAssistant.id, model }])
+    setDirty(true)
+  }
+
+  const updateEntry = (idx, patch) => {
+    setChain((c) =>
+      c.map((e, i) => {
+        if (i !== idx) return e
+        const next = { ...e, ...patch }
+        // 切换供应商时，模型重置为该供应商下第一个
+        if (patch.assistantId && patch.assistantId !== e.assistantId) {
+          next.model = modelsOf(patch.assistantId)[0]?.id || ''
+        }
+        return next
+      }),
+    )
+    setDirty(true)
+  }
+
+  const removeEntry = (idx) => {
+    setChain((c) => c.filter((_, i) => i !== idx))
+    setDirty(true)
+  }
+
+  const moveEntry = (idx, dir) => {
+    const target = idx + dir
+    setChain((c) => {
+      if (target < 0 || target >= c.length) return c
+      const next = [...c]
+      const tmp = next[idx]
+      next[idx] = next[target]
+      next[target] = tmp
+      return next
+    })
+    setDirty(true)
+  }
+
+  const saveChain = async () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      const res = await updateDefaultChain(chain)
+      const d = res?.data ?? res
+      setChain(Array.isArray(d?.chain) ? d.chain : [])
+      setDirty(false)
+      flash('默认模型已保存', 'ok')
+    } catch (e) {
+      flash(`保存默认模型失败：${e.message}`, 'err')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-card">
+      <div className="mb-5 flex items-start gap-4">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500 text-white">
+          <Star size={20} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold text-slate-900">默认模型配置</h3>
+            <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
+              系统默认
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            从已配置的 AI 助手中选择模型组成默认模型链。第 1 个为系统默认模型；请求失败或异常时自动切换到下一个，失败的模型将进入 {cooldownMinutes} 分钟冷却期，期间被跳过，冷却结束后重新从第 1 个开始尝试。
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-6 text-sm text-slate-400">
+          <Loader2 size={16} className="mr-2 animate-spin" />
+          加载默认模型…
+        </div>
+      ) : enabledAssistants.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center text-xs text-slate-400">
+          请先在下方添加并启用 AI 助手，再配置默认模型
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {chain.length === 0 && (
+              <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4 text-center text-xs text-slate-400">
+                还没有配置默认模型，点击「添加模型」开始
+              </p>
+            )}
+            {chain.map((entry, idx) => {
+              const models = modelsOf(entry.assistantId)
+              const hasAssistant = models.length > 0 || enabledAssistants.some((x) => x.id === entry.assistantId)
+              return (
+                <div
+                  key={`${entry.assistantId}|${entry.model}|${idx}`}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/60 p-2.5"
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-200 font-mono text-[11px] font-bold text-slate-600">
+                    {idx + 1}
+                  </span>
+                  <select
+                    value={entry.assistantId}
+                    onChange={(e) => updateEntry(idx, { assistantId: e.target.value })}
+                    className="h-9 max-w-[45%] flex-1 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus:border-primary-400"
+                  >
+                    {enabledAssistants.some((x) => x.id === entry.assistantId) ? null : (
+                      <option value={entry.assistantId}>（助手已停用或删除）</option>
+                    )}
+                    {enabledAssistants.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={entry.model}
+                    onChange={(e) => updateEntry(idx, { model: e.target.value })}
+                    disabled={!hasAssistant}
+                    className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 font-mono text-xs text-slate-700 outline-none focus:border-primary-400 disabled:opacity-50"
+                  >
+                    {!entry.model && <option value="">选择模型</option>}
+                    {(models.find((m) => m.id === entry.model)
+                      ? models
+                      : [...models, { id: entry.model }]
+                    )
+                      .filter((m) => m.id)
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name || m.id}
+                        </option>
+                      ))}
+                  </select>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      type="button"
+                      title="上移"
+                      disabled={idx === 0}
+                      onClick={() => moveEntry(idx, -1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                    >
+                      <ChevronUp size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      title="下移"
+                      disabled={idx === chain.length - 1}
+                      onClick={() => moveEntry(idx, 1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                    >
+                      <ChevronDown size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      title="移除"
+                      onClick={() => removeEntry(idx)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                  {idx === 0 && (
+                    <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                      默认
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={addEntry}
+              className="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:border-primary-300 hover:text-primary-600"
+            >
+              <Plus size={14} />
+              添加模型
+            </button>
+            <button
+              type="button"
+              onClick={saveChain}
+              disabled={saving || !dirty}
+              className="flex items-center gap-1.5 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              {dirty ? '保存默认模型' : '已保存'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 const TYPE_META = {
   openai: { label: 'API · OpenAI 兼容', icon: Sparkles, iconBg: 'bg-violet-500', hint: 'DeepSeek / Ollama / SiliconFlow 等 OpenAI 协议服务' },
@@ -1376,6 +1608,9 @@ export default function Settings() {
                   </span>
                 }
               />
+
+              {/* 默认模型配置（failover 链） */}
+              <DefaultChainSection assistants={assistants} />
 
               <div className="flex justify-end">
                 <button

@@ -18,6 +18,12 @@ export const listCLIModels = (kind) => get(`/api/v1/ai/cli/models?kind=${encodeU
 // 连通性测速：默认取第一个启用模型发一条最小消息
 export const testAssistant = (id) => post(`/api/v1/ai/assistants/${id}/test`, {})
 
+// ============ 系统默认模型链（failover） ============
+// 链上第一个为系统默认模型；请求失败自动切换下一个，失败模型进入冷却期
+export const getDefaultChain = () => get('/api/v1/ai/default-chain')
+export const updateDefaultChain = (chain) =>
+  put('/api/v1/ai/default-chain', { chain })
+
 // ============ 会话 ============
 export const listSessions = () => get('/api/v1/ai/sessions')
 export const createSession = (data) => post('/api/v1/ai/sessions', data)
