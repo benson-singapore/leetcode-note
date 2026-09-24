@@ -439,28 +439,10 @@ func (c *AIController) Chat(ctx *gin.Context) {
 		return
 	}
 
-	// 加载设置并解析助手
+	// 加载设置
 	settings, err := ai.LoadSettings()
 	if err != nil {
 		utils.InternalError(ctx, "加载 AI 设置失败: "+err.Error())
-		return
-	}
-	assistantID := body.AssistantID
-	if assistantID == "" {
-		assistantID = body.Provider
-	}
-	assistant, err := ai.FindAssistant(settings, assistantID)
-	if err != nil {
-		utils.BadRequest(ctx, err.Error())
-		return
-	}
-	if !assistant.Enabled {
-		utils.BadRequest(ctx, "该 AI 助手已被停用，请在设置中启用")
-		return
-	}
-	provider, err := ai.GetProvider(assistant)
-	if err != nil {
-		utils.BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -517,24 +499,121 @@ func (c *AIController) Chat(ctx *gin.Context) {
 	// 先告知 sessionID（新建会话场景）
 	writeSSE("session", sessionID)
 
-	// 模型：未指定时使用助手下第一个启用的模型
-	modelName := body.Model
-	if modelName == "" {
-		modelName = firstEnabledModel(assistant)
+	// 候选模型链：请求未指定助手与模型时，走系统默认模型链（failover）
+	// 否则保持旧行为：用户显式选择的助手 + 模型，单次尝试
+	useChain := body.AssistantID == "" && body.Provider == "" && body.Model == ""
+	type chainCandidate struct {
+		assistant *ai.AssistantConfig
+		provider  ai.Provider
+		model     string
 	}
-	fullText, chatErr := provider.ChatStream(cancelCtx, *chatReq, ai.ChatOptions{
-		APIKey:    assistant.APIKey,
-		BaseURL:   assistant.BaseURL,
-		Model:     modelName,
-		MaxTokens: 4096,
-	}, func(delta string) {
-		writeSSE("delta", delta)
-	})
+	var candidates []chainCandidate
 
-	// 取消场景
-	if chatErr != nil && cancelCtx.Err() != nil {
-		writeSSE("done", "[已取消]")
-		return
+	if useChain {
+		for i := range settings.DefaultChain {
+			entry := settings.DefaultChain[i]
+			// 冷却期内跳过（失败后 10 分钟不再尝试）
+			if ai.ChainCooldownRemaining(entry.AssistantID, entry.Model) > 0 {
+				continue
+			}
+			a, err := ai.FindAssistant(settings, entry.AssistantID)
+			if err != nil || !a.Enabled {
+				continue
+			}
+			if !assistantHasModel(a, entry.Model) {
+				continue
+			}
+			p, err := ai.GetProvider(a)
+			if err != nil {
+				continue
+			}
+			candidates = append(candidates, chainCandidate{assistant: a, provider: p, model: entry.Model})
+		}
+		// 链为空时回退到默认助手的首选模型；
+		// 链非空但全部处于冷却期时不回退，直接提示等待冷却结束
+		if len(candidates) == 0 {
+			if len(settings.DefaultChain) > 0 {
+				writeSSE("error", fmt.Sprintf("默认模型链上的模型均在冷却期内（约 %.0f 分钟后重试），请稍后再试", ai.ModelCooldown.Minutes()))
+				return
+			}
+			if fallback, err := ai.FindAssistant(settings, settings.DefaultAssistant); err == nil && fallback.Enabled {
+				if m := firstEnabledModel(fallback); m != "" {
+					if p, err := ai.GetProvider(fallback); err == nil {
+						candidates = append(candidates, chainCandidate{assistant: fallback, provider: p, model: m})
+					}
+				}
+			}
+		}
+		if len(candidates) == 0 {
+			writeSSE("error", "默认模型链为空，请先在设置中配置默认模型")
+			return
+		}
+	} else {
+		assistantID := body.AssistantID
+		if assistantID == "" {
+			assistantID = body.Provider
+		}
+		assistant, err := ai.FindAssistant(settings, assistantID)
+		if err != nil {
+			utils.BadRequest(ctx, err.Error())
+			return
+		}
+		if !assistant.Enabled {
+			utils.BadRequest(ctx, "该 AI 助手已被停用，请在设置中启用")
+			return
+		}
+		provider, err := ai.GetProvider(assistant)
+		if err != nil {
+			utils.BadRequest(ctx, err.Error())
+			return
+		}
+		modelName := body.Model
+		if modelName == "" {
+			modelName = firstEnabledModel(assistant)
+		}
+		candidates = append(candidates, chainCandidate{assistant: assistant, provider: provider, model: modelName})
+	}
+
+	var fullText string
+	var chatErr error
+	var usedAssistant *ai.AssistantConfig
+	var usedModel string
+
+	for i, cand := range candidates {
+		usedAssistant = cand.assistant
+		usedModel = cand.model
+		writeSSE("model", usedAssistant.ID+"|"+usedModel)
+
+		deltasEmitted := false
+		fullText, chatErr = cand.provider.ChatStream(cancelCtx, *chatReq, ai.ChatOptions{
+			APIKey:    cand.assistant.APIKey,
+			BaseURL:   cand.assistant.BaseURL,
+			Model:     cand.model,
+			MaxTokens: 4096,
+		}, func(delta string) {
+			deltasEmitted = true
+			writeSSE("delta", delta)
+		})
+
+		// 取消场景：不进入 failover
+		if chatErr != nil && cancelCtx.Err() != nil {
+			writeSSE("done", "[已取消]")
+			return
+		}
+
+		if chatErr == nil {
+			ai.ClearChainFailure(cand.assistant.ID, cand.model)
+			break
+		}
+
+		// 失败处理：
+		// - 已经输出过增量文本（流中断）无法干净地切换模型，直接报错
+		// - 未输出任何内容：标记失败进入冷却期，切换链上下一个候选
+		ai.MarkChainFailure(cand.assistant.ID, cand.model)
+		if deltasEmitted || i == len(candidates)-1 {
+			break
+		}
+		writeSSE("info", "模型 "+usedModel+" 请求失败，自动切换下一个默认模型…")
 	}
 
 	if chatErr != nil {
@@ -544,10 +623,82 @@ func (c *AIController) Chat(ctx *gin.Context) {
 
 	// 持久化助手回复
 	if fullText != "" {
-		_, _ = ai.AppendMessage(sessionID, "assistant", fullText, assistant.ID, modelName)
-		_ = ai.UpdateSession(sessionID, "", assistant.ID, modelName)
+		_, _ = ai.AppendMessage(sessionID, "assistant", fullText, usedAssistant.ID, usedModel)
+		_ = ai.UpdateSession(sessionID, "", usedAssistant.ID, usedModel)
 	}
 	writeSSE("done", fullText)
+}
+
+// assistantHasModel 判断助手上是否启用了指定模型
+func assistantHasModel(a *ai.AssistantConfig, model string) bool {
+	for _, m := range a.Models {
+		if m.ID == model && m.Enabled {
+			return true
+		}
+	}
+	return false
+}
+
+// GetDefaultChain GET /ai/default-chain 返回系统默认模型链
+func (c *AIController) GetDefaultChain(ctx *gin.Context) {
+	settings, err := ai.LoadSettings()
+	if err != nil {
+		utils.InternalError(ctx, "加载 AI 设置失败: "+err.Error())
+		return
+	}
+	utils.Success(ctx, gin.H{
+		"chain":           settings.DefaultChain,
+		"cooldownMinutes": int(ai.ModelCooldown.Minutes()),
+	})
+}
+
+// UpdateDefaultChainRequest PUT /ai/default-chain 请求体
+type UpdateDefaultChainRequest struct {
+	Chain []ai.DefaultChainEntry `json:"chain"`
+}
+
+// PUT /ai/default-chain 保存系统默认模型链
+func (c *AIController) UpdateDefaultChain(ctx *gin.Context) {
+	var req UpdateDefaultChainRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(ctx, "请求参数错误: "+err.Error())
+		return
+	}
+
+	settings, err := ai.LoadSettings()
+	if err != nil {
+		utils.InternalError(ctx, "加载 AI 设置失败: "+err.Error())
+		return
+	}
+
+	// 校验并清洗：助手存在且启用、模型存在且启用、去重
+	cleaned := []ai.DefaultChainEntry{}
+	seen := map[string]bool{}
+	for _, e := range req.Chain {
+		a, err := ai.FindAssistant(settings, strings.TrimSpace(e.AssistantID))
+		if err != nil || !a.Enabled {
+			continue
+		}
+		model := strings.TrimSpace(e.Model)
+		if !assistantHasModel(a, model) {
+			continue
+		}
+		key := a.ID + "|" + model
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		cleaned = append(cleaned, ai.DefaultChainEntry{AssistantID: a.ID, Model: model})
+	}
+
+	settings.DefaultChain = cleaned
+	if err := ai.SaveSettings(settings); err != nil {
+		utils.InternalError(ctx, "保存 AI 设置失败: "+err.Error())
+		return
+	}
+	// 链变更后清空失败缓存，重新从链首尝试
+	ai.ClearAllChainFailures()
+	utils.Success(ctx, gin.H{"saved": true, "chain": cleaned})
 }
 
 // POST /ai/chat/cancel 取消当前生成

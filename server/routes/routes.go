@@ -116,6 +116,8 @@ func RegisterRoutes(r *gin.Engine) {
 			// 助手 CRUD 与状态管理
 			ai.GET("/assistants", aiCtrl.ListAssistants)
 			ai.GET("/cli/models", aiCtrl.ListCLIModels)
+			ai.GET("/default-chain", aiCtrl.GetDefaultChain)
+			ai.PUT("/default-chain", aiCtrl.UpdateDefaultChain)
 			ai.POST("/assistants", aiCtrl.CreateAssistant)
 			ai.PUT("/assistants/:id", aiCtrl.UpdateAssistant)
 			ai.DELETE("/assistants/:id", aiCtrl.DeleteAssistant)

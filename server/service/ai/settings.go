@@ -11,8 +11,9 @@ import (
 // Settings AI 全局设置（存储在 settings 表，key = "ai_settings"）
 // 支持多个 AI 助手，每个助手可配置多个模型
 type Settings struct {
-	DefaultAssistant string            `json:"defaultAssistant"`
-	Assistants       []AssistantConfig `json:"assistants"`
+	DefaultAssistant string              `json:"defaultAssistant"`
+	Assistants       []AssistantConfig   `json:"assistants"`
+	DefaultChain     []DefaultChainEntry `json:"defaultChain,omitempty"` // 系统默认模型链（failover 用）
 }
 
 // AssistantConfig 单个 AI 助手配置
