@@ -65,6 +65,19 @@ CREATE TABLE IF NOT EXISTS reviews (
   FOREIGN KEY (user_problem_id) REFERENCES user_problems(id) ON DELETE CASCADE
 );
 
+-- 解题方案表：一道题的多种解法（默认实现不落库，额外方案存此表）
+CREATE TABLE IF NOT EXISTS solution_schemes (
+  id TEXT PRIMARY KEY,
+  problem_id TEXT NOT NULL,
+  name TEXT DEFAULT '',
+  code TEXT,
+  html_demo TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
+);
+
 -- 应用设置表：本地应用无需登录，KV 存储全局设置（如 LeetCode Cookie、AI 配置等）
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
@@ -106,3 +119,4 @@ CREATE INDEX IF NOT EXISTS idx_problem_tags_tag ON problem_tags(tag);
 CREATE INDEX IF NOT EXISTS idx_reviews_user_problem_id ON reviews(user_problem_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_review_date ON reviews(review_date);
 CREATE INDEX IF NOT EXISTS idx_ai_messages_session ON ai_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_solution_schemes_problem_id ON solution_schemes(problem_id);

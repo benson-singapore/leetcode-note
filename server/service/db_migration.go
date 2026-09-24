@@ -102,7 +102,34 @@ func MigrateDatabase() error {
 		log.Printf("[Migration] 索引 idx_user_problems_review_count 已添加或已存在\n")
 	}
 
+	if err := createSolutionSchemesTable(db); err != nil {
+		log.Printf("[Migration] 创建 solution_schemes 表失败: %v\n", err)
+	}
+
 	log.Println("[Migration] 数据库迁移完成")
+	return nil
+}
+
+func createSolutionSchemesTable(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS solution_schemes (
+			id TEXT PRIMARY KEY,
+			problem_id TEXT NOT NULL,
+			name TEXT DEFAULT '',
+			code TEXT,
+			html_demo TEXT,
+			sort_order INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
+		);
+	`)
+	if err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_solution_schemes_problem_id ON solution_schemes(problem_id)`); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -69,6 +69,25 @@ type Review struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+// SolutionScheme 解题方案表：一道题的多种解法（默认实现不落库，额外方案存此表）
+type SolutionScheme struct {
+	ID        string    `json:"id"`
+	ProblemID string    `json:"problem_id"`
+	Name      string    `json:"name"`
+	Code      string    `json:"code"`
+	HtmlDemo  string    `json:"html_demo"`
+	SortOrder int       `json:"sort_order"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SaveSolutionSchemeRequest 创建/更新解题方案请求
+type SaveSolutionSchemeRequest struct {
+	Name *string `json:"name,omitempty"`
+	Code *string `json:"code,omitempty"`
+	Html *string `json:"html,omitempty"` // 传 nil 表示不修改对应字段
+}
+
 // Pagination 分页对象
 type Pagination struct {
 	Total      int64       `json:"total"`

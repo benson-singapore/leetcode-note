@@ -21,7 +21,7 @@ import {
   ImagePlus,
   PenLine,
   Eye,
-  MonitorPlay,
+  Layers,
   Loader2,
   Sparkles,
   Undo2,
@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { FrequencyBars } from './FrequencyBars'
 import { CodeEditor } from './CodeEditor'
-import { SolutionDemoTab } from './SolutionDemoTab'
+import { SolutionSchemesTab } from './SolutionSchemesTab'
 import { uploadImageFile, uploadImageFromUrl } from '../api/images'
 import { chatStream, cancelChat } from '../api/ai'
 import {
@@ -307,7 +307,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                     { id: 'desc', label: '题目内容', icon: <FileText size={15} /> },
                     { id: 'notes', label: '核心笔记', icon: <StickyNote size={15} /> },
                     { id: 'code', label: '代码实现', icon: <Terminal size={15} /> },
-                    { id: 'solutionDemo', label: '解题演示', icon: <MonitorPlay size={15} /> },
+                    { id: 'solutionSchemes', label: '解题方案', icon: <Layers size={15} /> },
                   ].map((tab) => {
                     const active = detailTab === tab.id
                     return (
@@ -345,9 +345,9 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                       <CodeEditor activeProblem={activeProblem} updateProblem={updateProblem} />
                     </div>
                   )}
-                  {detailTab === 'solutionDemo' && (
+                  {detailTab === 'solutionSchemes' && (
                     <div className="flex-1 overflow-hidden p-6 custom-scrollbar scroll-smooth min-w-0">
-                      <SolutionDemoTab
+                      <SolutionSchemesTab
                         activeProblem={activeProblem}
                         updateProblem={updateProblem}
                       />

@@ -15,6 +15,13 @@ export const importLeetCodeSolved = (slugs) => post('/api/v1/leetcode/import-sol
 export const getSolutionDemo = (id) => get(`/api/v1/problems/${id}/solution-demo`)
 export const putSolutionDemo = (id, html) =>
   put(`/api/v1/problems/${id}/solution-demo`, { html })
+export const getSolutionSchemes = (id) => get(`/api/v1/problems/${id}/solution-schemes`)
+export const createSolutionScheme = (id, data) =>
+  post(`/api/v1/problems/${id}/solution-schemes`, data)
+export const updateSolutionScheme = (id, schemeId, data) =>
+  put(`/api/v1/problems/${id}/solution-schemes/${schemeId}`, data)
+export const deleteSolutionScheme = (id, schemeId) =>
+  del(`/api/v1/problems/${id}/solution-schemes/${schemeId}`)
 
 // ============ 用户题目记录 ============
 export const getUserProblems = (params) => get('/api/v1/user-problems', params)
