@@ -189,10 +189,16 @@ func GetManager() *Manager {
 }
 
 // StartTask 注册一个可取消的生成任务
+// 注意：sync.Mutex 不可重入，不能在持有锁时调用 StopTask，否则会死锁
 func (m *Manager) StartTask(id string) (context.Context, context.CancelFunc) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.StopTask(id, false)
+
+	// 覆盖旧任务（若有）
+	if cancel, ok := m.cancels[id]; ok {
+		cancel()
+		delete(m.cancels, id)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	m.currentID = id
