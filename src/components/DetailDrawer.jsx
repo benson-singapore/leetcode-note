@@ -30,12 +30,16 @@ import {
 import { FrequencyBars } from './FrequencyBars'
 import { CodeEditor } from './CodeEditor'
 import { SolutionSchemesTab } from './SolutionSchemesTab'
+import { EmbeddedBrowser } from './EmbeddedBrowser'
 import { uploadImageFile, uploadImageFromUrl } from '../api/images'
 import { chatStream, cancelChat } from '../api/ai'
+import { isTauri } from '../api/client'
+import { invoke } from '@tauri-apps/api/core'
 import {
   updateUserProblem,
   createReview,
   getReviews,
+  getSettings,
   deleteProblem,
 } from '../api/leetcode'
 
@@ -63,6 +67,24 @@ const stripHtml = (html) => {
 
 const AI_OPTIMIZE_SYSTEM_PROMPT =
   '你是一位资深算法教练，擅长为 LeetCode 题目撰写清晰、结构化的中文核心笔记。请严格只输出 Markdown 格式的笔记正文，不要输出任何解释、前言或寒暄。'
+
+// 题目页打开方式（设置 → 复习偏好 → 题目页打开方式）：'embedded' | 'system'
+// 带短 TTL 缓存，避免连续点击题目时重复请求设置接口
+let openModeCache = { value: null, ts: 0 }
+const getBrowserOpenMode = async () => {
+  const now = Date.now()
+  if (openModeCache.value && now - openModeCache.ts < 5000) {
+    return openModeCache.value
+  }
+  try {
+    const res = await getSettings()
+    const mode = (res?.data || res || {}).leetcode_open_mode || 'embedded'
+    openModeCache = { value: mode, ts: now }
+    return mode
+  } catch {
+    return openModeCache.value || 'embedded'
+  }
+}
 
 const STATUS_MAP = {
   Unpracticed: {
@@ -114,15 +136,39 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
   const [isLoadingReviews, setIsLoadingReviews] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [embeddedUrl, setEmbeddedUrl] = useState(null) // null = 内嵌浏览器关闭
 
   useEffect(() => {
     setDetailTab('desc')
     setConfirmingDelete(false)
+    setEmbeddedUrl(null) // 切题时关闭内嵌浏览器
     if (activeProblem?.id) {
       loadReviews()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProblem?.id])
+
+  // Drawer 关闭时同步关闭内嵌浏览器窗口
+  const handleClose = () => {
+    setEmbeddedUrl(null)
+    onClose?.()
+  }
+
+  // VIEW_LEETCODE：按「设置 → 复习偏好 → 题目页打开方式」决定打开方式
+  const handleViewLeetcode = async () => {
+    if (!activeProblem?.id) return
+    const url = `https://leetcode.cn/problems/${activeProblem.titleSlug || activeProblem.title}`
+    const mode = await getBrowserOpenMode()
+    if (mode === 'system') {
+      if (isTauri()) {
+        invoke('open_in_system_browser', { url }).catch((e) => console.error(e))
+      } else {
+        window.open(url, '_blank', 'noreferrer')
+      }
+      return
+    }
+    setEmbeddedUrl(url)
+  }
 
   const loadReviews = async () => {
     if (!activeProblem?.userProblemId) {
@@ -214,7 +260,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
     <div className="fixed inset-0 z-[60] flex justify-end overflow-hidden antialiased">
       <div
         className="absolute inset-0 bg-slate-900/40 animate-in fade-in duration-300"
-        onClick={onClose}
+        onClick={handleClose}
       ></div>
       <div className="relative w-full max-w-[80%] h-full bg-white shadow-2xl flex flex-col">
         {loading || !activeProblem ? (
@@ -276,14 +322,13 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                 </div>
               </div>
               <div className="flex items-center gap-2.5 shrink-0">
-                <a
-                  href={`https://leetcode.cn/problems/${activeProblem.titleSlug || activeProblem.title}`}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={handleViewLeetcode}
                   className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 text-white text-[11px] font-semibold rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-lg shadow-primary-200"
                 >
                   VIEW_LEETCODE <ExternalLink size={14} />
-                </a>
+                </button>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
@@ -380,6 +425,13 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
               </aside>
             </div>
           </>
+        )}
+        {/* 内嵌 LeetCode 浏览器（独立 Tauri 窗口 + 工具栏） */}
+        {embeddedUrl && (
+          <EmbeddedBrowser
+            url={embeddedUrl}
+            onClose={() => setEmbeddedUrl(null)}
+          />
         )}
       </div>
     </div>,

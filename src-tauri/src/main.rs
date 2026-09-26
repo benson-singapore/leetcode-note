@@ -155,6 +155,144 @@ fn close_leetcode_login(app: tauri::AppHandle) {
     }
 }
 
+// ===== 内嵌 LeetCode 浏览器 =====
+
+const EMBED_BROWSER_WINDOW: &str = "leetcode-embed";
+
+/// 哨兵 URL scheme：注入的工具栏按钮通过导航到该 scheme 触发 Rust 端
+/// on_navigation 拦截，从而用系统浏览器打开页面（无需 IPC / 远程域授权）。
+const OPEN_SENTINEL_SCHEME: &str = "lcn-open";
+
+/// 注入到内嵌页面的悬浮工具栏（documentStart 用户脚本，每次导航都会重新注入）。
+/// 在页面右上角挂一个「默认浏览器打开」按钮；点击时导航到哨兵 scheme，
+/// 由 Rust 端拦截该导航并调用系统默认浏览器。
+const EMBED_TOOLBAR_SCRIPT: &str = r#"(function () {
+  if (window.__LCN_TOOLBAR_INJECTED__) return;
+  window.__LCN_TOOLBAR_INJECTED__ = true;
+
+  var SCHEME = 'lcn-open';
+
+  function createToolbar() {
+    if (document.getElementById('lcn-embed-toolbar') || !document.body) return;
+    var bar = document.createElement('div');
+    bar.id = 'lcn-embed-toolbar';
+    bar.style.cssText = 'position:fixed;top:64px;right:14px;z-index:2147483647;'
+      + 'display:flex;align-items:center;gap:6px;'
+      + 'font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;';
+
+    var btn = document.createElement('button');
+    btn.textContent = '默认浏览器打开 ↗';
+    btn.title = '使用系统默认浏览器打开当前页面';
+    btn.style.cssText = 'height:30px;padding:0 14px;border:none;border-radius:15px;'
+      + 'background:#16a34a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;'
+      + 'box-shadow:0 4px 12px rgba(22,163,74,.35);white-space:nowrap;opacity:.85;'
+      + 'transition:opacity .15s,transform .1s;';
+    btn.onmouseenter = function () { btn.style.opacity = '1'; };
+    btn.onmouseleave = function () { btn.style.opacity = '.85'; };
+    btn.onmousedown = function () { btn.style.transform = 'scale(0.95)'; };
+    btn.onmouseup = function () { btn.style.transform = ''; };
+    btn.onclick = function () {
+      window.location.href = SCHEME + '://open?u=' + encodeURIComponent(window.location.href);
+    };
+    bar.appendChild(btn);
+    document.body.appendChild(bar);
+  }
+
+  // documentStart 时 body 尚未就绪，轮询挂载；之后低频自愈（SPA 重建 body 时自动补回）
+  var timer = setInterval(function () {
+    createToolbar();
+  }, 800);
+  setTimeout(function () { clearInterval(timer); }, 15000);
+  document.addEventListener('DOMContentLoaded', createToolbar);
+})();"#;
+
+/// 打开内嵌 LeetCode 浏览器窗口：webview 顶层直接加载目标页面（第一方
+/// 上下文，与登录窗口共用默认 Cookie 存储，因此已登录），并通过注入的
+/// 用户脚本在页面右上角挂「默认浏览器打开」悬浮按钮。
+#[tauri::command]
+fn open_embedded_browser(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    let parsed: tauri::Url = url
+        .parse()
+        .map_err(|e| format!("无效 URL: {e}"))?;
+
+    // 已打开则复用：直接导航到新地址并聚焦
+    if let Some(win) = app.get_webview_window(EMBED_BROWSER_WINDOW) {
+        win.navigate(parsed).map_err(|e| e.to_string())?;
+        win.show().ok();
+        win.set_focus().ok();
+        return Ok(());
+    }
+
+    let app_handle = app.clone();
+
+    let window = tauri::WebviewWindowBuilder::new(
+        &app,
+        EMBED_BROWSER_WINDOW,
+        tauri::WebviewUrl::External(parsed),
+    )
+    .title("LeetCode 内嵌浏览")
+    .inner_size(1000.0, 760.0)
+    .min_inner_size(480.0, 480.0)
+    .initialization_script(EMBED_TOOLBAR_SCRIPT)
+    .on_navigation(move |nav_url| {
+        // 拦截工具栏按钮触发的哨兵导航：取消导航并改用系统浏览器打开
+        if nav_url.scheme() == OPEN_SENTINEL_SCHEME {
+            let target = nav_url
+                .query_pairs()
+                .find(|(k, _)| k == "u")
+                .map(|(_, v)| v.to_string());
+            if let Some(target) = target {
+                let app = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    let opener_app = app.clone();
+                    let _ = app.run_on_main_thread(move || {
+                        use tauri_plugin_opener::OpenerExt;
+                        if let Err(e) = opener_app.opener().open_url(target, None::<&str>) {
+                            eprintln!("[embed] 用系统浏览器打开失败: {e}");
+                        }
+                    });
+                });
+            }
+            return false;
+        }
+        true
+    })
+    .build()
+    .map_err(|e| format!("创建内嵌浏览器窗口失败: {e}"))?;
+
+    // 用户通过标题栏原生关闭时，通知主窗口清理状态
+    {
+        use tauri::Emitter;
+        let app_handle = window.app_handle().clone();
+        window.on_window_event(move |event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                let _ = app_handle.emit_to("main", "leetcode-embed-closed", ());
+            }
+        });
+    }
+
+    let _ = window.set_focus();
+
+    Ok(())
+}
+
+/// 关闭内嵌浏览器窗口
+#[tauri::command]
+fn close_embedded_browser(app: tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window(EMBED_BROWSER_WINDOW) {
+        let _ = win.close();
+    }
+}
+
+/// 用系统默认浏览器打开 URL
+#[tauri::command]
+fn open_in_system_browser(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
 /// 挑选端口：优先固定默认端口（便于浏览器调试），被占用则向后寻找
 fn pick_free_port() -> std::io::Result<u16> {
     for offset in 0..20 {
@@ -242,7 +380,10 @@ fn main() {
             get_server_info,
             open_leetcode_login,
             capture_login_cookie,
-            close_leetcode_login
+            close_leetcode_login,
+            open_embedded_browser,
+            close_embedded_browser,
+            open_in_system_browser
         ])
         .setup(move |app| {
             // 系统托盘

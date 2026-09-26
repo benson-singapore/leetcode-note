@@ -1677,6 +1677,7 @@ export default function Settings() {
                         default_language: settings.default_language || 'Python 3',
                         daily_review_target: settings.daily_review_target || '3',
                         heatmap_peak: settings.heatmap_peak || '4',
+                        leetcode_open_mode: settings.leetcode_open_mode || 'embedded',
                       },
                       '复习偏好已保存'
                     )}
@@ -1708,6 +1709,16 @@ export default function Settings() {
                     onChange={(e) => setKV('daily_review_target', e.target.value)}
                     className={inputCls}
                   />
+                </Field>
+                <Field label="题目页打开方式" hint="VIEW_LEETCODE 按钮打开 LeetCode 题目页使用的浏览器">
+                  <select
+                    value={settings.leetcode_open_mode || 'embedded'}
+                    onChange={(e) => setKV('leetcode_open_mode', e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="embedded">内置浏览器（应用内窗口，共享登录状态）</option>
+                    <option value="system">系统默认浏览器</option>
+                  </select>
                 </Field>
               </div>
             </Card>
