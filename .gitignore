@@ -21,3 +21,5 @@ Thumbs.db
 # Go sidecar 本地开发数据
 server/data/
 .playwright-cli
+
+.claude/settings.local.json
