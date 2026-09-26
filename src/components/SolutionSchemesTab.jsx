@@ -14,6 +14,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { chatStream, cancelChat } from '../api/ai'
+import { fetchDefaultLangSlug, resolveLangSlug } from '../utils/codeLang'
 import {
   getSolutionDemo,
   putSolutionDemo,
@@ -315,7 +316,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
       activeProblem.translatedContent || activeProblem.content || '',
     ).slice(0, 8000)
     const langSlug =
-      activeProblem.codeSnippets?.[0]?.langSlug || activeProblem.codeSnippets?.[0]?.lang || ''
+      resolvedLangSlug || activeProblem.codeSnippets?.[0]?.langSlug || activeProblem.codeSnippets?.[0]?.lang || ''
 
     setAiState('streaming')
     setAiError('')
@@ -385,20 +386,35 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
     }
   }
 
+  // 代码语言：跟随「设置 → 默认目标语言」自动切换（代码面板标签 / 高亮 / AI 演示提示共用）
+  const [defaultLangSlug, setDefaultLangSlug] = useState('')
+  useEffect(() => {
+    let alive = true
+    fetchDefaultLangSlug().then((slug) => {
+      if (alive && slug) setDefaultLangSlug(slug)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+  const resolvedLangSlug =
+    resolveLangSlug(activeProblem?.codeSnippets, defaultLangSlug) ||
+    activeProblem?.codeSnippets?.[0]?.langSlug ||
+    activeProblem?.codeSnippets?.[0]?.lang ||
+    'java'
+
   // 默认实现代码高亮（只读）
   const highlightedDefaultCode = useMemo(() => {
     const code = activeProblem?.code || ''
     if (!code) return ''
-    const langSlug =
-      activeProblem.codeSnippets?.[0]?.langSlug || activeProblem.codeSnippets?.[0]?.lang || 'java'
-    const lang = HLJS_LANGS[langSlug]
+    const lang = HLJS_LANGS[resolvedLangSlug]
     try {
       if (lang) return hljs.highlight(code, { language: lang, ignoreIllegals: true }).value
     } catch {
       /* fallthrough */
     }
     return hljs.highlightAuto(code).value
-  }, [activeProblem?.code, activeProblem?.codeSnippets])
+  }, [activeProblem?.code, resolvedLangSlug])
 
   if (!problemId) return null
 
@@ -590,7 +606,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
                 solution.{selected.isDefault ? 'default' : 'scheme'}
               </span>
               <span className="text-primary-500 font-bold opacity-80 uppercase tracking-widest">
-                {(activeProblem.codeSnippets?.[0]?.langSlug || 'code').toUpperCase()}
+                {(resolvedLangSlug || 'code').toUpperCase()}
               </span>
             </div>
             {selected.isDefault ? (

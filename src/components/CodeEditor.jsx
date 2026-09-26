@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css'
 import { updateUserProblem } from '../api/leetcode'
+import { fetchDefaultLangSlug, resolveLangSlug } from '../utils/codeLang'
 
 /** 将「块内」下标映射到反缩进后的新下标（olds / news 为各行字符串，不含 \n） */
 function mapIndexInBlock(idx, olds, news) {
@@ -51,11 +52,24 @@ export function CodeEditor({ activeProblem, updateProblem }) {
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
   const [highlightedCode, setHighlightedCode] = useState('')
+  const [defaultLangSlug, setDefaultLangSlug] = useState('')
   const highlightLayerRef = useRef(null)
   const textareaRef = useRef(null)
   const pendingSelectionRef = useRef(null)
 
+  // 读取「设置 → 默认目标语言」，代码语言标签与高亮自动跟随该设置
+  useEffect(() => {
+    let alive = true
+    fetchDefaultLangSlug().then((slug) => {
+      if (alive && slug) setDefaultLangSlug(slug)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
   const langSlug =
+    resolveLangSlug(activeProblem.codeSnippets, defaultLangSlug) ||
     activeProblem.codeSnippets?.[0]?.langSlug ||
     activeProblem.codeSnippets?.[0]?.lang ||
     'java'
