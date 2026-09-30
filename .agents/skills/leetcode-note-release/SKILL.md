@@ -56,6 +56,7 @@ description: 为 LeetCode Note 编排桌面端版本发布：确认版本、生�
 ## 平台目标
 
 - macOS：`aarch64-apple-darwin` 与 `x86_64-apple-darwin`，输出 DMG。
+- macOS 使用 Tauri ad-hoc identity `-` 对 app 签名，不需要 Apple Developer 账号；这不是 Apple 公证。用户首次打开时若被 Gatekeeper 拦截，可在系统设置的“隐私与安全性”中点“仍要打开”。
 - Windows：`x86_64-pc-windows-msvc`，输出 MSI 和 NSIS EXE。
 - Linux：`x86_64-unknown-linux-gnu`，输出 AppImage、DEB、RPM。
 - 每个 bundle 都包含对应 target triple 的 Go sidecar。Tauri 的构建前置命令会再次执行 `scripts/build-sidecar.sh`；目标由 `TAURI_ENV_TARGET_TRIPLE` 指定，脚本不得退回宿主架构。

@@ -75,7 +75,20 @@ jobs:
       - name: Build desktop bundles
         env:
           TAURI_ENV_TARGET_TRIPLE: ${{ matrix.target }}
+          APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && '-' || '' }}
         run: npx tauri build --target "${{ matrix.target }}"
+
+      - name: Verify macOS ad-hoc signature
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          app="$(find "src-tauri/target/$TARGET/release/bundle/macos" -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign --display --verbose=2 "$app" 2>&1
 
       - name: Stage release assets
         shell: bash
