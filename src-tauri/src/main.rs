@@ -1,3 +1,4 @@
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::time::{Duration, Instant};
 
@@ -159,65 +160,234 @@ fn close_leetcode_login(app: tauri::AppHandle) {
 
 const EMBED_BROWSER_WINDOW: &str = "leetcode-embed";
 
-/// 哨兵 URL scheme：注入的工具栏按钮通过导航到该 scheme 触发 Rust 端
-/// on_navigation 拦截，从而用系统浏览器打开页面（无需 IPC / 远程域授权）。
+/// 哨兵 URL scheme：顶部按钮通过导航到该 scheme 触发 Rust 端 on_navigation，
+/// 将当前题目页交给系统默认浏览器打开。
 const OPEN_SENTINEL_SCHEME: &str = "lcn-open";
 
-/// 注入到内嵌页面的悬浮工具栏（documentStart 用户脚本，每次导航都会重新注入）。
-/// 在页面右上角挂一个「默认浏览器打开」按钮；点击时导航到哨兵 scheme，
-/// 由 Rust 端拦截该导航并调用系统默认浏览器。
-const EMBED_TOOLBAR_SCRIPT: &str = r#"(function () {
-  if (window.__LCN_TOOLBAR_INJECTED__) return;
-  window.__LCN_TOOLBAR_INJECTED__ = true;
+#[derive(Serialize)]
+struct EmbeddedApiResponse {
+    status: u16,
+    response_text: String,
+}
+
+/// 通过本机 sidecar 转发内嵌 LeetCode 页面的笔记 API，绕过站点 CSP/CORS。
+#[tauri::command]
+fn embedded_local_api_request(
+    state: tauri::State<ServerInfo>,
+    method: String,
+    path: String,
+    body: Option<String>,
+) -> Result<EmbeddedApiResponse, String> {
+    if path.bytes().any(|byte| byte <= 0x20 || byte == 0x7f) {
+        return Err("本地 API 路径包含非法字符".to_string());
+    }
+    let valid_path = [
+        ("GET", "/api/v1/leetcode/user-problem/detail"),
+        ("POST", "/api/v1/leetcode/user-problem/save-v2"),
+        ("GET", "/api/v1/leetcode/user-synced-code"),
+    ]
+    .iter()
+    .any(|(allowed_method, endpoint)| {
+        method.eq_ignore_ascii_case(allowed_method)
+            && (path == *endpoint || path.starts_with(&format!("{endpoint}?")))
+    });
+    if !valid_path {
+        return Err("不允许访问此本地 API 路径".to_string());
+    }
+    let method = method.to_ascii_uppercase();
+    if !matches!(method.as_str(), "GET" | "POST") {
+        return Err("不支持的本地 API 请求方法".to_string());
+    }
+
+    let payload = body.unwrap_or_default();
+    let mut stream = TcpStream::connect((SERVER_HOST, state.port)).map_err(|e| e.to_string())?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(8)))
+        .map_err(|e| e.to_string())?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(8)))
+        .map_err(|e| e.to_string())?;
+    let request = format!(
+        "{method} {path} HTTP/1.1\r\nHost: {SERVER_HOST}:{}\r\nContent-Type: application/json\r\nAccept: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{payload}",
+        state.port,
+        payload.as_bytes().len()
+    );
+    stream.write_all(request.as_bytes()).map_err(|e| e.to_string())?;
+    let mut response = Vec::new();
+    stream.read_to_end(&mut response).map_err(|e| e.to_string())?;
+
+    let split = response
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+        .ok_or_else(|| "本地 API 返回了无效 HTTP 响应".to_string())?;
+    let headers = String::from_utf8_lossy(&response[..split]);
+    let status = headers
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|code| code.parse::<u16>().ok())
+        .ok_or_else(|| "无法读取本地 API 响应状态".to_string())?;
+    let raw_body = &response[split + 4..];
+    let decoded_body = if headers
+        .lines()
+        .any(|line| line.eq_ignore_ascii_case("transfer-encoding: chunked"))
+    {
+        decode_chunked_body(raw_body)?
+    } else {
+        raw_body.to_vec()
+    };
+
+    Ok(EmbeddedApiResponse {
+        status,
+        response_text: String::from_utf8_lossy(&decoded_body).into_owned(),
+    })
+}
+
+fn decode_chunked_body(mut input: &[u8]) -> Result<Vec<u8>, String> {
+    let mut output = Vec::new();
+    loop {
+        let line_end = input
+            .windows(2)
+            .position(|window| window == b"\r\n")
+            .ok_or_else(|| "本地 API 分块响应格式无效".to_string())?;
+        let size_text = std::str::from_utf8(&input[..line_end])
+            .map_err(|e| e.to_string())?
+            .split(';')
+            .next()
+            .unwrap_or("");
+        let size = usize::from_str_radix(size_text.trim(), 16).map_err(|e| e.to_string())?;
+        input = &input[line_end + 2..];
+        if size == 0 {
+            break;
+        }
+        if input.len() < size + 2 || &input[size..size + 2] != b"\r\n" {
+            return Err("本地 API 分块响应长度无效".to_string());
+        }
+        output.extend_from_slice(&input[..size]);
+        input = &input[size + 2..];
+    }
+    Ok(output)
+}
+
+/// 内嵌浏览器窗口的自定义顶部栏高度（与隐藏后的 macOS 标题栏高度接近）。
+const EMBED_TOPBAR_HEIGHT: u32 = 32;
+
+/// 注入到内嵌页面的自定义顶部 header 栏（documentStart 用户脚本，每次导航都会重新注入）。
+/// 该栏固定在页面最顶部，充当窗口标题栏：左侧留出 macOS 红绿灯位置，
+/// 右侧放「默认浏览器打开」按钮（点击后导航到哨兵 scheme，由 Rust 端拦截并交给系统浏览器）。
+/// 同时给 <html> 增加等高内边距，把页面内容整体下移，避免遮挡 LeetCode 页面。
+const EMBED_TOPBAR_SCRIPT: &str = r#"(function () {
+  if (window.__LCN_TOPBAR_INJECTED__) return;
+  window.__LCN_TOPBAR_INJECTED__ = true;
 
   var SCHEME = 'lcn-open';
+  var BAR_ID = 'lcn-embed-topbar';
+  var STYLE_ID = 'lcn-embed-topbar-style';
+  var BAR_HEIGHT = __LCN_TOPBAR_HEIGHT__;
 
-  function createToolbar() {
-    if (document.getElementById('lcn-embed-toolbar') || !document.body) return;
+  var CSS = [
+    'html.lcn-has-topbar{padding-top:' + BAR_HEIGHT + 'px!important;box-sizing:border-box!important;}',
+    '#' + BAR_ID + '{position:fixed;top:0;left:0;right:0;height:' + BAR_HEIGHT + 'px;',
+    'z-index:2147483647;display:flex;align-items:center;justify-content:flex-end;',
+    'padding:0 12px 0 84px;background:rgba(250,251,252,.9);',
+    '-webkit-backdrop-filter:saturate(180%) blur(12px);backdrop-filter:saturate(180%) blur(12px);',
+    'border-bottom:1px solid rgba(15,23,42,.08);',
+    'font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;',
+    'user-select:none;-webkit-user-select:none;}',
+    '#' + BAR_ID + ' .lcn-topbar-title{position:absolute;left:50%;top:50%;',
+    'transform:translate(-50%,-50%);font-size:11px;font-weight:600;color:#64748b;',
+    'letter-spacing:.3px;pointer-events:none;white-space:nowrap;}',
+    '#' + BAR_ID + ' .lcn-open-btn{position:relative;display:inline-flex;align-items:center;gap:5px;',
+    'height:22px;padding:0 10px;border:1px solid #d7e0ea;border-radius:7px;background:#fff;',
+    'color:#334155;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;',
+    'box-shadow:0 1px 2px rgba(15,23,42,.06);transition:background .15s,border-color .15s,transform .1s;}',
+    '#' + BAR_ID + ' .lcn-open-btn:hover{background:#f1f5f9;border-color:#c3cfdd;}',
+    '#' + BAR_ID + ' .lcn-open-btn:active{transform:scale(.96);}',
+    '#' + BAR_ID + ' .lcn-open-btn svg{width:11px;height:11px;}'
+  ].join('');
+
+  function injectTopbarStyle() {
+    if (!document.getElementById(STYLE_ID)) {
+      var style = document.createElement('style');
+      style.id = STYLE_ID;
+      style.textContent = CSS;
+      (document.head || document.documentElement).appendChild(style);
+    }
+    if (document.documentElement) {
+      document.documentElement.classList.add('lcn-has-topbar');
+    }
+  }
+
+  function createTopbar() {
+    if (document.getElementById(BAR_ID) || !document.body) return;
+    injectTopbarStyle();
+
     var bar = document.createElement('div');
-    bar.id = 'lcn-embed-toolbar';
-    bar.style.cssText = 'position:fixed;top:64px;right:14px;z-index:2147483647;'
-      + 'display:flex;align-items:center;gap:6px;'
-      + 'font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;';
+    bar.id = BAR_ID;
+    // "deep"：整条栏（除可点击元素外）都可拖动窗口
+    bar.setAttribute('data-tauri-drag-region', 'deep');
+
+    var title = document.createElement('span');
+    title.className = 'lcn-topbar-title';
+    title.textContent = 'LeetCode 内嵌浏览';
+    bar.appendChild(title);
 
     var btn = document.createElement('button');
-    btn.textContent = '默认浏览器打开 ↗';
+    btn.type = 'button';
+    btn.className = 'lcn-open-btn';
     btn.title = '使用系统默认浏览器打开当前页面';
-    btn.style.cssText = 'height:30px;padding:0 14px;border:none;border-radius:15px;'
-      + 'background:#16a34a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;'
-      + 'box-shadow:0 4px 12px rgba(22,163,74,.35);white-space:nowrap;opacity:.85;'
-      + 'transition:opacity .15s,transform .1s;';
-    btn.onmouseenter = function () { btn.style.opacity = '1'; };
-    btn.onmouseleave = function () { btn.style.opacity = '.85'; };
-    btn.onmousedown = function () { btn.style.transform = 'scale(0.95)'; };
-    btn.onmouseup = function () { btn.style.transform = ''; };
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '
+      + 'stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>'
+      + '<polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>'
+      + '<span>默认浏览器打开</span>';
     btn.onclick = function () {
       window.location.href = SCHEME + '://open?u=' + encodeURIComponent(window.location.href);
     };
     bar.appendChild(btn);
+
     document.body.appendChild(bar);
   }
 
   // documentStart 时 body 尚未就绪，轮询挂载；之后低频自愈（SPA 重建 body 时自动补回）
-  var timer = setInterval(function () {
-    createToolbar();
-  }, 800);
+  var timer = setInterval(createTopbar, 800);
   setTimeout(function () { clearInterval(timer); }, 15000);
-  document.addEventListener('DOMContentLoaded', createToolbar);
+  document.addEventListener('DOMContentLoaded', createTopbar);
 })();"#;
 
 /// 打开内嵌 LeetCode 浏览器窗口：webview 顶层直接加载目标页面（第一方
 /// 上下文，与登录窗口共用默认 Cookie 存储，因此已登录），并通过注入的
-/// 用户脚本在页面右上角挂「默认浏览器打开」悬浮按钮。
+/// 用户脚本在窗口最顶部挂一条自定义 header 栏（含「默认浏览器打开」按钮与拖拽区）。
 #[tauri::command]
-fn open_embedded_browser(app: tauri::AppHandle, url: String) -> Result<(), String> {
+fn open_embedded_browser(
+    app: tauri::AppHandle,
+    url: String,
+    notes_enabled: Option<bool>,
+    api_host: Option<String>,
+) -> Result<(), String> {
+    let notes_enabled = notes_enabled.unwrap_or(true);
+    let api_host = api_host.unwrap_or_else(|| format!("http://{SERVER_HOST}:{SERVER_PORT_BASE}"));
     let parsed: tauri::Url = url
         .parse()
         .map_err(|e| format!("无效 URL: {e}"))?;
 
-    // 已打开则复用：直接导航到新地址并聚焦
+    if !matches!(parsed.host_str(), Some("leetcode.cn") | Some("leetcode.com")) {
+        return Err("内置浏览器只允许打开 LeetCode 站点".to_string());
+    }
+
+    // 已打开则复用：地址变化时导航，否则只聚焦（避免重复加载丢失页面状态）
     if let Some(win) = app.get_webview_window(EMBED_BROWSER_WINDOW) {
-        win.navigate(parsed).map_err(|e| e.to_string())?;
+        let enabled = if notes_enabled { "true" } else { "false" };
+        win.eval(&format!("sessionStorage.setItem('lcn-notes-enabled', '{enabled}')"))
+            .map_err(|e| e.to_string())?;
+        let same_page = win
+            .url()
+            .map(|current| {
+                current.as_str().trim_end_matches('/') == parsed.as_str().trim_end_matches('/')
+            })
+            .unwrap_or(false);
+        if !same_page {
+            win.navigate(parsed).map_err(|e| e.to_string())?;
+        }
         win.show().ok();
         win.set_focus().ok();
         return Ok(());
@@ -225,17 +395,66 @@ fn open_embedded_browser(app: tauri::AppHandle, url: String) -> Result<(), Strin
 
     let app_handle = app.clone();
 
-    let window = tauri::WebviewWindowBuilder::new(
+    let mut target = parsed;
+    if notes_enabled {
+        target.query_pairs_mut().append_pair("__lcn_notes", "1");
+    }
+
+    let api_host = api_host.trim_end_matches('/');
+    let user_script = include_str!("../../tamper-monkey/leetcode-note-drawer.user.js")
+        .replace(
+            "const API_HOST = 'http://127.0.0.1:17877';",
+            &format!("const API_HOST = '{}';", api_host.replace('\'', "")),
+        );
+    let notes_injection = format!(
+        r#"(function() {{
+          var u = new URL(location.href);
+          var enabled = sessionStorage.getItem('lcn-notes-enabled') === 'true' || u.searchParams.get('__lcn_notes') === '1';
+          if (u.searchParams.has('__lcn_notes')) {{
+            u.searchParams.delete('__lcn_notes');
+            history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+          }}
+          sessionStorage.setItem('lcn-notes-enabled', enabled ? 'true' : 'false');
+          // 题目页 /problems/... 与题库页 /problemset/... 都注入笔记插件；
+          // 从题库页 SPA 进入具体题目时由用户脚本自行挂载入口并加载对应数据。
+          if (!enabled || !/^\/problems(et)?\//.test(location.pathname)) return;
+          window.GM_xmlhttpRequest = function(options) {{
+            var tauri = window.__TAURI_INTERNALS__;
+            if (!tauri || typeof tauri.invoke !== 'function') {{
+              if (options.onerror) options.onerror(new Error('Tauri 本地 API 桥接不可用'));
+              return;
+            }}
+            var requestUrl = new URL(options.url);
+            tauri.invoke('embedded_local_api_request', {{
+              method: options.method || 'GET',
+              path: requestUrl.pathname + requestUrl.search,
+              body: options.data === undefined ? null : options.data
+            }}).then(function(response) {{
+              if (options.onload) options.onload({{ status: response.status, responseText: response.response_text }});
+            }}).catch(function(error) {{ if (options.onerror) options.onerror(error); }});
+          }};
+          {user_script}
+        }})();"#
+    );
+
+    let topbar_script = EMBED_TOPBAR_SCRIPT
+        .replace("__LCN_TOPBAR_HEIGHT__", &EMBED_TOPBAR_HEIGHT.to_string());
+
+    let mut builder = tauri::WebviewWindowBuilder::new(
         &app,
         EMBED_BROWSER_WINDOW,
-        tauri::WebviewUrl::External(parsed),
+        tauri::WebviewUrl::External(target),
     )
     .title("LeetCode 内嵌浏览")
-    .inner_size(1000.0, 760.0)
-    .min_inner_size(480.0, 480.0)
-    .initialization_script(EMBED_TOOLBAR_SCRIPT)
+    .inner_size(1280.0, 860.0)
+    .min_inner_size(720.0, 560.0)
+    .center()
+    // 先不显示，定位到与主窗口错开的位置后再显示，避免闪一下居中再跳位
+    .visible(false)
+    .initialization_script(&topbar_script)
+    .initialization_script(&notes_injection)
     .on_navigation(move |nav_url| {
-        // 拦截工具栏按钮触发的哨兵导航：取消导航并改用系统浏览器打开
+        // 拦截顶部栏按钮触发的哨兵导航：取消导航并改用系统浏览器打开
         if nav_url.scheme() == OPEN_SENTINEL_SCHEME {
             let target = nav_url
                 .query_pairs()
@@ -256,9 +475,29 @@ fn open_embedded_browser(app: tauri::AppHandle, url: String) -> Result<(), Strin
             return false;
         }
         true
-    })
-    .build()
-    .map_err(|e| format!("创建内嵌浏览器窗口失败: {e}"))?;
+    });
+
+    // macOS：隐藏系统标题栏（保留红绿灯），由页面内注入的自定义顶部栏承担标题栏职责
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder
+            .title_bar_style(tauri::TitleBarStyle::Overlay)
+            .hidden_title(true);
+    }
+
+    let window = builder
+        .build()
+        .map_err(|e| format!("创建内嵌浏览器窗口失败: {e}"))?;
+
+    // 相对主窗口错开显示（右下偏移），避免与主界面完全重叠
+    if let Some(main) = app.get_webview_window("main") {
+        if let Ok(pos) = main.outer_position() {
+            let scale = main.scale_factor().unwrap_or(1.0);
+            let offset = (64.0 * scale) as i32;
+            let _ = window.set_position(tauri::PhysicalPosition::new(pos.x + offset, pos.y + offset));
+        }
+    }
+    let _ = window.show();
 
     // 用户通过标题栏原生关闭时，通知主窗口清理状态
     {
@@ -381,6 +620,7 @@ fn main() {
             open_leetcode_login,
             capture_login_cookie,
             close_leetcode_login,
+            embedded_local_api_request,
             open_embedded_browser,
             close_embedded_browser,
             open_in_system_browser
@@ -431,7 +671,11 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // 点关闭按钮隐藏到托盘而不是退出
+            // 仅主窗口点关闭按钮时隐藏到托盘；登录窗口 / 内嵌浏览器
+            // 必须真正关闭（否则关闭后无法再次打开）。
+            if window.label() != "main" {
+                return;
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 window.hide().ok();

@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  ExternalLink,
   History,
   LayoutList,
   MonitorPlay,
@@ -26,6 +27,11 @@ import {
   getActivityDay,
 } from '../api/leetcode'
 import { DetailDrawer } from '../components/DetailDrawer'
+import { EmbeddedBrowser } from '../components/EmbeddedBrowser'
+import { getBrowserOpenMode, openInSystemBrowser } from '../utils/browserOpen'
+
+// LeetCode 题库页（可与内置浏览器的笔记插件配合：点进题目后加载对应笔记）
+const LEETCODE_PROBLEMSET_URL = 'https://leetcode.cn/problemset/'
 
 const DIFFICULTIES = {
   Easy: { color: 'text-emerald-500 bg-emerald-50 border-emerald-100', label: '简单' },
@@ -150,6 +156,9 @@ export default function Problems({ reviewMode = false }) {
   const [activeProblemId, setActiveProblemId] = useState(null)
   const [activeProblem, setActiveProblem] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // 内置 LeetCode 题库浏览器（null = 关闭）
+  const [embeddedUrl, setEmbeddedUrl] = useState(null)
 
   const searchTimer = useRef(null)
 
@@ -292,6 +301,22 @@ export default function Problems({ reviewMode = false }) {
       .finally(() => setDetailLoading(false))
   }
 
+  // 打开 LeetCode 题库（按设置决定内置浏览器 / 系统浏览器）
+  const handleOpenLeetcode = async () => {
+    const mode = await getBrowserOpenMode()
+    if (mode === 'system') {
+      openInSystemBrowser(LEETCODE_PROBLEMSET_URL)
+      return
+    }
+    setEmbeddedUrl(LEETCODE_PROBLEMSET_URL)
+  }
+
+  // 关闭内置浏览器：可能已在其中保存了题目数据，刷新列表
+  const handleEmbeddedClose = () => {
+    setEmbeddedUrl(null)
+    handleRefresh()
+  }
+
   // 抽屉内更新题目（同步刷新列表行）
   const handleUpdateProblem = (next) => {
     setActiveProblem(next)
@@ -363,7 +388,7 @@ export default function Problems({ reviewMode = false }) {
   }, [page, totalPages])
 
   return (
-    <div className="flex h-full bg-white">
+    <div className="relative flex h-full bg-white">
       {/* 左侧过滤面板 */}
       <aside className="scrollbar-hidden w-80 shrink-0 space-y-6 overflow-y-auto border-r border-slate-100 bg-slate-50/50 p-5">
         {/* 我的基础数据 */}
@@ -551,6 +576,14 @@ export default function Problems({ reviewMode = false }) {
                 </div>
               )}
               <button
+                type="button"
+                onClick={handleOpenLeetcode}
+                className="flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50/60 px-4 py-1.5 text-[11px] font-semibold text-primary-700 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-100 active:scale-95"
+                title="在内置浏览器打开 LeetCode 题库，可直接进入题目练习（自动加载笔记）"
+              >
+                VIEW_LEETCODE <ExternalLink size={13} />
+              </button>
+              {!randomMode && <button
                 type="button"
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -848,6 +881,11 @@ export default function Problems({ reviewMode = false }) {
           }}
           loading={detailLoading}
         />
+      )}
+
+      {/* 内置 LeetCode 题库浏览器 */}
+      {embeddedUrl && (
+        <EmbeddedBrowser url={embeddedUrl} onClose={handleEmbeddedClose} />
       )}
     </div>
   )

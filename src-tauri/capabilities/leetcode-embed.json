@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "leetcode-embed-remote",
+  "description": "LeetCode 内嵌页面的受限本地 API 桥接权限",
+  "windows": ["leetcode-embed"],
+  "remote": {
+    "urls": ["https://leetcode.cn/*", "https://leetcode.com/*"]
+  },
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "allow-embedded-local-api-request"
+  ]
+}

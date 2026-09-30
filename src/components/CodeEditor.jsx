@@ -77,9 +77,10 @@ export function CodeEditor({ activeProblem, updateProblem }) {
   const langLabel = (langSlug || 'code').toUpperCase()
 
   useEffect(() => {
-    setCode(activeProblem.code || '')
+    const latestCode = activeProblem.code || ''
+    setCode((current) => (current === latestCode ? current : latestCode))
     setSaveStatus('')
-  }, [activeProblem.id])
+  }, [activeProblem.id, activeProblem.code])
 
   // 更新高亮代码
   useEffect(() => {

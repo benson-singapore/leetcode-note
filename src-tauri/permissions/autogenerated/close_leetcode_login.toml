@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-close-leetcode-login"
+description = "Enables the close_leetcode_login command without any pre-configured scope."
+commands.allow = ["close_leetcode_login"]
+
+[[permission]]
+identifier = "deny-close-leetcode-login"
+description = "Denies the close_leetcode_login command without any pre-configured scope."
+commands.deny = ["close_leetcode_login"]

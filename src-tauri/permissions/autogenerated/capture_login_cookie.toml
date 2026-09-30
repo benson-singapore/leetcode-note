@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-capture-login-cookie"
+description = "Enables the capture_login_cookie command without any pre-configured scope."
+commands.allow = ["capture_login_cookie"]
+
+[[permission]]
+identifier = "deny-capture-login-cookie"
+description = "Denies the capture_login_cookie command without any pre-configured scope."
+commands.deny = ["capture_login_cookie"]

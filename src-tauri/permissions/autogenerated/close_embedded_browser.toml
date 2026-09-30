@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-close-embedded-browser"
+description = "Enables the close_embedded_browser command without any pre-configured scope."
+commands.allow = ["close_embedded_browser"]
+
+[[permission]]
+identifier = "deny-close-embedded-browser"
+description = "Denies the close_embedded_browser command without any pre-configured scope."
+commands.deny = ["close_embedded_browser"]

@@ -12,6 +12,13 @@
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:event:default",
-    "shell:default"
+    "shell:default",
+    "allow-get-server-info",
+    "allow-open-leetcode-login",
+    "allow-capture-login-cookie",
+    "allow-close-leetcode-login",
+    "allow-open-embedded-browser",
+    "allow-close-embedded-browser",
+    "allow-open-in-system-browser"
   ]
 }

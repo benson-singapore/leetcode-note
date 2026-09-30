@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-embedded-local-api-request"
+description = "Enables the embedded_local_api_request command without any pre-configured scope."
+commands.allow = ["embedded_local_api_request"]
+
+[[permission]]
+identifier = "deny-embedded-local-api-request"
+description = "Denies the embedded_local_api_request command without any pre-configured scope."
+commands.deny = ["embedded_local_api_request"]

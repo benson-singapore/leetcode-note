@@ -1720,6 +1720,21 @@ export default function Settings() {
                     <option value="system">系统默认浏览器</option>
                   </select>
                 </Field>
+                <Field label="内置浏览器笔记按钮" hint="仅内置浏览器生效；开启后自动注入应用自带的笔记脚本">
+                  <label className="flex min-h-10 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={settings.embedded_notes_enabled !== 'false'}
+                      onChange={(e) => {
+                        const value = e.target.checked ? 'true' : 'false'
+                        setKV('embedded_notes_enabled', value)
+                        persist({ embedded_notes_enabled: value }, '内置浏览器笔记设置已保存')
+                      }}
+                      className="h-4 w-4 accent-primary-600"
+                    />
+                    自动加载 LeetCode 笔记功能
+                  </label>
+                </Field>
               </div>
             </Card>
             </section>
@@ -1784,13 +1799,13 @@ export default function Settings() {
             <section className="space-y-5">
               <SectionHeader
                 title="插件同步"
-                desc="通过油猴脚本在 LeetCode 题目页直接读取 / 写入本应用的题目笔记，实现数据双向同步"
+                desc="内置浏览器会自动注入同一套笔记功能；外部浏览器仍可安装油猴脚本实现数据双向同步"
               />
               <Card
                 icon={Puzzle}
                 iconBg="bg-amber-500"
                 title="Tampermonkey 油猴脚本"
-                desc="安装脚本后，在 leetcode.cn 题目页面会出现「笔记」按钮，数据将与本应用后台同步"
+                desc="Tauri 内置浏览器无需安装扩展；系统浏览器请安装 Tampermonkey 脚本。两种方式均会读取和保存本应用本地数据库中的笔记数据"
               >
                 <div className="space-y-4">
                   {/* 后台服务地址 */}
