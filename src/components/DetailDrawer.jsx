@@ -356,6 +356,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                     { id: 'desc', label: '题目内容', icon: <FileText size={15} /> },
                     { id: 'notes', label: '核心笔记', icon: <StickyNote size={15} /> },
                     { id: 'code', label: '代码实现', icon: <Terminal size={15} /> },
+                    { id: 'demo', label: '演示', icon: <Eye size={15} /> },
                     { id: 'solutionSchemes', label: '解题方案', icon: <Layers size={15} /> },
                   ].map((tab) => {
                     const active = detailTab === tab.id
@@ -392,6 +393,15 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                   {detailTab === 'code' && (
                     <div className="flex-1 overflow-hidden p-6 custom-scrollbar scroll-smooth min-w-0">
                       <CodeEditor activeProblem={activeProblem} updateProblem={updateProblem} />
+                    </div>
+                  )}
+                  {detailTab === 'demo' && (
+                    <div id="detail-demo-host" className="relative flex-1 overflow-hidden min-w-0">
+                      <SolutionSchemesTab
+                        activeProblem={activeProblem}
+                        updateProblem={updateProblem}
+                        defaultOnly
+                      />
                     </div>
                   )}
                   {detailTab === 'solutionSchemes' && (

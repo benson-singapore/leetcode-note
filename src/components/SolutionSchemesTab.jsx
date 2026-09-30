@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileCode2,
+  Maximize2,
   X,
 } from 'lucide-react'
 import { chatStream, cancelChat } from '../api/ai'
@@ -95,12 +96,12 @@ function buildDemoPrompt({ title, difficulty, content, examples, constraints, la
     .join('\n\n')
 }
 
-export function SolutionSchemesTab({ activeProblem, updateProblem }) {
+export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly = false }) {
   const problemId = activeProblem?.id
   const [schemes, setSchemes] = useState([]) // 额外方案（不含默认实现）
   const [loading, setLoading] = useState(true)
   // null = 列表视图；否则为当前打开（独立抽屉展示）的方案 key
-  const [selectedKey, setSelectedKey] = useState(null)
+  const [selectedKey, setSelectedKey] = useState(defaultOnly ? DEFAULT_KEY : null)
   const [defaultDemo, setDefaultDemo] = useState('') // 默认实现的演示 HTML（文件存储）
   const [demoText, setDemoText] = useState('') // 当前选中方案的演示 HTML（可编辑缓冲）
   const [demoDirty, setDemoDirty] = useState(false)
@@ -183,8 +184,8 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
 
   // 切换题目时回到列表视图
   useEffect(() => {
-    setSelectedKey(null)
-  }, [problemId])
+    setSelectedKey(defaultOnly ? DEFAULT_KEY : null)
+  }, [problemId, defaultOnly])
 
   const selected = useMemo(() => {
     if (selectedKey === DEFAULT_KEY) {
@@ -302,6 +303,19 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleOpenDemoWindow = () => {
+    const html = demoText || '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><body><p>暂无演示内容</p></body></html>'
+    const previewUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }))
+    const previewWindow = window.open(previewUrl, '_blank')
+    if (!previewWindow) {
+      URL.revokeObjectURL(previewUrl)
+      setSaveStatus('浏览器阻止了新窗口，请允许弹出窗口后重试')
+      setTimeout(() => setSaveStatus(''), 3000)
+      return
+    }
+    previewWindow.opener = null
   }
 
   // ===== AI 生成演示 =====
@@ -468,7 +482,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
   // ===== 列表视图（默认）：满屏展示方案列表 =====
   return (
     <>
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col min-h-0 min-w-0">
+      <div className={defaultOnly ? 'hidden' : 'animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col min-h-0 min-w-0'}>
         {/* 顶部工具条 */}
         <div className="flex items-center justify-between gap-2 shrink-0 pb-3">
           <div className="flex items-center gap-2.5">
@@ -552,15 +566,15 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
       {/* ===== 方案详情抽屉（独立大窗口） ===== */}
       {selected &&
         createPortal(
-          <div className="fixed inset-0 z-[80] flex justify-end overflow-hidden antialiased">
-            <div
+          <div className={defaultOnly ? 'absolute inset-0 z-10 flex overflow-hidden antialiased' : 'fixed inset-0 z-[80] flex justify-end overflow-hidden antialiased'}>
+            {!defaultOnly && <div
               className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px] animate-in fade-in duration-300"
               onClick={() => setSelectedKey(null)}
-            />
-            <div className="relative w-full max-w-[92%] h-full bg-[#FAFAFA] shadow-2xl flex flex-col animate-in slide-in-from-right-10 fade-in duration-300">
+            />}
+            <div className={defaultOnly ? 'relative w-full h-full bg-[#FAFAFA] flex flex-col' : 'relative w-full max-w-[92%] h-full bg-[#FAFAFA] shadow-2xl flex flex-col animate-in slide-in-from-right-10 fade-in duration-300'}>
               {/* 抽屉头部 */}
               <div className="px-6 py-4 border-b border-slate-100 bg-white flex items-center gap-3 shrink-0">
-                <button
+                {!defaultOnly && <button
                   type="button"
                   onClick={() => setSelectedKey(null)}
                   title="返回方案列表（Esc）"
@@ -568,7 +582,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
                 >
                   <ChevronLeft size={14} />
                   返回列表
-                </button>
+                </button>}
                 <div className="h-6 w-px bg-slate-100 shrink-0" />
                 <div className="flex-1 min-w-0 flex items-center gap-3">
                   {selected.isDefault ? (
@@ -576,9 +590,9 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
                       <span className="px-3 py-1.5 rounded-lg bg-primary-600 text-white text-[11px] font-bold shrink-0">
                         默认实现
                       </span>
-                      <span className="text-[11px] text-slate-400 truncate">
+                      {!defaultOnly && <span className="text-[11px] text-slate-400 truncate">
                         代码与「代码实现」标签共享，可直接在此查看
-                      </span>
+                      </span>}
                     </>
                   ) : (
                     <>
@@ -624,14 +638,14 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
                   </span>
                 )}
                 <div className="h-6 w-px bg-slate-100 shrink-0" />
-                <button
+                {!defaultOnly && <button
                   type="button"
                   onClick={() => setSelectedKey(null)}
                   title="关闭（Esc）"
                   className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 active:scale-90 transition-all shrink-0"
                 >
                   <X size={16} />
-                </button>
+                </button>}
               </div>
 
               {/* 抽屉内容：左右分栏（可折叠）充分利用空间 */}
@@ -714,7 +728,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
                   )}
 
                   {/* 面板显隐切换：隐藏另一侧后当前面板占满整行 */}
-                  <div
+                  {!defaultOnly && <div
                     className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50/90 shrink-0"
                     role="group"
                     aria-label="面板显隐"
@@ -763,13 +777,22 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
                       演示
                       {showDemo ? <ChevronRight size={10} /> : <ChevronLeft size={10} />}
                     </button>
-                  </div>
+                  </div>}
+                  {defaultOnly && <button
+                    type="button"
+                    onClick={handleOpenDemoWindow}
+                    title="在新窗口中打开 HTML 演示"
+                    aria-label="在新窗口中打开 HTML 演示"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 transition-colors shrink-0"
+                  >
+                    <Maximize2 size={14} />
+                  </button>}
                 </div>
 
                 {/* 主体：左右分栏（代码 | 演示），可折叠，隐藏一侧后另一侧占满整行 */}
                 <div className="flex-1 min-h-0 flex gap-4 min-w-0">
                   {/* 左：代码区 */}
-                  {showCode && (
+                  {showCode && !defaultOnly && (
                     <div
                       className={`${
                         showDemo
@@ -821,7 +844,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
                   {showDemo && (
                     <div
                       className={
-                        showCode
+                          showCode && !defaultOnly
                           ? 'flex-1 min-h-0 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-inner flex flex-col min-w-0'
                           : 'flex-1 min-h-0 min-w-0 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-inner flex flex-col'
                       }
@@ -866,7 +889,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem }) {
               </div>
             </div>
           </div>,
-          document.body
+          defaultOnly ? (document.getElementById('detail-demo-host') || document.body) : document.body
         )}
     </>
   )
