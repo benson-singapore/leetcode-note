@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
+import hljs from 'highlight.js'
 import {
   X,
   ExternalLink,
@@ -18,6 +19,7 @@ import {
   Star,
   Link2,
   Check,
+  Copy,
   ImagePlus,
   PenLine,
   Eye,
@@ -28,7 +30,7 @@ import {
   Square,
 } from 'lucide-react'
 import { FrequencyBars } from './FrequencyBars'
-import { CodeEditor } from './CodeEditor'
+import { CodeEditor, HLJS_LANGS } from './CodeEditor'
 import { SolutionSchemesTab } from './SolutionSchemesTab'
 import { EmbeddedBrowser } from './EmbeddedBrowser'
 import { uploadImageFile, uploadImageFromUrl } from '../api/images'
@@ -108,6 +110,22 @@ const STATUS_MAP = {
     comment: '我就是这道题的主人！👑',
   },
 }
+
+// 「训练打卡」抽屉回显用：掌握程度 / 完成状态选项（与插件、后端字段对齐）
+const MASTERY_OPTIONS = [
+  { value: 'Confused', label: '一脸懵逼😳', icon: '😳' },
+  { value: 'New', label: '未掌握', icon: '📚' },
+  { value: 'Struggling', label: '半生不熟', icon: '🤷' },
+  { value: 'Relearning', label: '需重练', icon: '🔁' },
+  { value: 'Stable', label: '很稳', icon: '✅' },
+  { value: 'Mastered', label: '已精通', icon: '👑' },
+]
+
+const PROGRESS_STATUS_OPTIONS = [
+  { value: 'Unpracticed', label: '未开始', icon: '⏳' },
+  { value: 'Reviewing', label: '复习中', icon: '🔄' },
+  { value: 'Mastered', label: '已完成', icon: '🏁' },
+]
 
 export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose, loading }) {
   const [detailTab, setDetailTab] = useState('desc')
@@ -1079,6 +1097,36 @@ function ReviewSection({
     { key: 'Mastered', label: '已完成' },
   ]
   const [selectedReview, setSelectedReview] = useState(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    setCopied(false)
+  }, [selectedReview])
+
+  const handleCopyCode = async () => {
+    if (!selectedReview?.code) return
+    try {
+      await navigator.clipboard.writeText(selectedReview.code)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch (error) {
+      console.error('复制代码快照失败:', error)
+    }
+  }
+
+  // 代码快照高亮：复用 CodeEditor 的 highlight.js 语言映射与 atom-one-dark 主题
+  const highlightedSnapshot = useMemo(() => {
+    const code = selectedReview?.code
+    if (!code) return ''
+    const language = HLJS_LANGS[(selectedReview.code_language || '').toLowerCase()]
+    try {
+      if (language) return hljs.highlight(code, { language, ignoreIllegals: true }).value
+      return hljs.highlightAuto(code).value
+    } catch (error) {
+      console.error('代码快照高亮失败:', error)
+      return code.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch])
+    }
+  }, [selectedReview])
 
   return (
     <div className="space-y-6">
@@ -1139,19 +1187,161 @@ function ReviewSection({
       </div>
 
       {selectedReview && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/40 p-5" onMouseDown={(event) => event.target === event.currentTarget && setSelectedReview(null)}>
-          <section role="dialog" aria-modal="true" aria-labelledby="review-detail-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-            <header className="mb-5 flex items-center justify-between">
-              <div><h2 id="review-detail-title" className="text-base font-bold text-slate-800">训练打卡记录</h2><p className="mt-1 text-xs text-slate-500">{new Date(selectedReview.review_date).toLocaleString('zh-CN')}</p></div>
-              <button type="button" onClick={() => setSelectedReview(null)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100" aria-label="关闭"><X size={17} /></button>
-            </header>
-            <div className="mb-4 flex flex-wrap gap-2 text-xs">
-              <span className={`rounded-full px-3 py-1 font-semibold ${STATUS_MAP[selectedReview.status]?.light || 'bg-slate-100 text-slate-600'}`}>{STATUS_MAP[selectedReview.status]?.label || selectedReview.status}</span>
-              {selectedReview.progress_status && <span className="rounded-full bg-primary-50 px-3 py-1 font-semibold text-primary-700">{progressOptions.find((option) => option.key === selectedReview.progress_status)?.label || selectedReview.progress_status}</span>}
-              {selectedReview.personal_difficulty > 0 && <span className="rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-700">手感 {'★'.repeat(selectedReview.personal_difficulty)}</span>}
+        <div className="fixed inset-0 z-[10000] flex justify-end overflow-hidden antialiased">
+          <div
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px] animate-in fade-in duration-300"
+            onClick={() => setSelectedReview(null)}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="review-detail-title"
+            className="relative flex h-full w-[1000px] max-w-[92vw] flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 sm:flex-row"
+          >
+            {/* 左侧：代码快照 */}
+            <div className="flex flex-1 min-w-0 flex-col p-6 min-h-0">
+              <header className="mb-4 flex shrink-0 items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 id="review-detail-title" className="truncate text-base font-bold text-slate-800">
+                    {activeProblem?.translatedTitle || activeProblem?.title || '代码快照'}
+                  </h2>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    代码快照{selectedReview.code_language ? ` · ${selectedReview.code_language}` : ''}
+                  </p>
+                </div>
+                {selectedReview.code && (
+                  <button
+                    type="button"
+                    onClick={handleCopyCode}
+                    className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-500 transition-all hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 active:scale-95"
+                  >
+                    {copied ? <Check size={13} /> : <Copy size={13} />}
+                    {copied ? '已复制' : '复制代码'}
+                  </button>
+                )}
+              </header>
+              <pre className="flex-1 min-h-0 overflow-auto custom-scrollbar rounded-xl bg-[#282c34] p-4 font-mono text-xs leading-5 text-[#abb2bf]">
+                {selectedReview.code ? (
+                  <code className="hljs !bg-transparent !p-0 block min-w-0 whitespace-pre" dangerouslySetInnerHTML={{ __html: highlightedSnapshot }} />
+                ) : (
+                  '此记录没有代码快照'
+                )}
+              </pre>
             </div>
-            <div className="mb-5 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{selectedReview.comment || '未填写训练记录'}</div>
-            <div><h3 className="mb-2 text-xs font-semibold text-slate-600">代码快照{selectedReview.code_language ? ` · ${selectedReview.code_language}` : ''}</h3><pre className="max-h-[50vh] overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-5 text-slate-100">{selectedReview.code || '此记录没有代码快照'}</pre></div>
+
+            {/* 右侧：训练打卡表单回显 */}
+            <aside className="flex w-[300px] shrink-0 flex-col border-l border-slate-100 bg-slate-50">
+              <header className="flex items-center justify-between gap-2.5 px-4 pt-4 pb-1">
+                <div className="text-[15px] font-bold text-slate-800">训练打卡</div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReview(null)}
+                  aria-label="关闭"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-700"
+                >
+                  <X size={16} />
+                </button>
+              </header>
+
+              <div className="flex-1 overflow-auto custom-scrollbar px-4 pt-1.5 pb-4">
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  {new Date(selectedReview.review_date).toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+
+                <section className="mt-3.5 flex flex-col gap-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">掌握程度</span>
+                  <div className="flex flex-col gap-1.5">
+                    {MASTERY_OPTIONS.map((opt) => {
+                      const active = opt.value === selectedReview.status
+                      return (
+                        <div
+                          key={opt.value}
+                          className={`rounded-md border px-2 py-2 text-center text-[11px] transition-all ${
+                            active
+                              ? 'border-primary-600 bg-primary-600 font-semibold text-white'
+                              : 'border-slate-200 bg-white text-slate-700'
+                          }`}
+                        >
+                          {opt.icon} {opt.label}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+
+                {selectedReview.progress_status && (
+                  <section className="mt-4 flex flex-col gap-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">完成状态</span>
+                    <div className="flex flex-col gap-1.5">
+                      {PROGRESS_STATUS_OPTIONS.map((opt) => {
+                        const active = opt.value === selectedReview.progress_status
+                        return (
+                          <div
+                            key={opt.value}
+                            className={`rounded-md border px-2 py-2 text-center text-[11px] transition-all ${
+                              active
+                                ? 'border-primary-600 bg-primary-600 font-semibold text-white'
+                                : 'border-slate-200 bg-white text-slate-700'
+                            }`}
+                          >
+                            {opt.icon} {opt.label}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {selectedReview.personal_difficulty > 0 && (
+                  <section className="mt-4 flex flex-col gap-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">手感自评</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(PERSONAL_RATINGS).map(([value, rating]) => {
+                        const active = Number(value) === Number(selectedReview.personal_difficulty)
+                        return (
+                          <div
+                            key={value}
+                            className={`flex flex-1 basis-[calc(50%-0.375rem)] flex-col items-center gap-0.5 rounded-md border px-1 py-1.5 text-center transition-all ${
+                              active
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-slate-200 bg-white'
+                            }`}
+                          >
+                            <span className="text-[14px] leading-none">{rating.icon}</span>
+                            <span className={`text-[10px] ${active ? 'font-semibold text-primary-700' : 'text-slate-400'}`}>
+                              {rating.label}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                <section className="mt-4 flex flex-col gap-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">训练记录</span>
+                  <div className="min-h-[120px] whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-2.5 text-[12px] leading-6 text-slate-700">
+                    {selectedReview.comment || '未填写训练记录'}
+                  </div>
+                </section>
+              </div>
+
+              <div className="border-t border-slate-100 px-4 pt-3.5 pb-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedReview(null)}
+                  className="w-full rounded-lg bg-primary-600 py-2.5 text-[13px] font-semibold text-white shadow-lg shadow-primary-200 transition-all hover:bg-primary-700 active:scale-95"
+                >
+                  关闭
+                </button>
+              </div>
+            </aside>
           </section>
         </div>,
         document.body

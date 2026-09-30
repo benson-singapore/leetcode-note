@@ -29,7 +29,7 @@ function mapIndexInBlock(idx, olds, news) {
   return np
 }
 
-const HLJS_LANGS = {
+export const HLJS_LANGS = {
   java: 'java',
   python: 'python',
   python3: 'python',
@@ -39,12 +39,15 @@ const HLJS_LANGS = {
   javascript: 'javascript',
   typescript: 'typescript',
   go: 'go',
+  golang: 'go',
   rust: 'rust',
   kotlin: 'kotlin',
   swift: 'swift',
   ruby: 'ruby',
   php: 'php',
   mysql: 'sql',
+  scala: 'scala',
+  dart: 'dart',
 }
 
 export function CodeEditor({ activeProblem, updateProblem }) {
