@@ -26,6 +26,7 @@ import {
   X,
   ChevronUp,
   ChevronDown,
+  LogOut,
 } from 'lucide-react'
 import { getSettings, updateSettings, fetchLeetCodeProblem, getLeetCodeUserProfile, getLeetCodeSolvedStats, getLeetCodeSolvedList, importLeetCodeSolved } from '../api/leetcode'
 import {
@@ -829,6 +830,9 @@ export default function Settings() {
   const [profile, setProfile] = useState(null) // { avatar, username, realName, userSlug }
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileError, setProfileError] = useState('')
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const accountMenuRef = useRef(null)
   const [cookieEditing, setCookieEditing] = useState(false)
   const [solvedStats, setSolvedStats] = useState(null)
   const [solvedStatsLoading, setSolvedStatsLoading] = useState(false)
@@ -1011,6 +1015,28 @@ export default function Settings() {
     loadAssistants()
   }, [])
 
+  useEffect(() => {
+    const syncAccountSettings = () => {
+      getSettings().then((res) => {
+        const latestSettings = res.data || res
+        setSettings(latestSettings)
+        if (!latestSettings.leetcode_cookie) {
+          setProfile(null)
+          setSolvedStats(null)
+          setSolvedStatsError('')
+        }
+      }).catch(() => {})
+    }
+    window.addEventListener('leetcode-account-changed', syncAccountSettings)
+    return () => window.removeEventListener('leetcode-account-changed', syncAccountSettings)
+  }, [])
+
+  useEffect(() => {
+    const openAccountBinding = () => setActive('binding')
+    window.addEventListener('open-leetcode-account-settings', openAccountBinding)
+    return () => window.removeEventListener('open-leetcode-account-settings', openAccountBinding)
+  }, [])
+
   const loadAssistants = async () => {
     try {
       const res = await listAssistants()
@@ -1027,6 +1053,9 @@ export default function Settings() {
   const persist = async (kv, text) => {
     try {
       await updateSettings(kv)
+      if (Object.prototype.hasOwnProperty.call(kv, 'leetcode_cookie')) {
+        window.dispatchEvent(new Event('leetcode-account-changed'))
+      }
       flash(text)
     } catch (e) {
       flash(`保存失败：${e.message}`, 'err')
@@ -1048,6 +1077,7 @@ export default function Settings() {
             .then(() => {
               setLoginState('success')
               flash('LeetCode 登录成功，Cookie 已自动保存')
+              window.dispatchEvent(new Event('leetcode-account-changed'))
               loadProfile()
             })
             .catch(() => setLoginState('failed'))
@@ -1093,6 +1123,40 @@ export default function Settings() {
     } catch {}
     setLoginState('idle')
   }
+
+  const logoutLeetCode = async () => {
+    setLoggingOut(true)
+    try {
+      await updateSettings({ leetcode_cookie: '', leetcode_username: '' })
+      setSettings((prev) => ({ ...prev, leetcode_cookie: '', leetcode_username: '' }))
+      setProfile(null)
+      setSolvedStats(null)
+      setSolvedStatsError('')
+      setAccountMenuOpen(false)
+      window.dispatchEvent(new Event('leetcode-account-changed'))
+      flash('已退出 LeetCode 账号')
+    } catch (e) {
+      flash(`退出失败：${e.message}`, 'err')
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!accountMenuOpen) return
+    const closeOnOutsideClick = (event) => {
+      if (!accountMenuRef.current?.contains(event.target)) setAccountMenuOpen(false)
+    }
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setAccountMenuOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [accountMenuOpen])
 
   // 测试连接：用当前 Cookie 实际抓取一道题（two-sum，幂等）
   const testConnection = async () => {
@@ -1285,17 +1349,62 @@ export default function Settings() {
             >
               {/* 账号信息卡片：登录后自动展示头像 / 昵称 */}
               <div className="mb-4 flex items-center gap-4 rounded-xl bg-slate-50/80 p-5">
-                {profile?.avatar ? (
-                  <img
-                    src={profile.avatar}
-                    alt="头像"
-                    className="h-14 w-14 shrink-0 rounded-full border border-slate-200 object-cover"
-                  />
-                ) : (
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-400">
-                    <UserRound size={24} />
-                  </span>
-                )}
+                <div ref={accountMenuRef} className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setAccountMenuOpen((open) => !open)}
+                    aria-label="打开账号菜单"
+                    aria-haspopup="menu"
+                    aria-expanded={accountMenuOpen}
+                    className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-primary-300 hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  >
+                    {profile?.avatar ? (
+                      <img src={profile.avatar} alt="头像" className="h-full w-full object-cover" />
+                    ) : (
+                      <UserRound size={24} />
+                    )}
+                  </button>
+                  {accountMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute left-0 top-[calc(100%+8px)] z-30 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+                    >
+                      <div className="px-3 py-2">
+                        <p className="text-xs font-semibold text-slate-800">LeetCode 账号</p>
+                        <p className="mt-0.5 truncate text-[11px] text-slate-400">
+                          {hasCookie
+                            ? profile?.realName || profile?.username || '已配置登录凭证'
+                            : '尚未绑定账号'}
+                        </p>
+                      </div>
+                      <div className="my-1 border-t border-slate-100" />
+                      {hasCookie ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={logoutLeetCode}
+                          disabled={loggingOut}
+                          className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
+                        >
+                          {loggingOut ? '正在退出…' : '退出登录'}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setAccountMenuOpen(false)
+                            if (isTauri()) startLeetCodeLogin()
+                            else setCookieEditing(true)
+                          }}
+                          className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-medium text-primary-700 transition hover:bg-primary-50"
+                        >
+                          绑定账号信息
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-semibold text-slate-900">
@@ -1320,15 +1429,28 @@ export default function Settings() {
                             : '等待绑定 LeetCode 账号'}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={loadProfile}
-                  disabled={profileLoading || !hasCookie}
-                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50"
-                >
-                  {profileLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                  刷新账号信息
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={loadProfile}
+                    disabled={profileLoading || !hasCookie}
+                    className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50"
+                  >
+                    {profileLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                    刷新账号信息
+                  </button>
+                  {hasCookie && (
+                    <button
+                      type="button"
+                      onClick={logoutLeetCode}
+                      disabled={loggingOut}
+                      className="flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-medium text-rose-600 shadow-sm transition-all hover:bg-rose-50 active:scale-95 disabled:opacity-50"
+                    >
+                      {loggingOut ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                      {loggingOut ? '退出中…' : '退出账号'}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-4 rounded-xl bg-slate-50/80 p-5">
