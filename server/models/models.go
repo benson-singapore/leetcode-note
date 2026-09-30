@@ -61,12 +61,16 @@ type ProblemTag struct {
 
 // Review 复习记录表
 type Review struct {
-	ID            string    `json:"id"`
-	UserProblemID string    `json:"user_problem_id"`
-	ReviewDate    time.Time `json:"review_date"`
-	Status        string    `json:"status"`
-	Comment       string    `json:"comment"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID                 string    `json:"id"`
+	UserProblemID      string    `json:"user_problem_id"`
+	ReviewDate         time.Time `json:"review_date"`
+	Status             string    `json:"status"`
+	ProgressStatus     string    `json:"progress_status"`
+	PersonalDifficulty int       `json:"personal_difficulty"`
+	Comment            string    `json:"comment"`
+	Code               string    `json:"code"`
+	CodeLanguage       string    `json:"code_language"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 // SolutionScheme 解题方案表：一道题的多种解法（默认实现不落库，额外方案存此表）
@@ -131,9 +135,13 @@ type UpdateUserProblemRequest struct {
 
 // CreateReviewRequest 创建复习记录请求
 type CreateReviewRequest struct {
-	UserProblemID string `json:"user_problem_id" binding:"required"`
-	Status        string `json:"status" binding:"required"`
-	Comment       string `json:"comment"`
+	UserProblemID      string `json:"user_problem_id" binding:"required"`
+	Status             string `json:"status" binding:"required"`
+	ProgressStatus     string `json:"progress_status"`
+	PersonalDifficulty int    `json:"personal_difficulty"`
+	Comment            string `json:"comment"`
+	Code               string `json:"code"`
+	CodeLanguage       string `json:"code_language"`
 }
 
 // StatsResponse 统计数据响应

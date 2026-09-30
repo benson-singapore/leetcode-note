@@ -25,12 +25,16 @@ func NewReviewService() *ReviewService {
 // CreateReview 创建复习记录
 func (s *ReviewService) CreateReview(req *models.CreateReviewRequest) (*models.Review, error) {
 	review := &models.Review{
-		ID:            uuid.New().String(),
-		UserProblemID: req.UserProblemID,
-		ReviewDate:    time.Now(),
-		Status:        req.Status,
-		Comment:       req.Comment,
-		CreatedAt:     time.Now(),
+		ID:                 uuid.New().String(),
+		UserProblemID:      req.UserProblemID,
+		ReviewDate:         time.Now(),
+		Status:             req.Status,
+		ProgressStatus:     req.ProgressStatus,
+		PersonalDifficulty: req.PersonalDifficulty,
+		Comment:            req.Comment,
+		Code:               req.Code,
+		CodeLanguage:       req.CodeLanguage,
+		CreatedAt:          time.Now(),
 	}
 
 	if err := s.reviewRepo.CreateReview(review); err != nil {
@@ -44,6 +48,15 @@ func (s *ReviewService) CreateReview(req *models.CreateReviewRequest) (*models.R
 		userProblem.LastReview = &time.Time{}
 		*userProblem.LastReview = time.Now()
 		userProblem.Status = req.Status
+		if req.ProgressStatus != "" {
+			userProblem.ProgressStatus = req.ProgressStatus
+		}
+		if req.PersonalDifficulty > 0 {
+			userProblem.PersonalDifficulty = req.PersonalDifficulty
+		}
+		if req.Code != "" {
+			userProblem.Code = req.Code
+		}
 		userProblem.UpdatedAt = time.Now()
 		s.userProblemRepo.UpdateUserProblem(userProblem)
 	}

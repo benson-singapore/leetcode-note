@@ -60,7 +60,11 @@ CREATE TABLE IF NOT EXISTS reviews (
   user_problem_id TEXT NOT NULL,
   review_date DATE NOT NULL,
   status TEXT NOT NULL,
+  progress_status TEXT DEFAULT '',
+  personal_difficulty INTEGER DEFAULT 0,
   comment TEXT,
+  code TEXT DEFAULT '',
+  code_language TEXT DEFAULT '',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_problem_id) REFERENCES user_problems(id) ON DELETE CASCADE
 );

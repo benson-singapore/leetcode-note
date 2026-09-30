@@ -131,7 +131,15 @@ const STATUS_MAP = {
 
 export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose, loading }) {
   const [detailTab, setDetailTab] = useState('desc')
-  const [newReview, setNewReview] = useState({ comment: '', status: 'Reviewing', showForm: false })
+  const [newReview, setNewReview] = useState({
+    comment: '',
+    status: 'New',
+    progressStatus: 'Reviewing',
+    personalDifficulty: 0,
+    code: '',
+    codeLanguage: '',
+    showForm: false,
+  })
   const [reviews, setReviews] = useState([])
   const [isLoadingReviews, setIsLoadingReviews] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -188,52 +196,59 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
   }
 
   const handleAddReview = async () => {
-    if (!newReview.comment.trim()) return
-
     try {
       let userProblemId = activeProblem.userProblemId
       if (!userProblemId) {
         // 该题还没有用户记录，先通过 upsert 创建（以题目 ID 作为键）
         const created = await updateUserProblem(activeProblem.id, {
-          personalDifficulty: activeProblem.personalDifficulty,
+          personalDifficulty: newReview.personalDifficulty || activeProblem.personalDifficulty,
           status: newReview.status,
-          progressStatus: activeProblem.progressStatus,
+          progressStatus: newReview.progressStatus,
           notes: activeProblem.notes || '',
-          code: activeProblem.code || '',
+          code: newReview.code,
         })
         userProblemId = created?.data?.id || created?.id
-        if (userProblemId) {
-          updateProblem({ ...activeProblem, userProblemId })
-        }
+        if (!userProblemId) throw new Error('创建题目打卡记录失败')
+        updateProblem({ ...activeProblem, userProblemId })
       }
 
       await createReview({
         user_problem_id: userProblemId,
         status: newReview.status,
+        progress_status: newReview.progressStatus,
+        personal_difficulty: newReview.personalDifficulty,
         comment: newReview.comment,
+        code: newReview.code,
+        code_language: newReview.codeLanguage,
       })
 
       // 更新用户题目状态
       await updateUserProblem(userProblemId || activeProblem.id, {
-        personalDifficulty: activeProblem.personalDifficulty,
+        personalDifficulty: newReview.personalDifficulty || activeProblem.personalDifficulty,
         status: newReview.status,
-        progressStatus: activeProblem.progressStatus,
+        progressStatus: newReview.progressStatus,
         notes: activeProblem.notes || '',
-        code: activeProblem.code || '',
+        code: newReview.code,
       })
 
       // 重新加载复习记录
-      await loadReviews()
+      await loadReviews(userProblemId)
 
       // 更新本地状态
       updateProblem({
         ...activeProblem,
         status: newReview.status,
+        progressStatus: newReview.progressStatus,
+        personalDifficulty: newReview.personalDifficulty || activeProblem.personalDifficulty,
+        code: newReview.code,
+        userProblemId,
       })
 
-      setNewReview({ comment: '', status: newReview.status, showForm: false })
+      setNewReview({ ...newReview, comment: '', showForm: false })
+      return true
     } catch (error) {
       console.error('创建复习记录失败:', error)
+      throw error
     }
   }
 
@@ -1109,68 +1124,110 @@ function ReviewSection({
   isLoadingReviews,
 }) {
   const reviewStatusOptions = ['Confused', 'New', 'Struggling', 'Relearning', 'Stable', 'Mastered']
+  const progressOptions = [
+    { key: 'Unpracticed', label: '未开始' },
+    { key: 'Reviewing', label: '复习中' },
+    { key: 'Mastered', label: '已完成' },
+  ]
+  const ratingOptions = [
+    { value: 1, label: '秒杀' },
+    { value: 2, label: '拿捏' },
+    { value: 3, label: '纠结' },
+    { value: 4, label: '烧脑' },
+    { value: 5, label: '地狱' },
+  ]
+  const [selectedReview, setSelectedReview] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  const openNewReview = () => {
+    setNewReview({
+      comment: '',
+      status: reviewStatusOptions.includes(activeProblem.status) ? activeProblem.status : 'New',
+      progressStatus: activeProblem.progressStatus || 'Reviewing',
+      personalDifficulty: activeProblem.personalDifficulty || 0,
+      code: activeProblem.code || '',
+      codeLanguage: activeProblem.codeLanguage || '',
+      showForm: true,
+    })
+  }
+
+  const submitReview = async () => {
+    setSaving(true)
+    setSaveError('')
+    try {
+      if (await handleAddReview()) setNewReview((current) => ({ ...current, showForm: false }))
+    } catch (error) {
+      setSaveError(error.message || '保存失败，请重试')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <label className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-          <History size={16} className="text-primary-500" /> 复习训练打卡
+          <History size={16} className="text-primary-500" /> 训练打卡
         </label>
         <button
-          onClick={() => setNewReview({ ...newReview, showForm: !newReview.showForm })}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md active:scale-95 ${
-            newReview.showForm
-              ? 'bg-slate-200 text-slate-600'
-              : 'bg-primary-600 text-white shadow-primary-50'
-          }`}
+          type="button"
+          onClick={openNewReview}
+          title="新增训练打卡"
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md active:scale-95 bg-primary-600 text-white shadow-primary-50"
         >
-          {newReview.showForm ? <X size={16} /> : <Plus size={18} />}
+          <Plus size={18} />
         </button>
       </div>
 
-      {newReview.showForm && (
-        <div className="bg-primary-50/50 p-5 rounded-2xl border-2 border-primary-100 space-y-4 animate-in zoom-in-95 duration-200">
-          <label className="text-[10px] font-semibold text-primary-700 uppercase block tracking-tight">
-            本次训练后的掌握度
-          </label>
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-white rounded-xl">
-            {reviewStatusOptions.map((k) => {
-              const v = STATUS_MAP[k]
-              if (!v) return null
-              return (
-                <button
-                  key={k}
-                  onClick={() => {
-                    setNewReview({
-                      ...newReview,
-                      status: k,
-                      comment: v.comment,
-                    })
-                  }}
-                  className={`py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
-                    newReview.status === k
-                      ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                      : 'bg-transparent text-slate-400 border-transparent hover:bg-slate-50'
-                  }`}
-                >
-                  {v.label}
-                </button>
-              )
-            })}
-          </div>
-          <textarea
-            className="w-full h-24 p-3 bg-white border border-primary-100 rounded-xl text-xs focus:ring-2 ring-primary-100 outline-none placeholder:italic"
-            placeholder="记录本次遇到的坑点或突破..."
-            value={newReview.comment}
-            onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-          />
-          <button
-            onClick={handleAddReview}
-            className="w-full bg-primary-600 text-white py-2.5 rounded-xl text-[10px] font-semibold uppercase hover:bg-primary-700 transition-all shadow-lg tracking-widest"
-          >
-            RECORD_JOURNEY
-          </button>
-        </div>
+      {newReview.showForm && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/40 p-5" onMouseDown={(event) => event.target === event.currentTarget && setNewReview({ ...newReview, showForm: false })}>
+          <section role="dialog" aria-modal="true" aria-labelledby="review-dialog-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <header className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 id="review-dialog-title" className="text-base font-bold text-slate-800">新增训练打卡</h2>
+                <p className="mt-1 text-xs text-slate-500">记录本次状态、手感和代码快照</p>
+              </div>
+              <button type="button" onClick={() => setNewReview({ ...newReview, showForm: false })} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100" aria-label="关闭">
+                <X size={17} />
+              </button>
+            </header>
+            <div className="space-y-5">
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-slate-600">掌握程度</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {reviewStatusOptions.map((key) => {
+                    const option = STATUS_MAP[key]
+                    return <button key={key} type="button" onClick={() => setNewReview({ ...newReview, status: key })} className={`rounded-lg border px-2 py-2 text-xs font-semibold transition-colors ${newReview.status === key ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{option?.label || key}</button>
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-slate-600">打卡状态</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {progressOptions.map((option) => <button key={option.key} type="button" onClick={() => setNewReview({ ...newReview, progressStatus: option.key })} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${newReview.progressStatus === option.key ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{option.label}</button>)}
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-slate-600">本次手感评分</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {ratingOptions.map((option) => <button key={option.value} type="button" onClick={() => setNewReview({ ...newReview, personalDifficulty: option.value })} className={`rounded-lg border px-2 py-2 text-xs font-semibold transition-colors ${newReview.personalDifficulty === option.value ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}><span className="block text-sm">{'★'.repeat(option.value)}</span><span>{option.label}</span></button>)}
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-slate-600">训练记录</label>
+                <textarea className="h-24 w-full resize-y rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100" placeholder="记录本次遇到的坑点或突破..." value={newReview.comment} onChange={(event) => setNewReview({ ...newReview, comment: event.target.value })} />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-slate-600">代码快照{newReview.codeLanguage ? ` · ${newReview.codeLanguage}` : ''}</label>
+                <pre className="max-h-44 overflow-auto rounded-xl bg-slate-950 p-3 text-xs leading-5 text-slate-100">{newReview.code || '当前没有已保存的代码'}</pre>
+              </div>
+              {saveError && <p role="alert" className="text-xs font-medium text-rose-600">{saveError}</p>}
+              <button type="button" disabled={saving} onClick={submitReview} className="w-full rounded-xl bg-primary-600 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-primary-700 disabled:cursor-wait disabled:opacity-60">{saving ? '保存中…' : '保存打卡'}</button>
+            </div>
+          </section>
+        </div>,
+        document.body
       )}
 
       <div className="space-y-5 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-slate-100">
@@ -1178,7 +1235,7 @@ function ReviewSection({
           <div className="text-center py-4 text-slate-400 text-[12px]">加载中...</div>
         ) : reviews && reviews.length > 0 ? (
           reviews.map((rev, idx) => (
-            <div key={rev.id || idx} className="relative pl-8 group">
+            <button type="button" key={rev.id || idx} onClick={() => setSelectedReview(rev)} className="relative block w-full pl-8 text-left group">
               <div className="absolute left-0 top-1.5 w-6 h-6 bg-white border-2 border-primary-500 rounded-full flex items-center justify-center z-10 shadow-sm transition-transform group-hover:scale-110">
                 <Star size={10} className="text-primary-500" fill="currentColor" />
               </div>
@@ -1201,16 +1258,38 @@ function ReviewSection({
                     {STATUS_MAP[rev.status]?.label || rev.status}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-600 leading-relaxed font-medium italic opacity-80">
-                  "{rev.comment}"
-                </p>
+                <p className="text-[11px] text-slate-600 leading-relaxed font-medium italic opacity-80">{rev.comment || '未填写训练记录'}</p>
+                <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-slate-400">
+                  {rev.progress_status && <span>{progressOptions.find((option) => option.key === rev.progress_status)?.label || rev.progress_status}</span>}
+                  {rev.personal_difficulty > 0 && <span>{'★'.repeat(rev.personal_difficulty)} 手感</span>}
+                  {rev.code && <span>含代码快照 · 点击查看</span>}
+                </div>
               </div>
-            </div>
+            </button>
           ))
         ) : (
           <div className="text-center py-4 text-slate-400 text-[12px]">暂无复习记录</div>
         )}
       </div>
+
+      {selectedReview && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/40 p-5" onMouseDown={(event) => event.target === event.currentTarget && setSelectedReview(null)}>
+          <section role="dialog" aria-modal="true" aria-labelledby="review-detail-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <header className="mb-5 flex items-center justify-between">
+              <div><h2 id="review-detail-title" className="text-base font-bold text-slate-800">训练打卡记录</h2><p className="mt-1 text-xs text-slate-500">{new Date(selectedReview.review_date).toLocaleString('zh-CN')}</p></div>
+              <button type="button" onClick={() => setSelectedReview(null)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100" aria-label="关闭"><X size={17} /></button>
+            </header>
+            <div className="mb-4 flex flex-wrap gap-2 text-xs">
+              <span className={`rounded-full px-3 py-1 font-semibold ${STATUS_MAP[selectedReview.status]?.light || 'bg-slate-100 text-slate-600'}`}>{STATUS_MAP[selectedReview.status]?.label || selectedReview.status}</span>
+              {selectedReview.progress_status && <span className="rounded-full bg-primary-50 px-3 py-1 font-semibold text-primary-700">{progressOptions.find((option) => option.key === selectedReview.progress_status)?.label || selectedReview.progress_status}</span>}
+              {selectedReview.personal_difficulty > 0 && <span className="rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-700">手感 {'★'.repeat(selectedReview.personal_difficulty)}</span>}
+            </div>
+            <div className="mb-5 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{selectedReview.comment || '未填写训练记录'}</div>
+            <div><h3 className="mb-2 text-xs font-semibold text-slate-600">代码快照{selectedReview.code_language ? ` · ${selectedReview.code_language}` : ''}</h3><pre className="max-h-[50vh] overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-5 text-slate-100">{selectedReview.code || '此记录没有代码快照'}</pre></div>
+          </section>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

@@ -17,9 +17,9 @@ func NewReviewRepository() *ReviewRepository {
 // CreateReview 创建复习记录
 func (r *ReviewRepository) CreateReview(review *models.Review) error {
 	_, err := r.db.Exec(`
-		INSERT INTO reviews (id, user_problem_id, review_date, status, comment, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, review.ID, review.UserProblemID, review.ReviewDate, review.Status, review.Comment, review.CreatedAt)
+		INSERT INTO reviews (id, user_problem_id, review_date, status, progress_status, personal_difficulty, comment, code, code_language, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, review.ID, review.UserProblemID, review.ReviewDate, review.Status, review.ProgressStatus, review.PersonalDifficulty, review.Comment, review.Code, review.CodeLanguage, review.CreatedAt)
 	return err
 }
 
@@ -27,9 +27,9 @@ func (r *ReviewRepository) CreateReview(review *models.Review) error {
 func (r *ReviewRepository) GetReviewByID(id string) (*models.Review, error) {
 	var review models.Review
 	err := r.db.QueryRow(`
-		SELECT id, user_problem_id, review_date, status, comment, created_at
+		SELECT id, user_problem_id, review_date, status, COALESCE(progress_status, ''), COALESCE(personal_difficulty, 0), COALESCE(comment, ''), COALESCE(code, ''), COALESCE(code_language, ''), created_at
 		FROM reviews WHERE id = ?
-	`, id).Scan(&review.ID, &review.UserProblemID, &review.ReviewDate, &review.Status, &review.Comment, &review.CreatedAt)
+	`, id).Scan(&review.ID, &review.UserProblemID, &review.ReviewDate, &review.Status, &review.ProgressStatus, &review.PersonalDifficulty, &review.Comment, &review.Code, &review.CodeLanguage, &review.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (r *ReviewRepository) GetReviewByID(id string) (*models.Review, error) {
 // GetReviewsByUserProblemID 根据用户题目 ID 获取复习记录
 func (r *ReviewRepository) GetReviewsByUserProblemID(userProblemID string) ([]models.Review, error) {
 	rows, err := r.db.Query(`
-		SELECT id, user_problem_id, review_date, status, comment, created_at
+		SELECT id, user_problem_id, review_date, status, COALESCE(progress_status, ''), COALESCE(personal_difficulty, 0), COALESCE(comment, ''), COALESCE(code, ''), COALESCE(code_language, ''), created_at
 		FROM reviews WHERE user_problem_id = ? ORDER BY review_date DESC
 	`, userProblemID)
 	if err != nil {
@@ -50,7 +50,7 @@ func (r *ReviewRepository) GetReviewsByUserProblemID(userProblemID string) ([]mo
 	var reviews []models.Review
 	for rows.Next() {
 		var review models.Review
-		err := rows.Scan(&review.ID, &review.UserProblemID, &review.ReviewDate, &review.Status, &review.Comment, &review.CreatedAt)
+		err := rows.Scan(&review.ID, &review.UserProblemID, &review.ReviewDate, &review.Status, &review.ProgressStatus, &review.PersonalDifficulty, &review.Comment, &review.Code, &review.CodeLanguage, &review.CreatedAt)
 		if err != nil {
 			return nil, err
 		}

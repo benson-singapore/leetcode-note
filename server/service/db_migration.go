@@ -96,6 +96,21 @@ func MigrateDatabase() error {
 			)
 		`)
 	}
+	for _, col := range []struct {
+		name     string
+		dataType string
+	}{
+		{"progress_status", "TEXT DEFAULT ''"},
+		{"personal_difficulty", "INTEGER DEFAULT 0"},
+		{"code", "TEXT DEFAULT ''"},
+		{"code_language", "TEXT DEFAULT ''"},
+	} {
+		if err := addColumnIfNotExists(db, "reviews", col.name, col.dataType); err != nil {
+			log.Printf("[Migration] 添加 reviews.%s 失败: %v\n", col.name, err)
+		} else {
+			log.Printf("[Migration] 列 reviews.%s 已添加或已存在\n", col.name)
+		}
+	}
 	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_problems_review_count ON user_problems(review_count)`); err != nil {
 		log.Printf("[Migration] 创建索引 idx_user_problems_review_count 失败: %v\n", err)
 	} else {
