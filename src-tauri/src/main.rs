@@ -159,6 +159,52 @@ fn close_leetcode_login(app: tauri::AppHandle) {
 // ===== 内嵌 LeetCode 浏览器 =====
 
 const EMBED_BROWSER_WINDOW: &str = "leetcode-embed";
+const EMBED_DEFAULT_ZOOM: f64 = 0.9;
+
+const EMBED_ZOOM_SCRIPT: &str = r#"(function() {
+  if (window.__lcnZoomKeysInstalled) return;
+  window.__lcnZoomKeysInstalled = true;
+  var minZoom = 0.5;
+  var maxZoom = 2.0;
+  var step = 0.1;
+  var defaultZoom = 0.9;
+  var storedZoom = Number(sessionStorage.getItem('lcn-webview-zoom'));
+  window.__lcnWebviewZoom = Number.isFinite(storedZoom) && storedZoom >= minZoom && storedZoom <= maxZoom
+    ? storedZoom
+    : defaultZoom;
+  document.addEventListener('keydown', function(event) {
+    if (!(event.metaKey || event.ctrlKey)) return;
+    var key = event.key;
+    var code = event.code;
+    var nextZoom = window.__lcnWebviewZoom;
+    if (key === '+' || key === '=' || code === 'NumpadAdd') nextZoom += step;
+    else if (key === '-' || key === '_' || code === 'NumpadSubtract') nextZoom -= step;
+    else if (key === '0' || code === 'Numpad0') nextZoom = defaultZoom;
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
+    nextZoom = Math.max(minZoom, Math.min(maxZoom, Math.round(nextZoom * 10) / 10));
+    window.__lcnWebviewZoom = nextZoom;
+    sessionStorage.setItem('lcn-webview-zoom', String(nextZoom));
+    var indicator = document.getElementById('lcn-zoom-indicator');
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'lcn-zoom-indicator';
+      indicator.style.cssText = 'position:fixed;top:82px;right:18px;z-index:2147483647;padding:7px 11px;border-radius:9px;background:rgba(15,23,42,.85);color:#fff;font:600 12px -apple-system,BlinkMacSystemFont,sans-serif;pointer-events:none;opacity:0;transition:opacity .15s;';
+      document.body.appendChild(indicator);
+    }
+    indicator.textContent = Math.round(nextZoom * 100) + '%';
+    indicator.style.opacity = '1';
+    clearTimeout(window.__lcnZoomIndicatorTimer);
+    window.__lcnZoomIndicatorTimer = setTimeout(function() { indicator.style.opacity = '0'; }, 900);
+    var tauri = window.__TAURI_INTERNALS__;
+    if (tauri && typeof tauri.invoke === 'function') {
+      tauri.invoke('set_embedded_zoom', { scale: nextZoom }).catch(function(error) {
+        console.error('[LeetCode Embed] 调整缩放失败:', error);
+      });
+    }
+  }, true);
+})();"#;
 
 /// 哨兵 URL scheme：顶部按钮通过导航到该 scheme 触发 Rust 端 on_navigation，
 /// 将当前题目页交给系统默认浏览器打开。
@@ -241,6 +287,19 @@ fn embedded_local_api_request(
         status,
         response_text: String::from_utf8_lossy(&decoded_body).into_owned(),
     })
+}
+
+/// 设置 LeetCode 内嵌窗口的 WebView 缩放比例。
+#[tauri::command]
+fn set_embedded_zoom(app: tauri::AppHandle, scale: f64) -> Result<(), String> {
+    if !scale.is_finite() {
+        return Err("缩放比例无效".to_string());
+    }
+    let scale = scale.clamp(0.5, 2.0);
+    let win = app
+        .get_webview_window(EMBED_BROWSER_WINDOW)
+        .ok_or_else(|| "内嵌浏览器窗口未打开".to_string())?;
+    win.set_zoom(scale).map_err(|e| e.to_string())
 }
 
 fn decode_chunked_body(mut input: &[u8]) -> Result<Vec<u8>, String> {
@@ -452,6 +511,7 @@ fn open_embedded_browser(
     // 先不显示，定位到与主窗口错开的位置后再显示，避免闪一下居中再跳位
     .visible(false)
     .initialization_script(&topbar_script)
+    .initialization_script(EMBED_ZOOM_SCRIPT)
     .initialization_script(&notes_injection)
     .on_navigation(move |nav_url| {
         // 拦截顶部栏按钮触发的哨兵导航：取消导航并改用系统浏览器打开
@@ -488,6 +548,9 @@ fn open_embedded_browser(
     let window = builder
         .build()
         .map_err(|e| format!("创建内嵌浏览器窗口失败: {e}"))?;
+    if let Err(error) = window.set_zoom(EMBED_DEFAULT_ZOOM) {
+        eprintln!("[embed] 设置默认缩放失败: {error}");
+    }
 
     // 相对主窗口错开显示（右下偏移），避免与主界面完全重叠
     if let Some(main) = app.get_webview_window("main") {
@@ -621,6 +684,7 @@ fn main() {
             capture_login_cookie,
             close_leetcode_login,
             embedded_local_api_request,
+            set_embedded_zoom,
             open_embedded_browser,
             close_embedded_browser,
             open_in_system_browser
