@@ -40,6 +40,7 @@ import {
   getProblem,
   updateUserProblem,
   getReviews,
+  updateReview,
   deleteProblem,
 } from '../api/leetcode'
 
@@ -125,6 +126,27 @@ const PROGRESS_STATUS_OPTIONS = [
   { value: 'Unpracticed', label: '未开始', icon: '⏳' },
   { value: 'Reviewing', label: '复习中', icon: '🔄' },
   { value: 'Mastered', label: '已完成', icon: '🏁' },
+]
+
+// 代码快照语言选项：slug 与 LeetCode / highlight.js 映射保持一致
+const REVIEW_LANGUAGE_OPTIONS = [
+  { value: 'java', label: 'Java' },
+  { value: 'python3', label: 'Python3' },
+  { value: 'python', label: 'Python' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'c', label: 'C' },
+  { value: 'csharp', label: 'C#' },
+  { value: 'go', label: 'Go' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'kotlin', label: 'Kotlin' },
+  { value: 'swift', label: 'Swift' },
+  { value: 'ruby', label: 'Ruby' },
+  { value: 'php', label: 'PHP' },
+  { value: 'scala', label: 'Scala' },
+  { value: 'dart', label: 'Dart' },
+  { value: 'mysql', label: 'MySQL' },
 ]
 
 export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose, loading }) {
@@ -1098,15 +1120,78 @@ function ReviewSection({
   ]
   const [selectedReview, setSelectedReview] = useState(null)
   const [copied, setCopied] = useState(false)
+  // 编辑草稿：打开记录时初始化，保存成功后才回写列表，避免输入过程污染时间线
+  const [draft, setDraft] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  // 代码编辑区：透明 textarea 叠在高亮层之上，滚动时同步位移保持对齐
+  const codeAreaRef = useRef(null)
+  const highlightLayerRef = useRef(null)
+
+  const syncCodeScroll = () => {
+    const area = codeAreaRef.current
+    const layer = highlightLayerRef.current
+    if (!area || !layer) return
+    layer.scrollTop = area.scrollTop
+    layer.scrollLeft = area.scrollLeft
+  }
+
+  const handleSelectReview = (review) => {
+    setSelectedReview(review)
+    setDraft({
+      status: review.status || 'New',
+      progress_status: review.progress_status || 'Reviewing',
+      personal_difficulty: review.personal_difficulty || 0,
+      comment: review.comment || '',
+      code: review.code || '',
+      code_language: review.code_language || 'java',
+    })
+    setSaveError('')
+  }
+
+  const handleCloseReview = () => {
+    setSelectedReview(null)
+    setDraft(null)
+    setSaveError('')
+  }
+
+  // 只更新内容字段；后端不写 created_at，统计口径（按创建时间）保持不变
+  const handleSaveReview = async () => {
+    if (!selectedReview?.id || !draft) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      const res = await updateReview(selectedReview.id, {
+        status: draft.status,
+        progress_status: draft.progress_status,
+        personal_difficulty: Number(draft.personal_difficulty) || 0,
+        comment: draft.comment,
+        code: draft.code,
+        code_language: draft.code_language,
+      })
+      const updated = res?.data || res
+      if (!updated?.id) throw new Error('保存成功但未返回记录')
+      setReviews((current) =>
+        current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
+      )
+      setSelectedReview((current) => (current?.id === updated.id ? { ...current, ...updated } : current))
+    } catch (error) {
+      console.error('保存打卡记录失败:', error)
+      setSaveError(error.message || '保存失败，请重试')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   useEffect(() => {
     setCopied(false)
   }, [selectedReview])
 
   const handleCopyCode = async () => {
-    if (!selectedReview?.code) return
+    const code = draft?.code
+    if (!code) return
     try {
-      await navigator.clipboard.writeText(selectedReview.code)
+      await navigator.clipboard.writeText(code)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1500)
     } catch (error) {
@@ -1116,9 +1201,9 @@ function ReviewSection({
 
   // 代码快照高亮：复用 CodeEditor 的 highlight.js 语言映射与 atom-one-dark 主题
   const highlightedSnapshot = useMemo(() => {
-    const code = selectedReview?.code
+    const code = draft?.code
     if (!code) return ''
-    const language = HLJS_LANGS[(selectedReview.code_language || '').toLowerCase()]
+    const language = HLJS_LANGS[(draft.code_language || '').toLowerCase()]
     try {
       if (language) return hljs.highlight(code, { language, ignoreIllegals: true }).value
       return hljs.highlightAuto(code).value
@@ -1126,7 +1211,7 @@ function ReviewSection({
       console.error('代码快照高亮失败:', error)
       return code.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch])
     }
-  }, [selectedReview])
+  }, [draft])
 
   return (
     <div className="space-y-6">
@@ -1149,7 +1234,7 @@ function ReviewSection({
           <div className="text-center py-4 text-slate-400 text-[12px]">加载中...</div>
         ) : reviews && reviews.length > 0 ? (
           reviews.map((rev, idx) => (
-            <button type="button" key={rev.id || idx} onClick={() => setSelectedReview(rev)} className="relative block w-full pl-8 text-left group">
+            <button type="button" key={rev.id || idx} onClick={() => handleSelectReview(rev)} className="relative block w-full pl-8 text-left group">
               <div className="absolute left-0 top-1.5 w-6 h-6 bg-white border-2 border-primary-500 rounded-full flex items-center justify-center z-10 shadow-sm transition-transform group-hover:scale-110">
                 <Star size={10} className="text-primary-500" fill="currentColor" />
               </div>
@@ -1176,7 +1261,9 @@ function ReviewSection({
                 <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-slate-400">
                   {rev.progress_status && <span>{progressOptions.find((option) => option.key === rev.progress_status)?.label || rev.progress_status}</span>}
                   {rev.personal_difficulty > 0 && <span>{'★'.repeat(rev.personal_difficulty)} 手感</span>}
-                  {rev.code && <span>含代码快照 · 点击查看</span>}
+                  {rev.code && <span>含代码快照</span>}
+                  <span className="text-slate-300">·</span>
+                  <span>点击查看 / 编辑</span>
                 </div>
               </div>
             </button>
@@ -1186,11 +1273,11 @@ function ReviewSection({
         )}
       </div>
 
-      {selectedReview && createPortal(
+      {selectedReview && draft && createPortal(
         <div className="fixed inset-0 z-[10000] flex justify-end overflow-hidden antialiased">
           <div
             className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px] animate-in fade-in duration-300"
-            onClick={() => setSelectedReview(null)}
+            onClick={handleCloseReview}
           />
           <section
             role="dialog"
@@ -1198,7 +1285,7 @@ function ReviewSection({
             aria-labelledby="review-detail-title"
             className="relative flex h-full w-[1000px] max-w-[92vw] flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 sm:flex-row"
           >
-            {/* 左侧：代码快照 */}
+            {/* 左侧：代码快照（可编辑） */}
             <div className="flex flex-1 min-w-0 flex-col p-6 min-h-0">
               <header className="mb-4 flex shrink-0 items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -1206,36 +1293,74 @@ function ReviewSection({
                     {activeProblem?.translatedTitle || activeProblem?.title || '代码快照'}
                   </h2>
                   <p className="mt-1 text-[11px] text-slate-400">
-                    代码快照{selectedReview.code_language ? ` · ${selectedReview.code_language}` : ''}
+                    代码快照
+                    <span className="ml-1.5 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500">
+                      {new Date(selectedReview.created_at || selectedReview.review_date).toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                      · 创建后编辑不计入统计
+                    </span>
                   </p>
                 </div>
-                {selectedReview.code && (
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-500 transition-all hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 active:scale-95"
+                <div className="flex shrink-0 items-center gap-2">
+                  <select
+                    value={draft.code_language}
+                    onChange={(e) => setDraft((current) => ({ ...current, code_language: e.target.value }))}
+                    aria-label="代码语言"
+                    className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-600 outline-none transition-all hover:border-primary-200 focus:border-primary-300 focus:ring-2 focus:ring-primary-100"
                   >
-                    {copied ? <Check size={13} /> : <Copy size={13} />}
-                    {copied ? '已复制' : '复制代码'}
-                  </button>
-                )}
+                    {REVIEW_LANGUAGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                  {draft.code && (
+                    <button
+                      type="button"
+                      onClick={handleCopyCode}
+                      className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-500 transition-all hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 active:scale-95"
+                    >
+                      {copied ? <Check size={13} /> : <Copy size={13} />}
+                      {copied ? '已复制' : '复制代码'}
+                    </button>
+                  )}
+                </div>
               </header>
-              <pre className="flex-1 min-h-0 overflow-auto custom-scrollbar rounded-xl bg-[#282c34] p-4 font-mono text-xs leading-5 text-[#abb2bf]">
-                {selectedReview.code ? (
-                  <code className="hljs !bg-transparent !p-0 block min-w-0 whitespace-pre" dangerouslySetInnerHTML={{ __html: highlightedSnapshot }} />
-                ) : (
-                  '此记录没有代码快照'
-                )}
-              </pre>
+              <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-700/40 bg-[#282c34]">
+                {/* 语法高亮层：置于透明 textarea 之下，随滚动同步 */}
+                <pre
+                  aria-hidden="true"
+                  ref={highlightLayerRef}
+                  className="custom-scrollbar pointer-events-none absolute inset-0 overflow-hidden p-4 font-mono text-xs leading-5 text-[#abb2bf]">
+                  <code
+                    className="hljs !bg-transparent !p-0 block min-w-0 whitespace-pre"
+                    dangerouslySetInnerHTML={{ __html: highlightedSnapshot }}
+                  />
+                </pre>
+                <textarea
+                  ref={codeAreaRef}
+                  value={draft.code}
+                  onChange={(e) => setDraft((current) => ({ ...current, code: e.target.value }))}
+                  onScroll={syncCodeScroll}
+                  spellCheck={false}
+                  aria-label="代码快照内容"
+                  placeholder={draft.code ? '' : '此记录没有代码快照，可在打卡面板中重新记录'}
+                  className="custom-scrollbar relative z-10 min-h-0 w-full flex-1 resize-none overflow-auto bg-transparent p-4 font-mono text-xs leading-5 text-transparent caret-[#f8fafc] outline-none"
+                  style={{ WebkitTextFillColor: 'transparent' }}
+                />
+              </div>
             </div>
 
-            {/* 右侧：训练打卡表单回显 */}
+            {/* 右侧：训练打卡（可编辑） */}
             <aside className="flex w-[300px] shrink-0 flex-col border-l border-slate-100 bg-slate-50">
               <header className="flex items-center justify-between gap-2.5 px-4 pt-4 pb-1">
                 <div className="text-[15px] font-bold text-slate-800">训练打卡</div>
                 <button
                   type="button"
-                  onClick={() => setSelectedReview(null)}
+                  onClick={handleCloseReview}
                   aria-label="关闭"
                   className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-700"
                 >
@@ -1245,7 +1370,7 @@ function ReviewSection({
 
               <div className="flex-1 overflow-auto custom-scrollbar px-4 pt-1.5 pb-4">
                 <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                  {new Date(selectedReview.review_date).toLocaleString('zh-CN', {
+                  创建于 {new Date(selectedReview.created_at || selectedReview.review_date).toLocaleString('zh-CN', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
@@ -1258,88 +1383,117 @@ function ReviewSection({
                   <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">掌握程度</span>
                   <div className="flex flex-col gap-1.5">
                     {MASTERY_OPTIONS.map((opt) => {
-                      const active = opt.value === selectedReview.status
+                      const active = opt.value === draft.status
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={opt.value}
-                          className={`rounded-md border px-2 py-2 text-center text-[11px] transition-all ${
+                          onClick={() => setDraft((current) => ({ ...current, status: opt.value }))}
+                          aria-pressed={active}
+                          className={`rounded-md border px-2 py-2 text-center text-[11px] transition-all active:scale-[.98] ${
                             active
                               ? 'border-primary-600 bg-primary-600 font-semibold text-white'
-                              : 'border-slate-200 bg-white text-slate-700'
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-primary-300'
                           }`}
                         >
                           {opt.icon} {opt.label}
-                        </div>
+                        </button>
                       )
                     })}
                   </div>
                 </section>
 
-                {selectedReview.progress_status && (
-                  <section className="mt-4 flex flex-col gap-2.5">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">完成状态</span>
-                    <div className="flex flex-col gap-1.5">
-                      {PROGRESS_STATUS_OPTIONS.map((opt) => {
-                        const active = opt.value === selectedReview.progress_status
-                        return (
-                          <div
-                            key={opt.value}
-                            className={`rounded-md border px-2 py-2 text-center text-[11px] transition-all ${
-                              active
-                                ? 'border-primary-600 bg-primary-600 font-semibold text-white'
-                                : 'border-slate-200 bg-white text-slate-700'
-                            }`}
-                          >
-                            {opt.icon} {opt.label}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </section>
-                )}
+                <section className="mt-4 flex flex-col gap-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">完成状态</span>
+                  <div className="flex flex-col gap-1.5">
+                    {PROGRESS_STATUS_OPTIONS.map((opt) => {
+                      const active = opt.value === draft.progress_status
+                      return (
+                        <button
+                          type="button"
+                          key={opt.value}
+                          onClick={() => setDraft((current) => ({ ...current, progress_status: opt.value }))}
+                          aria-pressed={active}
+                          className={`rounded-md border px-2 py-2 text-center text-[11px] transition-all active:scale-[.98] ${
+                            active
+                              ? 'border-primary-600 bg-primary-600 font-semibold text-white'
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-primary-300'
+                          }`}
+                        >
+                          {opt.icon} {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
 
-                {selectedReview.personal_difficulty > 0 && (
-                  <section className="mt-4 flex flex-col gap-2.5">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">手感自评</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(PERSONAL_RATINGS).map(([value, rating]) => {
-                        const active = Number(value) === Number(selectedReview.personal_difficulty)
-                        return (
-                          <div
-                            key={value}
-                            className={`flex flex-1 basis-[calc(50%-0.375rem)] flex-col items-center gap-0.5 rounded-md border px-1 py-1.5 text-center transition-all ${
-                              active
-                                ? 'border-primary-600 bg-primary-50'
-                                : 'border-slate-200 bg-white'
-                            }`}
-                          >
+                <section className="mt-4 flex flex-col gap-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">手感自评</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(PERSONAL_RATINGS).map(([value, rating]) => {
+                      const active = Number(value) === Number(draft.personal_difficulty)
+                      return (
+                        <button
+                          type="button"
+                          key={value}
+                          onClick={() =>
+                            setDraft((current) => ({
+                              ...current,
+                              personal_difficulty: active ? 0 : Number(value),
+                            }))
+                          }
+                          aria-pressed={active}
+                          className={`flex flex-1 basis-[calc(50%-0.375rem)] flex-col items-center gap-0.5 rounded-md border px-1 py-1.5 text-center transition-all active:scale-[.98] ${
+                            active
+                              ? 'border-primary-600 bg-primary-50'
+                              : 'border-slate-200 bg-white hover:border-primary-300'
+                          }`}
+                        >
                             <span className="text-[14px] leading-none">{rating.icon}</span>
                             <span className={`text-[10px] ${active ? 'font-semibold text-primary-700' : 'text-slate-400'}`}>
                               {rating.label}
                             </span>
-                          </div>
+                          </button>
                         )
                       })}
                     </div>
                   </section>
-                )}
 
                 <section className="mt-4 flex flex-col gap-2.5">
                   <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">训练记录</span>
-                  <div className="min-h-[120px] whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-2.5 text-[12px] leading-6 text-slate-700">
-                    {selectedReview.comment || '未填写训练记录'}
-                  </div>
+                  <textarea
+                    value={draft.comment}
+                    onChange={(e) => setDraft((current) => ({ ...current, comment: e.target.value }))}
+                    placeholder="记录本次遇到的坑点或突破..."
+                    aria-label="训练记录内容"
+                    className="min-h-[120px] w-full resize-y rounded-lg border border-slate-200 bg-white p-2.5 text-[12px] leading-6 text-slate-700 outline-none transition-colors placeholder:text-slate-300 focus:border-primary-400"
+                  />
                 </section>
               </div>
 
               <div className="border-t border-slate-100 px-4 pt-3.5 pb-4">
-                <button
-                  type="button"
-                  onClick={() => setSelectedReview(null)}
-                  className="w-full rounded-lg bg-primary-600 py-2.5 text-[13px] font-semibold text-white shadow-lg shadow-primary-200 transition-all hover:bg-primary-700 active:scale-95"
-                >
-                  关闭
-                </button>
+                {saveError && (
+                  <p role="alert" className="mb-2 text-[11px] font-medium text-rose-600">
+                    {saveError}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCloseReview}
+                    className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-[13px] font-semibold text-slate-500 transition-all hover:bg-slate-100 active:scale-95"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveReview}
+                    disabled={saving}
+                    className="flex-1 rounded-lg bg-primary-600 py-2.5 text-[13px] font-semibold text-white shadow-lg shadow-primary-200 transition-all hover:bg-primary-700 active:scale-95 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {saving ? '保存中…' : '保存修改'}
+                  </button>
+                </div>
               </div>
             </aside>
           </section>

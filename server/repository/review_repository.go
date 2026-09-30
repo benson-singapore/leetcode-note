@@ -19,7 +19,7 @@ func (r *ReviewRepository) CreateReview(review *models.Review) error {
 	_, err := r.db.Exec(`
 		INSERT INTO reviews (id, user_problem_id, review_date, status, progress_status, personal_difficulty, comment, code, code_language, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, review.ID, review.UserProblemID, review.ReviewDate, review.Status, review.ProgressStatus, review.PersonalDifficulty, review.Comment, review.Code, review.CodeLanguage, review.CreatedAt)
+	`, review.ID, review.UserProblemID, review.ReviewDate.Format("2006-01-02"), review.Status, review.ProgressStatus, review.PersonalDifficulty, review.Comment, review.Code, review.CodeLanguage, review.CreatedAt.UTC().Format("2006-01-02 15:04:05.999999999"))
 	return err
 }
 
@@ -65,11 +65,15 @@ func (r *ReviewRepository) DeleteReview(id string) error {
 	return err
 }
 
-// UpdateReview 更新复习记录
+// UpdateReview 更新复习记录的内容字段。
+// 刻意不写 created_at / review_date：热力图、今日复习与复习次数等统计都以创建时间为口径，
+// 编辑只改内容，改动记录的归属日期会篡改历史统计。
 func (r *ReviewRepository) UpdateReview(review *models.Review) error {
 	_, err := r.db.Exec(`
-		UPDATE reviews SET status = ?, comment = ? WHERE id = ?
-	`, review.Status, review.Comment, review.ID)
+		UPDATE reviews
+		SET status = ?, progress_status = ?, personal_difficulty = ?, comment = ?, code = ?, code_language = ?
+		WHERE id = ?
+	`, review.Status, review.ProgressStatus, review.PersonalDifficulty, review.Comment, review.Code, review.CodeLanguage, review.ID)
 	return err
 }
 
