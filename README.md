@@ -1,4 +1,5 @@
 <div align="center">
+  <p><a href="README.md">简体中文</a> | <a href="README.en.md">English</a></p>
   <img src="public/logo.png" width="72" height="72" alt="LeetCode 笔记图标" />
   <h1>LeetCode 笔记</h1>
   <p><strong>把刷题、记录和复习，放进一条连贯的学习路径。</strong></p>

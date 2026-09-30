@@ -25,6 +25,9 @@ detect_triple() {
 
 TARGET="${1:-}"
 if [ -z "$TARGET" ]; then
+  TARGET="${TAURI_ENV_TARGET_TRIPLE:-${CARGO_BUILD_TARGET:-}}"
+fi
+if [ -z "$TARGET" ]; then
   TARGET=$(detect_triple)
 fi
 

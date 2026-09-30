@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Notes"
+  short_description: "按 Git 历史检查或生成版本日志"
+  default_prompt: "使用 $release-notes 检查或生成有 Git 证据支持的版本更新日志。"

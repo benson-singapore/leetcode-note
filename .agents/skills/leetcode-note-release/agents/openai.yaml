@@ -1,0 +1,4 @@
+interface:
+  display_name: "LeetCode Note Release"
+  short_description: "编排全平台桌面版本发布"
+  default_prompt: "使用 $leetcode-note-release 按确认的版本发布 LeetCode Note，并核对 GitHub Release 和全平台安装包。"
