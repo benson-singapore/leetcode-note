@@ -26,6 +26,7 @@ import {
   X,
   ChevronUp,
   ChevronDown,
+  Globe,
   LogOut,
 } from 'lucide-react'
 import { getSettings, updateSettings, fetchLeetCodeProblem, getLeetCodeUserProfile, getLeetCodeSolvedStats, getLeetCodeSolvedList, importLeetCodeSolved } from '../api/leetcode'
@@ -48,8 +49,7 @@ import pluginScriptRaw from '../../tamper-monkey/leetcode-note-drawer.user.js?ra
 const NAV = [
   { id: 'binding', label: '账号绑定', icon: Link2 },
   { id: 'ai', label: 'AI 助手', icon: Sparkles },
-  { id: 'review', label: '复习偏好', icon: GraduationCap },
-  { id: 'appearance', label: '外观显示', icon: SlidersHorizontal },
+  { id: 'general', label: '通用设置', icon: SlidersHorizontal },
   { id: 'plugin', label: '插件同步', icon: Puzzle },
   { id: 'about', label: '关于', icon: Info },
 ]
@@ -1782,14 +1782,14 @@ export default function Settings() {
             </section>
           )}
 
-          {/* 复习偏好 */}
-          {active === 'review' && (
+          {/* 通用设置：语言与列表显示 */}
+          {active === 'general' && (
             <section className="space-y-5">
-              <SectionHeader title="复习偏好" desc="影响复习随机抽题、热力图展示等行为" />
+              <SectionHeader title="通用设置" desc="统一管理学习目标、题目列表与浏览器行为" />
             <Card
-              icon={GraduationCap}
-              iconBg="bg-emerald-500"
-              title="复习与热力图"
+              icon={SlidersHorizontal}
+              iconBg="bg-sky-600"
+              title="默认语言与列表显示"
               footer={
                 <div className="flex w-full justify-end">
                   <button
@@ -1797,89 +1797,10 @@ export default function Settings() {
                     onClick={() => persist(
                       {
                         default_language: settings.default_language || 'Python 3',
-                        daily_review_target: settings.daily_review_target || '3',
-                        heatmap_peak: settings.heatmap_peak || '4',
-                        leetcode_open_mode: settings.leetcode_open_mode || 'embedded',
-                      },
-                      '复习偏好已保存'
-                    )}
-                    className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
-                  >
-                    保存
-                  </button>
-                </div>
-              }
-            >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="默认目标语言" hint="在题目列表中优先显示该语言的提交记录">
-                  <select
-                    value={settings.default_language || 'Python 3'}
-                    onChange={(e) => setKV('default_language', e.target.value)}
-                    className={inputCls}
-                  >
-                    {LANGUAGES.map((l) => (
-                      <option key={l} value={l}>{l}</option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="每日复习目标 (题)" hint="决定热力图达到最深颜色的阈值">
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={settings.daily_review_target || '3'}
-                    onChange={(e) => setKV('daily_review_target', e.target.value)}
-                    className={inputCls}
-                  />
-                </Field>
-                <Field label="题目页打开方式" hint="VIEW_LEETCODE 和训练打卡按钮打开 LeetCode 题目页使用的浏览器">
-                  <select
-                    value={settings.leetcode_open_mode || 'embedded'}
-                    onChange={(e) => setKV('leetcode_open_mode', e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="embedded">内置浏览器（应用内窗口，共享登录状态）</option>
-                    <option value="system">系统默认浏览器</option>
-                  </select>
-                </Field>
-                <Field label="内置浏览器笔记与打卡按钮" hint="仅内置浏览器生效；开启后自动注入应用自带的笔记和打卡功能">
-                  <label className="flex min-h-10 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={settings.embedded_notes_enabled !== 'false'}
-                      onChange={(e) => {
-                        const value = e.target.checked ? 'true' : 'false'
-                        setKV('embedded_notes_enabled', value)
-                        persist({ embedded_notes_enabled: value }, '内置浏览器笔记设置已保存')
-                      }}
-                      className="h-4 w-4 accent-primary-600"
-                    />
-                    自动加载 LeetCode 笔记与打卡功能
-                  </label>
-                </Field>
-              </div>
-            </Card>
-            </section>
-          )}
-
-          {/* 外观显示 */}
-          {active === 'appearance' && (
-            <section className="space-y-5">
-              <SectionHeader title="外观显示" desc="题库列表的分页与信息密度" />
-            <Card
-              icon={SlidersHorizontal}
-              iconBg="bg-slate-700"
-              title="列表与信息"
-              footer={
-                <div className="flex w-full justify-end">
-                  <button
-                    type="button"
-                    onClick={() => persist(
-                      {
                         page_size: String(Math.min(100, Math.max(8, Number(settings.page_size) || 16))),
                         show_pass_rate: settings.show_pass_rate === 'true' ? 'true' : 'false',
                       },
-                      '显示设置已保存'
+                      '通用设置已保存'
                     )}
                     className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
                   >
@@ -1890,6 +1811,17 @@ export default function Settings() {
             >
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="默认目标语言" hint="在题目列表中优先显示该语言的提交记录">
+                    <select
+                      value={settings.default_language || 'Python 3'}
+                      onChange={(e) => setKV('default_language', e.target.value)}
+                      className={inputCls}
+                    >
+                      {LANGUAGES.map((l) => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  </Field>
                   <Field label="列表每页条数" hint="题库列表分页大小（8 - 100，默认 16）">
                     <input
                       type="number"
@@ -1913,6 +1845,104 @@ export default function Settings() {
                 </div>
               </div>
             </Card>
+            </section>
+          )}
+
+          {/* 通用设置：目标与热力图 */}
+          {active === 'general' && (
+            <section className="space-y-5">
+            <Card
+              icon={GraduationCap}
+              iconBg="bg-emerald-500"
+              title="每日目标与热力图"
+              desc="设置每日复习目标，影响热力图颜色深浅与今日复习统计。"
+              footer={
+                <div className="flex w-full justify-end">
+                  <button
+                    type="button"
+                    onClick={() => persist(
+                      {
+                        daily_review_target: String(Math.min(50, Math.max(1, Number(settings.daily_review_target) || 3))),
+                      },
+                      '每日目标已保存'
+                    )}
+                    className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
+                  >
+                    保存
+                  </button>
+                </div>
+              }
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="每日复习目标 (题)" hint="决定热力图达到最深颜色的阈值">
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={settings.daily_review_target || '3'}
+                    onChange={(e) => setKV('daily_review_target', e.target.value)}
+                    className={inputCls}
+                  />
+                </Field>
+              </div>
+            </Card>
+            </section>
+          )}
+
+          {/* 通用设置：浏览器 */}
+          {active === 'general' && (
+            <section className="space-y-5">
+              <Card
+                icon={Globe}
+                iconBg="bg-sky-500"
+                title="题目页与内置浏览器"
+                desc="控制题目链接的打开位置，以及内置浏览器中提供的笔记和打卡功能。"
+                footer={
+                  <div className="flex w-full justify-end">
+                    <button
+                      type="button"
+                      onClick={() => persist(
+                        {
+                          leetcode_open_mode: settings.leetcode_open_mode || 'embedded',
+                          embedded_notes_enabled: settings.embedded_notes_enabled === 'false' ? 'false' : 'true',
+                        },
+                        '浏览器设置已保存'
+                      )}
+                      className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
+                    >
+                      保存
+                    </button>
+                  </div>
+                }
+              >
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="题目页打开方式" hint="VIEW_LEETCODE 和训练打卡按钮打开 LeetCode 题目页使用的浏览器">
+                    <select
+                      value={settings.leetcode_open_mode || 'embedded'}
+                      onChange={(e) => setKV('leetcode_open_mode', e.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="embedded">内置浏览器（应用内窗口，共享登录状态）</option>
+                      <option value="system">系统默认浏览器</option>
+                    </select>
+                  </Field>
+                  <Field label="内置浏览器笔记与打卡按钮" hint="仅内置浏览器生效；开启后自动注入应用自带的笔记和打卡功能">
+                    <label className="flex min-h-10 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={settings.embedded_notes_enabled !== 'false'}
+                        onChange={(e) => {
+                          const value = e.target.checked ? 'true' : 'false'
+                          setKV('embedded_notes_enabled', value)
+                          persist({ embedded_notes_enabled: value }, '内置浏览器笔记设置已保存')
+                        }}
+                        className="h-4 w-4 accent-primary-600"
+                      />
+                      自动加载 LeetCode 笔记与打卡功能
+                    </label>
+                  </Field>
+                </div>
+              </Card>
             </section>
           )}
 
