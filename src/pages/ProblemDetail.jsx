@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getProblem, getSolutionDemo } from '../api/leetcode'
+import { useI18n } from '../i18n'
 
 // 题目详情：题目内容 + HTML 题解演示（iframe 沙箱）
 export default function ProblemDetail() {
+  const { t } = useI18n()
   const { id } = useParams()
   const [problem, setProblem] = useState(null)
   const [demoHtml, setDemoHtml] = useState(null)
@@ -24,8 +26,8 @@ export default function ProblemDetail() {
       .catch((e) => setError(e.message))
   }, [id])
 
-  if (error) return <div className="p-8 text-sm text-red-500">加载失败：{error}</div>
-  if (!problem) return <div className="p-8 text-sm text-neutral-400">加载中…</div>
+  if (error) return <div className="p-8 text-sm text-red-500">{t('加载失败：')}{error}</div>
+  if (!problem) return <div className="p-8 text-sm text-neutral-400">{t('加载中…')}</div>
 
   const content = (problem.translated_content || problem.content || '')
   const tags = (() => {
@@ -64,8 +66,8 @@ export default function ProblemDetail() {
       {/* Tab 切换：题目内容 / HTML 演示 */}
       <div className="mt-6 flex gap-2 border-b border-neutral-200">
         {[
-          ['content', '题目'],
-          ...(problem.has_html_demo ? [['demo', '题解演示']] : []),
+          ['content', t('题目')],
+          ...(problem.has_html_demo ? [['demo', t('题解演示')]] : []),
         ].map(([key, label]) => (
           <button
             key={key}

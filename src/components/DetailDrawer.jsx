@@ -43,6 +43,7 @@ import {
   updateReview,
   deleteProblem,
 } from '../api/leetcode'
+import { useI18n } from '../i18n'
 
 const OFFICIAL_DIFFICULTIES = {
   Easy: { color: 'text-emerald-500 bg-emerald-50 border-emerald-100', label: '简单' },
@@ -150,6 +151,7 @@ const REVIEW_LANGUAGE_OPTIONS = [
 ]
 
 export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose, loading }) {
+  const { t } = useI18n()
   const [detailTab, setDetailTab] = useState('desc')
   const [reviews, setReviews] = useState([])
   const [isLoadingReviews, setIsLoadingReviews] = useState(false)
@@ -185,7 +187,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
         await loadReviews(latest.userProblemId || latest.user_problem_id || activeProblem.userProblemId)
       }
     } catch (error) {
-      console.error('刷新内置浏览器同步的题目数据失败:', error)
+      console.error(t('刷新内置浏览器同步的题目数据失败:'), error)
     }
   }
 
@@ -228,7 +230,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
       const res = await getReviews(userProblemId)
       setReviews(res?.data || res || [])
     } catch (error) {
-      console.error('加载复习记录失败:', error)
+      console.error(t('加载复习记录失败:'), error)
       setReviews([])
     } finally {
       setIsLoadingReviews(false)
@@ -246,7 +248,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
       await deleteProblem(activeProblem.id)
       onDeleted?.(activeProblem.id)
     } catch (error) {
-      console.error('删除题目失败:', error)
+      console.error(t('删除题目失败:'), error)
       setDeleting(false)
       setConfirmingDelete(false)
     }
@@ -265,7 +267,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <Loader2 className="animate-spin h-12 w-12 text-primary-600 mx-auto mb-4" />
-              <p className="text-slate-600 text-sm">加载题目详情中...</p>
+              <p className="text-slate-600 text-sm">{t('加载题目详情中...')}</p>
             </div>
           </div>
         ) : (
@@ -288,9 +290,9 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                       }`}
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                      {STATUS_MAP[activeProblem.status]?.label ||
+                      {t(STATUS_MAP[activeProblem.status]?.label ||
                         activeProblem.status ||
-                        '未知'}
+                        '未知')}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-2 min-w-0">
@@ -330,14 +332,14 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  title={confirmingDelete ? '再点一次确认删除' : '删除此题目'}
+                  title={confirmingDelete ? t('再点一次确认删除') : t('删除此题目')}
                   className={`flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-all active:scale-90 ${
                     confirmingDelete
                       ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
                       : 'border-slate-100 bg-white text-slate-300 hover:border-rose-100 hover:bg-rose-50 hover:text-rose-500'
                   }`}
                 >
-                  {confirmingDelete ? (deleting ? '删除中…' : '确认删除？') : <Trash2 size={16} />}
+                  {confirmingDelete ? (deleting ? t('删除中…') : t('确认删除？')) : <Trash2 size={16} />}
                 </button>
               </div>
             </div>
@@ -447,6 +449,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
 }
 
 function DescriptionTab({ activeProblem }) {
+  const { t } = useI18n()
   const constraints = activeProblem.constraints || []
   return (
     <div className="max-w-3xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -458,9 +461,9 @@ function DescriptionTab({ activeProblem }) {
               'text-slate-500 bg-slate-50 border-slate-100'
             }`}
           >
-            {OFFICIAL_DIFFICULTIES[activeProblem.difficulty]?.label ||
+            {t(OFFICIAL_DIFFICULTIES[activeProblem.difficulty]?.label ||
               activeProblem.difficulty ||
-              '—'}
+              '—')}
           </span>
         </div>
       </div>
@@ -471,24 +474,24 @@ function DescriptionTab({ activeProblem }) {
         ) : activeProblem.content ? (
           <div dangerouslySetInnerHTML={{ __html: activeProblem.content }} />
         ) : (
-          <p>暂无题目描述</p>
+          <p>{t('暂无题目描述')}</p>
         )}
       </div>
 
       <div className="space-y-3">
         {(activeProblem.examples || []).map((ex, i) => (
           <div key={i} className="space-y-1.5">
-            <p className="text-[11px] font-semibold text-slate-800 tracking-tight">示例 {i + 1}:</p>
+            <p className="text-[11px] font-semibold text-slate-800 tracking-tight">{t('示例')} {i + 1}:</p>
             <div className="bg-slate-100/60 border border-slate-100 rounded-lg p-3 font-mono text-[11px] space-y-1 text-slate-700 shadow-inner">
               <p>
-                <span className="font-bold text-slate-400">输入:</span> {ex.input}
+                <span className="font-bold text-slate-400">{t('输入:')}</span> {ex.input}
               </p>
               <p>
-                <span className="font-bold text-slate-400">输出:</span> {ex.output}
+                <span className="font-bold text-slate-400">{t('输出:')}</span> {ex.output}
               </p>
               {ex.explanation && (
                 <p>
-                  <span className="font-bold text-slate-400">解释:</span> {ex.explanation}
+                  <span className="font-bold text-slate-400">{t('解释:')}</span> {ex.explanation}
                 </p>
               )}
             </div>
@@ -498,7 +501,7 @@ function DescriptionTab({ activeProblem }) {
 
       {(constraints || []).length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold text-slate-800 tracking-tight">提示：</p>
+          <p className="text-[11px] font-semibold text-slate-800 tracking-tight">{t('提示：')}</p>
           <div className="border-l-4 border-primary-500/20 pl-4 space-y-1">
             {constraints.map((c, i) => (
               <p key={i} className="font-mono text-[11px] text-slate-500">
@@ -515,6 +518,7 @@ function DescriptionTab({ activeProblem }) {
 }
 
 function NotesTab({ activeProblem, updateProblem }) {
+  const { t } = useI18n()
   const [notes, setNotes] = useState(activeProblem.notes || '')
   const [notesMode, setNotesMode] = useState(() =>
     (activeProblem.notes || '').trim() ? 'preview' : 'edit'
@@ -575,7 +579,7 @@ function NotesTab({ activeProblem, updateProblem }) {
       setImageModalOpen(false)
     } catch (err) {
       console.error(err)
-      alert(err.message || '图片上传失败')
+      alert(err.message || t('图片上传失败'))
     } finally {
       setImageUploading(false)
     }
@@ -591,7 +595,7 @@ function NotesTab({ activeProblem, updateProblem }) {
       setImageModalOpen(false)
     } catch (err) {
       console.error(err)
-      alert(err.message || 'URL 图片上传失败')
+      alert(err.message || t('URL 图片上传失败'))
     } finally {
       setImageUploading(false)
     }
@@ -623,8 +627,8 @@ function NotesTab({ activeProblem, updateProblem }) {
       setAiState('idle')
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (error) {
-      console.error('保存笔记失败:', error)
-      setSaveStatus('保存失败')
+      console.error(t('保存笔记失败:'), error)
+      setSaveStatus(t('保存失败'))
       setTimeout(() => setSaveStatus(''), 2000)
     } finally {
       setIsSaving(false)
@@ -675,7 +679,7 @@ function NotesTab({ activeProblem, updateProblem }) {
     )
     const currentNotes = (notes || '').trim()
     if (!content && !currentNotes) {
-      setAiError('暂无题目内容，无法进行 AI 优化')
+      setAiError(t('暂无题目内容，无法进行 AI 优化'))
       return
     }
 
@@ -713,11 +717,11 @@ function NotesTab({ activeProblem, updateProblem }) {
       } else {
         setAiSnapshot(null)
         setAiState('error')
-        if (!errText) setAiError('AI 未返回内容')
+        if (!errText) setAiError(t('AI 未返回内容'))
       }
     } catch (e) {
-      console.error('AI 优化失败:', e)
-      setAiError(e.message || 'AI 优化失败')
+      console.error(t('AI 优化失败:'), e)
+      setAiError(e.message || t('AI 优化失败'))
       setAiState('error')
       if (!buffer.trim()) {
         setAiSnapshot(null)
@@ -750,7 +754,7 @@ function NotesTab({ activeProblem, updateProblem }) {
           <div
             className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50/90 shrink-0"
             role="tablist"
-            aria-label="笔记编辑或预览"
+            aria-label={t('笔记编辑或预览')}
           >
             <button
               type="button"
@@ -763,8 +767,7 @@ function NotesTab({ activeProblem, updateProblem }) {
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <PenLine size={12} />
-              编辑
+              <PenLine size={12} />{t('编辑')}
             </button>
             <button
               type="button"
@@ -772,15 +775,14 @@ function NotesTab({ activeProblem, updateProblem }) {
               aria-selected={notesMode === 'preview'}
               onClick={() => (notes || '').trim() && setNotesMode('preview')}
               disabled={!(notes || '').trim()}
-              title={!(notes || '').trim() ? '有内容后可预览 Markdown' : '预览 Markdown'}
+              title={!(notes || '').trim() ? t('有内容后可预览 Markdown') : t('预览 Markdown')}
               className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                 notesMode === 'preview'
                   ? 'bg-white text-primary-700 shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <Eye size={12} />
-              预览
+              <Eye size={12} />{t('预览')}
             </button>
           </div>
           {notesMode === 'edit' && (
@@ -792,10 +794,9 @@ function NotesTab({ activeProblem, updateProblem }) {
                 setImageSourceTab('file')
               }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 shrink-0"
-              title="插入图片（图床）"
+              title={t('插入图片（图床）')}
             >
-              <ImagePlus size={12} />
-              插入图片
+              <ImagePlus size={12} />{t('插入图片')}
             </button>
           )}
           {/* AI 优化 / 停止 */}
@@ -804,10 +805,9 @@ function NotesTab({ activeProblem, updateProblem }) {
               type="button"
               onClick={handleStopAI}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-300 shrink-0"
-              title="停止生成"
+              title={t('停止生成')}
             >
-              <Square size={10} fill="currentColor" />
-              停止
+              <Square size={10} fill="currentColor" />{t('停止')}
             </button>
           ) : (
             <button
@@ -815,10 +815,9 @@ function NotesTab({ activeProblem, updateProblem }) {
               disabled={imageUploading}
               onClick={handleAIOptimize}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary-600 text-white text-[10px] font-bold hover:from-violet-700 hover:to-primary-700 transition-all disabled:opacity-50 shrink-0 shadow-sm"
-              title="让 AI 根据题目内容、代码实现和当前笔记优化核心笔记"
+              title={t('让 AI 根据题目内容、代码实现和当前笔记优化核心笔记')}
             >
-              <Sparkles size={12} />
-              AI 优化
+              <Sparkles size={12} />{t('AI 优化')}
             </button>
           )}
           {/* 撤销：AI 生成后可回滚，保存落库后消失 */}
@@ -828,10 +827,9 @@ function NotesTab({ activeProblem, updateProblem }) {
               disabled={aiState === 'streaming'}
               onClick={handleUndoAI}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-[10px] font-bold text-amber-600 hover:bg-amber-100 disabled:opacity-50 shrink-0"
-              title="撤销 AI 生成的结果，恢复到优化前的笔记"
+              title={t('撤销 AI 生成的结果，恢复到优化前的笔记')}
             >
-              <Undo2 size={12} />
-              撤销
+              <Undo2 size={12} />{t('撤销')}
             </button>
           )}
           {aiError && (
@@ -857,14 +855,14 @@ function NotesTab({ activeProblem, updateProblem }) {
             disabled={isSaving || aiState === 'streaming'}
             className="px-3 py-1.5 bg-primary-600 text-white text-[10px] font-bold rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? '保存中...' : '保存'}
+            {isSaving ? '保存中...' : t('保存')}
           </button>
         </div>
       </div>
       {notesMode === 'edit' ? (
         <textarea
           className="flex-1 w-full min-h-[12rem] p-6 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-4 ring-primary-50 outline-none transition-all shadow-xl leading-relaxed font-medium custom-scrollbar resize-none"
-          placeholder="在此记录你的解题心法…（支持 Markdown：标题、列表、代码块、图片等）"
+          placeholder={t('在此记录你的解题心法…（支持 Markdown：标题、列表、代码块、图片等）')}
           value={notes}
           onChange={handleNotesChange}
         />
@@ -877,8 +875,7 @@ function NotesTab({ activeProblem, updateProblem }) {
           </div>
           {aiState === 'streaming' && (
             <span className="sticky bottom-0 right-0 flex justify-end px-1 py-1 text-[10px] font-bold text-violet-600 items-center gap-1 bg-gradient-to-t from-white via-white/80 to-transparent">
-              <Loader2 size={11} className="animate-spin" />
-              AI 生成中…
+              <Loader2 size={11} className="animate-spin" />{t('AI 生成中…')}
             </span>
           )}
         </div>
@@ -909,15 +906,14 @@ function NotesTab({ activeProblem, updateProblem }) {
               <h3
                 id="notes-image-modal-title"
                 className="text-sm font-semibold text-slate-800 tracking-tight"
-              >
-                插入图片
+              >{t('插入图片')}
               </h3>
               <button
                 type="button"
                 disabled={imageUploading}
                 onClick={() => setImageModalOpen(false)}
                 className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
-                aria-label="关闭"
+                aria-label={t('关闭')}
               >
                 <X size={18} />
               </button>
@@ -933,8 +929,7 @@ function NotesTab({ activeProblem, updateProblem }) {
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <ImagePlus size={14} />
-                本地上传
+                <ImagePlus size={14} />{t('本地上传')}
               </button>
               <button
                 type="button"
@@ -945,15 +940,13 @@ function NotesTab({ activeProblem, updateProblem }) {
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <Link2 size={14} />
-                图片 URL
+                <Link2 size={14} />{t('图片 URL')}
               </button>
             </div>
 
             {imageSourceTab === 'file' ? (
               <div className="space-y-3">
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  从本机选择图片，上传到图床后将自动在笔记中插入 Markdown 图片。
+                <p className="text-[11px] text-slate-500 leading-relaxed">{t('从本机选择图片，上传到图床后将自动在笔记中插入 Markdown 图片。')}
                 </p>
                 <button
                   type="button"
@@ -961,13 +954,12 @@ function NotesTab({ activeProblem, updateProblem }) {
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full py-3 rounded-xl border-2 border-dashed border-slate-200 text-[11px] font-bold text-slate-600 hover:border-primary-300 hover:bg-primary-50/50 transition-all disabled:opacity-50"
                 >
-                  {imageUploading ? '上传中…' : '选择本地图片'}
+                  {imageUploading ? t('上传中…') : t('选择本地图片')}
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  粘贴可直链访问的图片地址，服务端转存图床后插入笔记。
+                <p className="text-[11px] text-slate-500 leading-relaxed">{t('粘贴可直链访问的图片地址，服务端转存图床后插入笔记。')}
                 </p>
                 <input
                   type="url"
@@ -983,7 +975,7 @@ function NotesTab({ activeProblem, updateProblem }) {
                   onClick={handleUploadFromUrlField}
                   className="w-full py-2.5 rounded-xl bg-primary-600 text-white text-[11px] font-bold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {imageUploading ? '处理中…' : '上传并插入'}
+                  {imageUploading ? t('处理中…') : t('上传并插入')}
                 </button>
               </div>
             )}
@@ -995,6 +987,7 @@ function NotesTab({ activeProblem, updateProblem }) {
 }
 
 function PersonalRatingSection({ activeProblem, updateProblem }) {
+  const { t } = useI18n()
   const updateRating = async (val) => {
     const next = { ...activeProblem, personalDifficulty: val }
     updateProblem(next)
@@ -1007,14 +1000,14 @@ function PersonalRatingSection({ activeProblem, updateProblem }) {
         code: activeProblem.code || '',
       })
     } catch (e) {
-      console.error('更新个人手感失败:', e)
+      console.error(t('更新个人手感失败:'), e)
     }
   }
 
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-        <BrainCircuit size={12} /> 个人手感难度自评
+        <BrainCircuit size={12} />{t('个人手感难度自评')}
       </label>
       <div className="grid grid-cols-5 gap-1 p-0.5 bg-slate-50 rounded-xl border border-slate-100">
         {Object.entries(PERSONAL_RATINGS).map(([val, config]) => (
@@ -1028,7 +1021,7 @@ function PersonalRatingSection({ activeProblem, updateProblem }) {
             }`}
           >
             <span className="text-sm">{config.icon}</span>
-            <span className="text-[10px] font-semibold uppercase mt-0.5">{config.label}</span>
+            <span className="text-[10px] font-semibold uppercase mt-0.5">{t(config.label)}</span>
           </button>
         ))}
       </div>
@@ -1037,6 +1030,7 @@ function PersonalRatingSection({ activeProblem, updateProblem }) {
 }
 
 function ProgressStatusSection({ activeProblem, updateProblem }) {
+  const { t } = useI18n()
   const current = activeProblem.progressStatus || 'Unpracticed'
 
   const options = [
@@ -1058,14 +1052,13 @@ function ProgressStatusSection({ activeProblem, updateProblem }) {
         code: activeProblem.code || '',
       })
     } catch (e) {
-      console.error('更新完成状态失败:', e)
+      console.error(t('更新完成状态失败:'), e)
     }
   }
 
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest block">
-        完成状态
+      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest block">{t('完成状态')}
       </label>
       <div className="grid grid-cols-3 gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100">
         {options.map((opt) => (
@@ -1079,7 +1072,7 @@ function ProgressStatusSection({ activeProblem, updateProblem }) {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {opt.label}
+            {t(opt.label)}
           </button>
         ))}
       </div>
@@ -1088,10 +1081,10 @@ function ProgressStatusSection({ activeProblem, updateProblem }) {
 }
 
 function TagsSection({ activeProblem }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest block">
-        知识标签映射
+      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest block">{t('知识标签映射')}
       </label>
       <div className="flex flex-wrap gap-2">
         {(activeProblem.tags || []).map((t) => (
@@ -1113,6 +1106,7 @@ function ReviewSection({
   reviews,
   isLoadingReviews,
 }) {
+  const { t } = useI18n()
   const progressOptions = [
     { key: 'Unpracticed', label: '未开始' },
     { key: 'Reviewing', label: '复习中' },
@@ -1170,14 +1164,14 @@ function ReviewSection({
         code_language: draft.code_language,
       })
       const updated = res?.data || res
-      if (!updated?.id) throw new Error('保存成功但未返回记录')
+      if (!updated?.id) throw new Error(t('保存成功但未返回记录'))
       setReviews((current) =>
         current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
       )
       setSelectedReview((current) => (current?.id === updated.id ? { ...current, ...updated } : current))
     } catch (error) {
-      console.error('保存打卡记录失败:', error)
-      setSaveError(error.message || '保存失败，请重试')
+      console.error(t('保存打卡记录失败:'), error)
+      setSaveError(error.message || t('保存失败，请重试'))
     } finally {
       setSaving(false)
     }
@@ -1195,7 +1189,7 @@ function ReviewSection({
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1500)
     } catch (error) {
-      console.error('复制代码快照失败:', error)
+      console.error(t('复制代码快照失败:'), error)
     }
   }
 
@@ -1208,7 +1202,7 @@ function ReviewSection({
       if (language) return hljs.highlight(code, { language, ignoreIllegals: true }).value
       return hljs.highlightAuto(code).value
     } catch (error) {
-      console.error('代码快照高亮失败:', error)
+      console.error(t('代码快照高亮失败:'), error)
       return code.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch])
     }
   }, [draft])
@@ -1217,12 +1211,12 @@ function ReviewSection({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <label className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-          <History size={16} className="text-primary-500" /> 训练打卡
+          <History size={16} className="text-primary-500" />{t('训练打卡')}
         </label>
         <button
           type="button"
           onClick={onOpenTraining}
-          title="打开题目进行练习和测试"
+          title={t('打开题目进行练习和测试')}
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md active:scale-95 bg-primary-600 text-white shadow-primary-50"
         >
           <Plus size={18} />
@@ -1231,7 +1225,7 @@ function ReviewSection({
 
       <div className="space-y-5 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-slate-100">
         {isLoadingReviews ? (
-          <div className="text-center py-4 text-slate-400 text-[12px]">加载中...</div>
+          <div className="text-center py-4 text-slate-400 text-[12px]">{t('加载中...')}</div>
         ) : reviews && reviews.length > 0 ? (
           reviews.map((rev, idx) => (
             <button type="button" key={rev.id || idx} onClick={() => handleSelectReview(rev)} className="relative block w-full pl-8 text-left group">
@@ -1254,22 +1248,22 @@ function ReviewSection({
                       STATUS_MAP[rev.status]?.light || 'bg-slate-50 text-slate-600'
                     }`}
                   >
-                    {STATUS_MAP[rev.status]?.label || rev.status}
+                    {t(STATUS_MAP[rev.status]?.label || rev.status)}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-600 leading-relaxed font-medium italic opacity-80">{rev.comment || '未填写训练记录'}</p>
+                <p className="text-[11px] text-slate-600 leading-relaxed font-medium italic opacity-80">{rev.comment || t('未填写训练记录')}</p>
                 <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-slate-400">
-                  {rev.progress_status && <span>{progressOptions.find((option) => option.key === rev.progress_status)?.label || rev.progress_status}</span>}
+                  {rev.progress_status && <span>{t(progressOptions.find((option) => option.key === rev.progress_status)?.label || rev.progress_status)}</span>}
                   {rev.personal_difficulty > 0 && <span>{'★'.repeat(rev.personal_difficulty)} 手感</span>}
-                  {rev.code && <span>含代码快照</span>}
+                  {rev.code && <span>{t('含代码快照')}</span>}
                   <span className="text-slate-300">·</span>
-                  <span>点击查看 / 编辑</span>
+                  <span>{t('点击查看 / 编辑')}</span>
                 </div>
               </div>
             </button>
           ))
         ) : (
-          <div className="text-center py-4 text-slate-400 text-[12px]">暂无复习记录</div>
+          <div className="text-center py-4 text-slate-400 text-[12px]">{t('暂无复习记录')}</div>
         )}
       </div>
 
@@ -1290,10 +1284,9 @@ function ReviewSection({
               <header className="mb-4 flex shrink-0 items-center justify-between gap-3">
                 <div className="min-w-0">
                   <h2 id="review-detail-title" className="truncate text-base font-bold text-slate-800">
-                    {activeProblem?.translatedTitle || activeProblem?.title || '代码快照'}
+                    {activeProblem?.translatedTitle || activeProblem?.title || t('代码快照')}
                   </h2>
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    代码快照
+                  <p className="mt-1 text-[11px] text-slate-400">{t('代码快照')}
                     <span className="ml-1.5 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500">
                       {new Date(selectedReview.created_at || selectedReview.review_date).toLocaleString('zh-CN', {
                         year: 'numeric',
@@ -1310,7 +1303,7 @@ function ReviewSection({
                   <select
                     value={draft.code_language}
                     onChange={(e) => setDraft((current) => ({ ...current, code_language: e.target.value }))}
-                    aria-label="代码语言"
+                    aria-label={t('代码语言')}
                     className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-600 outline-none transition-all hover:border-primary-200 focus:border-primary-300 focus:ring-2 focus:ring-primary-100"
                   >
                     {REVIEW_LANGUAGE_OPTIONS.map((option) => (
@@ -1324,7 +1317,7 @@ function ReviewSection({
                       className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-500 transition-all hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 active:scale-95"
                     >
                       {copied ? <Check size={13} /> : <Copy size={13} />}
-                      {copied ? '已复制' : '复制代码'}
+                      {copied ? t('已复制') : t('复制代码')}
                     </button>
                   )}
                 </div>
@@ -1346,8 +1339,8 @@ function ReviewSection({
                   onChange={(e) => setDraft((current) => ({ ...current, code: e.target.value }))}
                   onScroll={syncCodeScroll}
                   spellCheck={false}
-                  aria-label="代码快照内容"
-                  placeholder={draft.code ? '' : '此记录没有代码快照，可在打卡面板中重新记录'}
+                  aria-label={t('代码快照内容')}
+                  placeholder={draft.code ? '' : t('此记录没有代码快照，可在打卡面板中重新记录')}
                   className="custom-scrollbar relative z-10 min-h-0 w-full flex-1 resize-none overflow-auto bg-transparent p-4 font-mono text-xs leading-5 text-transparent caret-[#f8fafc] outline-none"
                   style={{ WebkitTextFillColor: 'transparent' }}
                 />
@@ -1357,11 +1350,11 @@ function ReviewSection({
             {/* 右侧：训练打卡（可编辑） */}
             <aside className="flex w-[300px] shrink-0 flex-col border-l border-slate-100 bg-slate-50">
               <header className="flex items-center justify-between gap-2.5 px-4 pt-4 pb-1">
-                <div className="text-[15px] font-bold text-slate-800">训练打卡</div>
+                <div className="text-[15px] font-bold text-slate-800">{t('训练打卡')}</div>
                 <button
                   type="button"
                   onClick={handleCloseReview}
-                  aria-label="关闭"
+                  aria-label={t('关闭')}
                   className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-700"
                 >
                   <X size={16} />
@@ -1380,7 +1373,7 @@ function ReviewSection({
                 </p>
 
                 <section className="mt-3.5 flex flex-col gap-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">掌握程度</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">{t('掌握程度')}</span>
                   <div className="flex flex-col gap-1.5">
                     {MASTERY_OPTIONS.map((opt) => {
                       const active = opt.value === draft.status
@@ -1396,7 +1389,7 @@ function ReviewSection({
                               : 'border-slate-200 bg-white text-slate-700 hover:border-primary-300'
                           }`}
                         >
-                          {opt.icon} {opt.label}
+                          {opt.icon} {t(opt.label)}
                         </button>
                       )
                     })}
@@ -1404,7 +1397,7 @@ function ReviewSection({
                 </section>
 
                 <section className="mt-4 flex flex-col gap-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">完成状态</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">{t('完成状态')}</span>
                   <div className="flex flex-col gap-1.5">
                     {PROGRESS_STATUS_OPTIONS.map((opt) => {
                       const active = opt.value === draft.progress_status
@@ -1420,7 +1413,7 @@ function ReviewSection({
                               : 'border-slate-200 bg-white text-slate-700 hover:border-primary-300'
                           }`}
                         >
-                          {opt.icon} {opt.label}
+                          {opt.icon} {t(opt.label)}
                         </button>
                       )
                     })}
@@ -1428,7 +1421,7 @@ function ReviewSection({
                 </section>
 
                 <section className="mt-4 flex flex-col gap-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">手感自评</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">{t('手感自评')}</span>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(PERSONAL_RATINGS).map(([value, rating]) => {
                       const active = Number(value) === Number(draft.personal_difficulty)
@@ -1460,12 +1453,12 @@ function ReviewSection({
                   </section>
 
                 <section className="mt-4 flex flex-col gap-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">训练记录</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-slate-400">{t('训练记录')}</span>
                   <textarea
                     value={draft.comment}
                     onChange={(e) => setDraft((current) => ({ ...current, comment: e.target.value }))}
-                    placeholder="记录本次遇到的坑点或突破..."
-                    aria-label="训练记录内容"
+                    placeholder={t('记录本次遇到的坑点或突破...')}
+                    aria-label={t('训练记录内容')}
                     className="min-h-[120px] w-full resize-y rounded-lg border border-slate-200 bg-white p-2.5 text-[12px] leading-6 text-slate-700 outline-none transition-colors placeholder:text-slate-300 focus:border-primary-400"
                   />
                 </section>
@@ -1482,8 +1475,7 @@ function ReviewSection({
                     type="button"
                     onClick={handleCloseReview}
                     className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-[13px] font-semibold text-slate-500 transition-all hover:bg-slate-100 active:scale-95"
-                  >
-                    取消
+                  >{t('取消')}
                   </button>
                   <button
                     type="button"
@@ -1491,7 +1483,7 @@ function ReviewSection({
                     disabled={saving}
                     className="flex-1 rounded-lg bg-primary-600 py-2.5 text-[13px] font-semibold text-white shadow-lg shadow-primary-200 transition-all hover:bg-primary-700 active:scale-95 disabled:cursor-wait disabled:opacity-60"
                   >
-                    {saving ? '保存中…' : '保存修改'}
+                    {saving ? t('保存中…') : t('保存修改')}
                   </button>
                 </div>
               </div>
@@ -1505,6 +1497,7 @@ function ReviewSection({
 }
 
 function SimilarQuestionsSection({ activeProblem }) {
+  const { t } = useI18n()
   let similarQuestions = []
 
   if (activeProblem.similarQuestions) {
@@ -1515,7 +1508,7 @@ function SimilarQuestionsSection({ activeProblem }) {
         similarQuestions = activeProblem.similarQuestions
       }
     } catch (e) {
-      console.error('解析相似题目失败:', e)
+      console.error(t('解析相似题目失败:'), e)
     }
   }
 
@@ -1526,7 +1519,7 @@ function SimilarQuestionsSection({ activeProblem }) {
   return (
     <div className="space-y-2">
       <label className="mt-[25px] text-[10px] font-semibold text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
-        <Link2 size={12} className="text-primary-500" /> 相似题目
+        <Link2 size={12} className="text-primary-500" />{t('相似题目')}
       </label>
       <div className="space-y-1.5">
         {similarQuestions.slice(0, 5).map((q, idx) => (

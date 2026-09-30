@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import { FrequencyBars } from './FrequencyBars'
+import { useI18n } from '../i18n'
 
 const OFFICIAL_DIFFICULTIES = {
   Easy: { color: 'text-emerald-500 bg-emerald-50 border-emerald-100', label: '简单' },
@@ -37,10 +38,11 @@ export function HeatmapDayProblemTable({
   selectedDateLabel,
   variant = 'reviews',
 }) {
+  const { t } = useI18n()
   const emptyText =
     variant === 'created'
-      ? `${selectedDateLabel} 该日尚未录入题目`
-      : `${selectedDateLabel} 当日无复习记录`
+      ? `${selectedDateLabel} ${t('该日尚未录入题目')}`
+      : `${selectedDateLabel} ${t('当日无复习记录')}`
 
   if (!problems || problems.length === 0) {
     return (
@@ -54,11 +56,11 @@ export function HeatmapDayProblemTable({
     <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card">
       <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-8 py-3.5 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-400">
         <div className="col-span-1">#</div>
-        <div className="col-span-4">题名</div>
-        <div className="col-span-1 text-center">通过率</div>
-        <div className="col-span-1 text-center">难度</div>
-        <div className="col-span-2 text-center">出题频率</div>
-        <div className="col-span-1 text-center">手感</div>
+        <div className="col-span-4">{t('题名')}</div>
+        <div className="col-span-1 text-center">{t('通过率')}</div>
+        <div className="col-span-1 text-center">{t('难度')}</div>
+        <div className="col-span-2 text-center">{t('出题频率')}</div>
+        <div className="col-span-1 text-center">{t('手感')}</div>
         <div className="col-span-2 pr-4 text-right uppercase">Status</div>
       </div>
 
@@ -97,14 +99,14 @@ export function HeatmapDayProblemTable({
                   'text-slate-500 bg-slate-50 border-slate-100'
                 }`}
               >
-                {OFFICIAL_DIFFICULTIES[p.difficulty]?.label || p.difficulty || '—'}
+                {t(OFFICIAL_DIFFICULTIES[p.difficulty]?.label || p.difficulty || '—')}
               </span>
             </div>
             <div className="col-span-2 flex justify-center group/freq">
               <div className="relative">
                 <FrequencyBars score={p.frequency} />
                 <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover/freq:opacity-100">
-                  {p.frequency ? `出题频率 ${Number(p.frequency).toLocaleString()}` : '-'}
+                  {p.frequency ? `${t('出题频率')} ${Number(p.frequency).toLocaleString()}` : '-'}
                 </div>
               </div>
             </div>
@@ -117,7 +119,7 @@ export function HeatmapDayProblemTable({
                   STATUS_MAP[p.status]?.light || 'bg-slate-50 text-slate-600'
                 }`}
               >
-                {STATUS_MAP[p.status]?.label || p.status || '未知'}
+                {t(STATUS_MAP[p.status]?.label || p.status || '未知')}
               </span>
               <ChevronRight
                 size={14}

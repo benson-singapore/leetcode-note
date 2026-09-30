@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useI18n } from '../i18n'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css'
 import {
@@ -97,6 +98,7 @@ function buildDemoPrompt({ title, difficulty, content, examples, constraints, la
 }
 
 export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly = false }) {
+  const { t } = useI18n()
   const problemId = activeProblem?.id
   const [schemes, setSchemes] = useState([]) // 额外方案（不含默认实现）
   const [loading, setLoading] = useState(true)
@@ -211,8 +213,8 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
 
   const displayName = (item) => {
     if (!item) return ''
-    if (item.isDefault) return '默认实现'
-    return (item.name || '').trim() || '未命名方案'
+    if (item.isDefault) return t('默认实现')
+    return (item.name || '').trim() || t('未命名方案')
   }
 
   // ===== 方案 CRUD =====
@@ -226,7 +228,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
       setSelectedKey(created.id) // 新建后自动打开该方案的详情抽屉
     } catch (e) {
       console.error(e)
-      setSaveStatus(e.message || '新增方案失败')
+      setSaveStatus(e.message || t('新增方案失败'))
       setTimeout(() => setSaveStatus(''), 3000)
     }
   }
@@ -244,7 +246,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
       if (selectedKey === schemeId) setSelectedKey(null)
     } catch (e) {
       console.error(e)
-      setSaveStatus(e.message || '删除失败')
+      setSaveStatus(e.message || t('删除失败'))
       setTimeout(() => setSaveStatus(''), 3000)
     }
   }
@@ -252,7 +254,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
   const handleSaveScheme = async () => {
     if (!selected || selected.isDefault) return
     setSaving(true)
-    setSaveStatus('保存中…')
+    setSaveStatus(t('保存中…'))
     try {
       const res = await updateSolutionScheme(problemId, selected.key, {
         name: draft.name,
@@ -261,11 +263,11 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
       const updated = res?.data
       setSchemes((prev) => prev.map((s) => (s.id === selected.key ? updated || s : s)))
       setDraftDirty(false)
-      setSaveStatus('已保存')
+      setSaveStatus(t('已保存'))
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (e) {
       console.error(e)
-      setSaveStatus(e.message || '保存失败')
+      setSaveStatus(e.message || t('保存失败'))
       setTimeout(() => setSaveStatus(''), 3000)
     } finally {
       setSaving(false)
@@ -281,7 +283,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
   const handleSaveDemo = async () => {
     if (!selected || saving) return
     setSaving(true)
-    setSaveStatus('保存中…')
+    setSaveStatus(t('保存中…'))
     try {
       if (selected.isDefault) {
         await putSolutionDemo(problemId, demoText)
@@ -293,12 +295,12 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
         setSchemes((prev) => prev.map((s) => (s.id === selected.key ? updated || s : s)))
       }
       setDemoDirty(false)
-      setSaveStatus('已保存')
+      setSaveStatus(t('已保存'))
       setDemoMode(demoText.trim() ? 'preview' : 'edit')
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (e) {
       console.error(e)
-      setSaveStatus(e.message || '保存失败')
+      setSaveStatus(e.message || t('保存失败'))
       setTimeout(() => setSaveStatus(''), 3000)
     } finally {
       setSaving(false)
@@ -306,12 +308,12 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
   }
 
   const handleOpenDemoWindow = () => {
-    const html = demoText || '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><body><p>暂无演示内容</p></body></html>'
+    const html = demoText || '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><body><p>' + t('暂无演示内容') + '</p></body></html>'
     const previewUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }))
     const previewWindow = window.open(previewUrl, '_blank')
     if (!previewWindow) {
       URL.revokeObjectURL(previewUrl)
-      setSaveStatus('浏览器阻止了新窗口，请允许弹出窗口后重试')
+      setSaveStatus(t('浏览器阻止了新窗口，请允许弹出窗口后重试'))
       setTimeout(() => setSaveStatus(''), 3000)
       return
     }
@@ -329,7 +331,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
     if (!selected || aiState === 'streaming') return
     const code = (selected.code || '').trim()
     if (!code) {
-      setAiError('当前方案没有代码实现，无法生成演示')
+      setAiError(t('当前方案没有代码实现，无法生成演示'))
       setAiState('error')
       return
     }
@@ -375,14 +377,14 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
 
       if (!buffer.trim()) {
         setAiState('error')
-        if (!errText) setAiError('AI 未返回内容')
+        if (!errText) setAiError(t('AI 未返回内容'))
         return
       }
 
       const html = extractHtml(buffer)
       if (!/<(!DOCTYPE|html)/i.test(html)) {
         setAiState('error')
-        setAiError('AI 返回的内容不是完整 HTML，请重试')
+        setAiError(t('AI 返回的内容不是完整 HTML，请重试'))
         return
       }
 
@@ -399,12 +401,12 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
         setSchemes((prev) => prev.map((s) => (s.id === selected.key ? updated || s : s)))
       }
       setDemoDirty(false)
-      setSaveStatus('演示已生成并保存')
+      setSaveStatus(t('演示已生成并保存'))
       setTimeout(() => setSaveStatus(''), 2500)
       setAiState('idle')
     } catch (e) {
-      console.error('AI 生成演示失败:', e)
-      setAiError(e.message || 'AI 生成失败')
+      console.error(t('AI 生成演示失败:'), e)
+      setAiError(e.message || t('AI 生成失败'))
       setAiState('error')
     }
   }
@@ -472,7 +474,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
     return (
       <div className="h-full flex items-center justify-center text-slate-400 gap-2">
         <Loader2 className="animate-spin" size={20} />
-        <span className="text-xs font-medium">加载解题方案中…</span>
+        <span className="text-xs font-medium">{t('加载解题方案中…')}</span>
       </div>
     )
   }
@@ -488,24 +490,22 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary-50 border border-primary-100">
               <Layers size={14} className="text-primary-600" />
-              <span className="text-[11px] font-bold text-primary-700 tracking-tight">
-                解题方案
+              <span className="text-[11px] font-bold text-primary-700 tracking-tight">{t('解题方案')}
               </span>
               <span className="text-[10px] font-mono text-primary-500 bg-white px-1.5 py-0.5 rounded-md border border-primary-100">
                 {stats.total}
               </span>
             </div>
-            <span className="text-[10px] text-slate-400">点击卡片查看 / 编辑方案详情</span>
+            <span className="text-[10px] text-slate-400">{t('点击卡片查看 / 编辑方案详情')}</span>
           </div>
           <button
             type="button"
             onClick={handleAddScheme}
             disabled={loading}
-            title="新增解题方案"
+            title={t('新增解题方案')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-[11px] font-bold hover:bg-primary-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm"
           >
-            <Plus size={13} />
-            新增方案
+            <Plus size={13} />{t('新增方案')}
           </button>
         </div>
 
@@ -514,24 +514,22 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
           {stats.total === 1 && !stats.hasDefaultCode && schemes.length === 0 ? (
             <div className="h-full min-h-[200px] flex flex-col items-center justify-center gap-3 text-slate-300">
               <Layers size={40} strokeWidth={1.5} />
-              <p className="text-xs font-medium text-slate-400">还没有任何解题方案</p>
-              <p className="text-[10px] text-slate-400">
-                点击右上角「新增方案」，或先在「代码实现」标签中编写默认实现
+              <p className="text-xs font-medium text-slate-400">{t('还没有任何解题方案')}</p>
+              <p className="text-[10px] text-slate-400">{t('点击右上角「新增方案」，或先在「代码实现」标签中编写默认实现')}
               </p>
               <button
                 type="button"
                 onClick={handleAddScheme}
                 className="mt-1 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-600 text-white text-[11px] font-bold hover:bg-primary-700 active:scale-95 transition-all shadow-sm"
               >
-                <Plus size={13} />
-                新增方案
+                <Plus size={13} />{t('新增方案')}
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
               <SchemeCard
-                label="默认实现"
-                hint="与「代码实现」共享同一份代码"
+                label={t('默认实现')}
+                hint={t('代码与「代码实现」标签共享，可直接在此查看')}
                 isDefault
                 hasCode={stats.hasDefaultCode}
                 hasDemo={stats.hasDefaultDemo}
@@ -540,7 +538,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
               {schemes.map((s) => (
                 <SchemeCard
                   key={s.id}
-                  label={(s.name || '').trim() || '未命名方案'}
+                  label={(s.name || '').trim() || t('未命名方案')}
                   hasCode={!!(s.code || '').trim()}
                   hasDemo={!!(s.html_demo || '').trim()}
                   onClick={() => setSelectedKey(s.id)}
@@ -556,7 +554,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                 className="group min-h-[92px] rounded-2xl border-2 border-dashed border-slate-200 bg-transparent flex flex-col items-center justify-center gap-1.5 text-slate-300 hover:border-primary-300 hover:bg-primary-50/40 hover:text-primary-500 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 <Plus size={20} strokeWidth={2.5} />
-                <span className="text-[11px] font-bold">新增解题方案</span>
+                <span className="text-[11px] font-bold">{t('新增解题方案')}</span>
               </button>
             </div>
           )}
@@ -577,21 +575,18 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                 {!defaultOnly && <button
                   type="button"
                   onClick={() => setSelectedKey(null)}
-                  title="返回方案列表（Esc）"
+                  title={t('返回方案列表（Esc）')}
                   className="flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-xl border border-slate-200 bg-white text-slate-500 text-[11px] font-bold hover:bg-slate-50 hover:text-slate-700 active:scale-95 transition-all shrink-0"
                 >
-                  <ChevronLeft size={14} />
-                  返回列表
+                  <ChevronLeft size={14} />{t('返回列表')}
                 </button>}
                 <div className="h-6 w-px bg-slate-100 shrink-0" />
                 <div className="flex-1 min-w-0 flex items-center gap-3">
                   {selected.isDefault ? (
                     <>
-                      <span className="px-3 py-1.5 rounded-lg bg-primary-600 text-white text-[11px] font-bold shrink-0">
-                        默认实现
+                      <span className="px-3 py-1.5 rounded-lg bg-primary-600 text-white text-[11px] font-bold shrink-0">{t('默认实现')}
                       </span>
-                      {!defaultOnly && <span className="text-[11px] text-slate-400 truncate">
-                        代码与「代码实现」标签共享，可直接在此查看
+                      {!defaultOnly && <span className="text-[11px] text-slate-400 truncate">{t('代码与「代码实现」标签共享，可直接在此查看')}
                       </span>}
                     </>
                   ) : (
@@ -603,7 +598,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                           setDraft({ ...draft, name: e.target.value })
                           setDraftDirty(true)
                         }}
-                        placeholder="方案名称（如：双指针、滑动窗口…）"
+                        placeholder={t('方案名称（如：双指针、滑动窗口…）')}
                         className="flex-1 min-w-0 max-w-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-primary-100"
                       />
                       <button
@@ -611,8 +606,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                         onClick={handleSaveScheme}
                         disabled={saving || aiState === 'streaming' || !draftDirty}
                         className="px-3 py-1.5 bg-primary-600 text-white text-[10px] font-bold rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shrink-0"
-                      >
-                        保存方案
+                      >{t('保存方案')}
                       </button>
                     </>
                   )}
@@ -625,7 +619,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                         : 'text-slate-500'
                     }`}
                   >
-                    {saveStatus.startsWith('已保存') && <Check size={12} />}
+                    {saveStatus.startsWith(t('已保存')) && <Check size={12} />}
                     {saveStatus}
                   </span>
                 )}
@@ -641,7 +635,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                 {!defaultOnly && <button
                   type="button"
                   onClick={() => setSelectedKey(null)}
-                  title="关闭（Esc）"
+                  title={t('关闭（Esc）')}
                   className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 active:scale-90 transition-all shrink-0"
                 >
                   <X size={16} />
@@ -652,13 +646,12 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
               <div className="flex-1 overflow-hidden p-6 flex flex-col gap-4 min-h-0 min-w-0">
                 {/* 操作栏：演示模式切换 + AI + 保存 + 面板显隐 */}
                 <div className="flex items-center gap-2 flex-wrap shrink-0">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                    演示 HTML
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('演示 HTML')}
                   </span>
                   <div
                     className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50/90 shrink-0"
                     role="tablist"
-                    aria-label="演示编辑或预览"
+                    aria-label={t('演示编辑或预览')}
                   >
                     <button
                       type="button"
@@ -671,8 +664,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                           : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
-                      <Pencil size={12} />
-                      编辑
+                      <Pencil size={12} />{t('编辑')}
                     </button>
                     <button
                       type="button"
@@ -686,8 +678,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                           : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
-                      <Eye size={12} />
-                      预览
+                      <Eye size={12} />{t('预览')}
                     </button>
                   </div>
                   {aiState === 'streaming' ? (
@@ -696,19 +687,17 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                       onClick={handleStopAI}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-300 shrink-0"
                     >
-                      <Square size={10} fill="currentColor" />
-                      停止
+                      <Square size={10} fill="currentColor" />{t('停止')}
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={handleAIDemo}
                       disabled={saving}
-                      title="AI 根据题目内容与当前方案的代码实现，生成可交互的 HTML 执行演示"
+                      title={t('AI 根据题目内容与当前方案的代码实现，生成可交互的 HTML 执行演示')}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary-600 text-white text-[10px] font-bold hover:from-violet-700 hover:to-primary-700 disabled:opacity-50 shrink-0 shadow-sm transition-all"
                     >
-                      <Sparkles size={12} />
-                      AI 演示
+                      <Sparkles size={12} />{t('AI 演示')}
                     </button>
                   )}
                   <button
@@ -716,14 +705,12 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                     onClick={handleSaveDemo}
                     disabled={saving || aiState === 'streaming' || !demoDirty}
                     className="px-3 py-1.5 bg-primary-600 text-white text-[10px] font-bold rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shrink-0"
-                  >
-                    保存演示
+                  >{t('保存演示')}
                   </button>
                   <div className="flex-1" />
                   {demoDirty && (
                     <span className="text-[10px] font-bold text-amber-500 flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                      未保存
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />{t('未保存')}
                     </span>
                   )}
 
@@ -731,7 +718,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                   {!defaultOnly && <div
                     className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50/90 shrink-0"
                     role="group"
-                    aria-label="面板显隐"
+                    aria-label={t('面板显隐')}
                   >
                     <button
                       type="button"
@@ -741,9 +728,9 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                       title={
                         showCode
                           ? showDemo
-                            ? '隐藏左侧代码面板，演示区扩到整行'
-                            : '至少保留一个面板'
-                          : '显示左侧代码面板'
+                            ? t('隐藏左侧代码面板，演示区扩到整行')
+                            : t('至少保留一个面板')
+                          : t('显示左侧代码面板')
                       }
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                         showCode
@@ -752,7 +739,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                       }`}
                     >
                       <FileCode2 size={12} />
-                      代码
+                      {t('代码')}
                       {showCode ? <ChevronLeft size={10} /> : <ChevronRight size={10} />}
                     </button>
                     <button
@@ -763,9 +750,9 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                       title={
                         showDemo
                           ? showCode
-                            ? '隐藏右侧演示面板，代码区扩到整行'
-                            : '至少保留一个面板'
-                          : '显示右侧演示面板'
+                            ? t('隐藏右侧演示面板，代码区扩到整行')
+                            : t('至少保留一个面板')
+                          : t('显示右侧演示面板')
                       }
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                         showDemo
@@ -781,8 +768,8 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                   {defaultOnly && <button
                     type="button"
                     onClick={handleOpenDemoWindow}
-                    title="在新窗口中打开 HTML 演示"
-                    aria-label="在新窗口中打开 HTML 演示"
+                    title={t('在新窗口中打开 HTML 演示')}
+                    aria-label={t('在新窗口中打开 HTML 演示')}
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 transition-colors shrink-0"
                   >
                     <Maximize2 size={14} />
@@ -820,8 +807,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                             />
                           </pre>
                         ) : (
-                          <div className="h-full flex items-center justify-center text-slate-500 text-xs text-center px-4">
-                            暂无代码，请先在「代码实现」标签中编写
+                          <div className="h-full flex items-center justify-center text-slate-500 text-xs text-center px-4">{t('暂无代码，请先在「代码实现」标签中编写')}
                           </div>
                         )}
                       </div>
@@ -829,7 +815,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                       <textarea
                         className="flex-1 w-full m-0 p-4 bg-[#1A1C1E] text-emerald-50 font-mono text-[12px] leading-relaxed outline-none resize-none overflow-auto custom-scrollbar whitespace-pre-wrap break-words [tab-size:2] caret-emerald-200"
                         spellCheck={false}
-                        placeholder="在此粘贴或编辑该方案的代码实现…"
+                        placeholder={t('在此粘贴或编辑该方案的代码实现…')}
                         value={draft.code}
                         onChange={(e) => {
                           setDraft({ ...draft, code: e.target.value })
@@ -852,8 +838,7 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                     {aiState === 'streaming' ? (
                       <div className="flex-1 flex flex-col min-h-0 bg-slate-950 p-3">
                         <div className="flex items-center gap-2 text-violet-300 text-[10px] font-bold mb-2 shrink-0">
-                          <Loader2 size={12} className="animate-spin" />
-                          AI 正在生成演示 HTML…
+                          <Loader2 size={12} className="animate-spin" />{t('AI 正在生成演示 HTML…')}
                         </div>
                         <pre className="flex-1 overflow-auto custom-scrollbar m-0 font-mono text-[10px] leading-relaxed text-emerald-300 whitespace-pre-wrap break-all">
                           {streamPreview || aiStreamText}
@@ -863,21 +848,20 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                       <textarea
                         className="flex-1 min-h-0 w-full p-4 font-mono text-[12px] leading-relaxed text-slate-800 outline-none resize-none custom-scrollbar"
                         spellCheck={false}
-                        placeholder="点击「AI 演示」让 AI 根据题目与当前方案代码生成交互演示；也可以在此手动粘贴或编辑 HTML…"
+                        placeholder={t('点击「AI 演示」让 AI 根据题目与当前方案代码生成交互演示；也可以在此手动粘贴或编辑 HTML…')}
                         value={demoText}
                         onChange={(e) => handleDemoChange(e.target.value)}
                       />
                     ) : !demoText.trim() ? (
                       <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-400">
                         <Sparkles size={24} className="text-slate-300" />
-                        <p className="text-xs font-medium">暂无演示内容</p>
-                        <p className="text-[10px] text-slate-400">
-                          点击上方「AI 演示」生成，或切换到「编辑」手动添加
+                        <p className="text-xs font-medium">{t('暂无演示内容')}</p>
+                        <p className="text-[10px] text-slate-400">{t('点击上方「AI 演示」生成，或切换到「编辑」手动添加')}
                         </p>
                       </div>
                     ) : (
                       <iframe
-                        title="解题方案演示"
+                        title={t('解题方案演示')}
                         className="flex-1 w-full min-h-0 border-0 bg-white"
                         sandbox="allow-scripts allow-same-origin"
                         srcDoc={demoText}
@@ -905,6 +889,7 @@ function SchemeCard({
   confirmingDelete,
   onDelete,
 }) {
+  const { t } = useI18n()
   return (
     <div
       onClick={onClick}
@@ -923,8 +908,7 @@ function SchemeCard({
           {label}
         </span>
         {isDefault && (
-          <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-primary-600 text-white text-[9px] font-bold">
-            默认
+          <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-primary-600 text-white text-[9px] font-bold">{t('默认')}
           </span>
         )}
       </div>
@@ -937,8 +921,7 @@ function SchemeCard({
               : 'bg-slate-50 text-slate-300 border-slate-100'
           }`}
         >
-          <FileCode2 size={9} />
-          代码
+          <FileCode2 size={9} />{t('代码')}
         </span>
         <span
           className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold border ${
@@ -947,12 +930,10 @@ function SchemeCard({
               : 'bg-slate-50 text-slate-300 border-slate-100'
           }`}
         >
-          <Eye size={9} />
-          演示
+          <Eye size={9} />{t('演示')}
         </span>
         <span className="flex-1" />
-        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-slate-300 group-hover:text-primary-500 transition-colors">
-          打开
+        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-slate-300 group-hover:text-primary-500 transition-colors">{t('打开')}
           <ChevronRight size={11} />
         </span>
       </div>
@@ -963,7 +944,7 @@ function SchemeCard({
             e.stopPropagation()
             onDelete()
           }}
-          title={confirmingDelete ? '再点一次确认删除' : '删除该方案'}
+          title={confirmingDelete ? t('再点一次确认删除') : t('删除该方案')}
           className={`absolute top-2.5 right-2.5 p-1.5 rounded-lg transition-all ${
             confirmingDelete
               ? 'bg-rose-50 text-rose-600 ring-1 ring-rose-200'

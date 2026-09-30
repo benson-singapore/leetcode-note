@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event'
 import { ExternalLink, X, Globe } from 'lucide-react'
 import { getSettings } from '../api/leetcode'
 import { resolveBase } from '../api/client'
+import { useI18n } from '../i18n'
 
 // 是否运行在 Tauri 环境（浏览器调试时降级为 window.open）
 const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -36,6 +37,7 @@ const openEmbedded = (url, notesEnabled, apiHost, toolMode) => {
  * 因此登录后内嵌浏览器同样是已登录状态。
  */
 export function EmbeddedBrowser({ url, toolMode = 'notes', onClose }) {
+  const { t } = useI18n()
   const [noticeVisible, setNoticeVisible] = useState(true)
 
   useEffect(() => {
@@ -122,22 +124,22 @@ export function EmbeddedBrowser({ url, toolMode = 'notes', onClose }) {
             try {
               await invoke('open_in_system_browser', { url })
             } catch (error) {
-              console.error('打开系统浏览器失败:', error)
+              console.error(t('打开系统浏览器失败:'), error)
             }
           } else {
             window.open(url, '_blank', 'noreferrer')
           }
         }}
-        title="使用系统默认浏览器打开此页面"
+        title={t('使用系统默认浏览器打开此页面')}
         className="flex h-8 items-center gap-1.5 rounded-full bg-primary-600 px-3 text-[11px] font-semibold text-white shadow-sm hover:bg-primary-700 active:scale-95 transition-all"
       >
         <ExternalLink size={12} />
-        默认浏览器打开
+        {t('默认浏览器打开')}
       </button>
       <button
         type="button"
         onClick={onClose}
-        title="关闭内嵌浏览器"
+        title={t('关闭内嵌浏览器')}
         className="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 hover:bg-slate-50 hover:text-slate-600 transition-all"
       >
         <X size={15} />

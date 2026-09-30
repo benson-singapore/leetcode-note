@@ -16,6 +16,7 @@ import {
   getActivityDay,
   getUserProblemsOnDate,
 } from '../api/leetcode'
+import { useI18n } from '../i18n'
 
 const DIFFICULTIES = {
   Easy: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', label: '简单' },
@@ -31,11 +32,11 @@ function localDateYMD() {
   return `${y}-${m}-${day}`
 }
 
-function formatZhDateLabel(ymd) {
+function formatDateLabel(ymd, locale) {
   const parts = (ymd || '').split('-').map(Number)
   if (parts.length !== 3 || parts.some(Number.isNaN)) return ymd || localDateYMD()
   const [y, mo, da] = parts
-  return new Date(y, mo - 1, da).toLocaleDateString('zh-CN', {
+  return new Date(y, mo - 1, da).toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -46,11 +47,12 @@ function formatZhDateLabel(ymd) {
 const num = (v) => (typeof v === 'number' && !Number.isNaN(v) ? v : 0)
 
 function DiffBadge({ difficulty }) {
+  const { t } = useI18n()
   const meta = DIFFICULTIES[difficulty]
   if (!meta) return null
   return (
     <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase ${meta.color}`}>
-      {meta.label}
+      {t(meta.label)}
     </span>
   )
 }
@@ -76,6 +78,7 @@ function ProblemList({ problems, renderExtra }) {
 }
 
 export default function Dashboard() {
+  const { t, language } = useI18n()
   const [stats, setStats] = useState(null)
   const [upStats, setUpStats] = useState(null)
   const [heatmap, setHeatmap] = useState(null)
@@ -160,49 +163,49 @@ export default function Dashboard() {
     [todayState.reviewed]
   )
 
-  const todayLabel = formatZhDateLabel(todayState.date)
+  const todayLabel = formatDateLabel(todayState.date, language === 'en' ? 'en-US' : 'zh-CN')
 
   return (
     <div className="h-full overflow-y-auto bg-white p-8 pt-5 md:px-12 md:pt-5">
       <div className="space-y-10 animate-in fade-in duration-700">
         <header className="space-y-1">
-          <h1 className="text-lg font-semibold tracking-tight text-slate-900">数据看板</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900">{t('数据看板')}</h1>
           <p className="text-xs font-normal tracking-wide text-slate-400">
-            基于你已录入题库的统计 · 与侧边栏一致
+            {t('基于你已录入题库的统计 · 与侧边栏一致')}
           </p>
         </header>
 
-        {error && <p className="text-sm font-medium text-rose-500">加载失败：{error}</p>}
+        {error && <p className="text-sm font-medium text-rose-500">{t('加载失败：')}{error}</p>}
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <div className="relative flex min-h-[140px] flex-col justify-between overflow-hidden rounded-2xl bg-primary-600 p-6 text-white shadow-card">
             <Target className="absolute -right-1 top-3 mb-2 opacity-15" size={72} />
-            <p className="relative z-[1] text-xs font-medium tracking-wide text-white/80">精通率</p>
+            <p className="relative z-[1] text-xs font-medium tracking-wide text-white/80">{t('精通率')}</p>
             <p className="relative z-[1] text-4xl font-semibold tracking-tight tabular-nums">{masteryPct}%</p>
             <p className="relative z-[1] mt-2 text-xs font-normal text-white/70">
-              已精通 {mastered} / 在练 {total} 题
+              {t('已精通 {mastered} / 在练 {total} 题', { mastered, total })}
             </p>
           </div>
 
           <div className="flex min-h-[140px] flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/60 p-6 shadow-card">
             <Library className="mb-2 text-primary-600" size={22} />
-            <p className="text-xs font-medium tracking-wide text-slate-400">在练题库</p>
+            <p className="text-xs font-medium tracking-wide text-slate-400">{t('在练题库')}</p>
             <p className="text-3xl font-semibold tracking-tight tabular-nums text-slate-900">{total}</p>
-            <p className="mt-2 text-xs font-normal text-slate-400">已加入个人题库的题目数</p>
+            <p className="mt-2 text-xs font-normal text-slate-400">{t('已加入个人题库的题目数')}</p>
           </div>
 
           <div className="flex min-h-[140px] flex-col justify-between rounded-2xl bg-slate-900 p-6 text-white shadow-card">
             <Trophy className="mb-2 text-primary-400 opacity-90" size={22} />
-            <p className="text-xs font-medium tracking-wide text-white/70">已精通</p>
+            <p className="text-xs font-medium tracking-wide text-white/70">{t('已精通')}</p>
             <p className="text-3xl font-semibold tracking-tight tabular-nums">{mastered}</p>
-            <p className="mt-2 text-xs font-normal text-white/50">状态为「已精通」的题目</p>
+            <p className="mt-2 text-xs font-normal text-white/50">{t('状态为「已精通」的题目')}</p>
           </div>
 
           <div className="flex min-h-[140px] flex-col justify-between rounded-2xl border border-amber-100/80 bg-amber-50/70 p-6 shadow-card">
             <AlertCircle className="mb-2 text-amber-600" size={22} />
-            <p className="text-xs font-medium tracking-wide text-amber-700/80">未精通</p>
+            <p className="text-xs font-medium tracking-wide text-amber-700/80">{t('未精通')}</p>
             <p className="text-3xl font-semibold tracking-tight tabular-nums text-amber-900">{notMastered}</p>
-            <p className="mt-2 text-xs font-normal text-amber-700/60">其中复习中 {reviewing} 题</p>
+            <p className="mt-2 text-xs font-normal text-amber-700/60">{t('其中复习中 {count} 题', { count: reviewing })}</p>
           </div>
         </div>
 
@@ -211,40 +214,40 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <Flame size={18} className="text-amber-400" />
               <p className="text-xs font-medium tracking-wide text-white/60">
-                近 {heatmapSummary?.windowDays ?? 365} 天训练概览
+                {t('近 {days} 天训练概览', { days: heatmapSummary?.windowDays ?? 365 })}
               </p>
             </div>
             <CalendarDays size={16} className="text-white/30" />
           </div>
           {error ? (
-            <p className="text-sm font-medium text-rose-300">活动数据加载失败，请稍后重试</p>
+            <p className="text-sm font-medium text-rose-300">{t('活动数据加载失败，请稍后重试')}</p>
           ) : !heatmapSummary ? (
-            <p className="text-sm font-medium text-white/50">加载中…</p>
+            <p className="text-sm font-medium text-white/50">{t('加载中…')}</p>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               <div>
                 <p className="mb-1 text-xs font-medium tracking-wide text-white/50">
-                  有复习记录的天数
+                  {t('有复习记录的天数')}
                 </p>
                 <p className="text-3xl font-semibold tracking-tight tabular-nums">{heatmapSummary.activeDays}</p>
-                <p className="mt-1 text-xs font-normal text-white/40">热力图上有颜色的日期数</p>
+                <p className="mt-1 text-xs font-normal text-white/40">{t('热力图上有颜色的日期数')}</p>
               </div>
               <div>
                 <p className="mb-1 text-xs font-medium tracking-wide text-white/50">
-                  复习人次累计
+                  {t('复习人次累计')}
                 </p>
                 <p className="text-3xl font-semibold tracking-tight tabular-nums">{heatmapSummary.reviewTouches}</p>
                 <p className="mt-1 text-xs font-normal text-white/40">
-                  按日「当日复习过的不重复题」求和（同题多天会重复计）
+                  {t('按日「当日复习过的不重复题」求和（同题多天会重复计）')}
                 </p>
               </div>
               <div>
                 <p className="mb-1 text-xs font-medium tracking-wide text-white/50">
-                  窗口内新录入
+                  {t('窗口内新录入')}
                 </p>
                 <p className="text-3xl font-semibold tracking-tight tabular-nums">{heatmapSummary.newAdded}</p>
                 <p className="mt-1 text-xs font-normal text-white/40">
-                  该期间新建 user_problem 的题目数
+                  {t('该期间新建 user_problem 的题目数')}
                 </p>
               </div>
             </div>
@@ -255,34 +258,34 @@ export default function Dashboard() {
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="mb-1 text-xs font-medium tracking-wide text-primary-700/80">
-                今日做题与复习
+                {t('今日做题与复习')}
               </p>
               <h2 className="text-base font-semibold tracking-tight text-slate-900">{todayLabel}</h2>
               <p className="mt-1 text-xs font-normal text-slate-500">
-                新录入按题库创建日；复习按当日复习记录（与日历统计一致）
+                {t('新录入按题库创建日；复习按当日复习记录（与日历统计一致）')}
               </p>
             </div>
           </div>
 
           {todayState.error ? (
-            <p className="text-sm font-medium text-rose-600">今日数据加载失败，请稍后刷新</p>
+            <p className="text-sm font-medium text-rose-600">{t('今日数据加载失败，请稍后刷新')}</p>
           ) : todayState.loading ? (
-            <p className="text-sm font-medium text-slate-400">加载今日数据…</p>
+            <p className="text-sm font-medium text-slate-400">{t('加载今日数据…')}</p>
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-card">
                 <div className="mb-4 flex items-center gap-2">
                   <PlusCircle className="text-primary-600" size={18} />
                   <p className="text-xs font-medium tracking-wide text-slate-400">
-                    今日新录入题库
+                    {t('今日新录入题库')}
                   </p>
                 </div>
                 <p className="text-4xl font-semibold tracking-tight tabular-nums text-slate-900">
                   {todayState.created.length}
                 </p>
-                <p className="mt-1 text-xs font-normal text-slate-500">当日创建的 user_problem 条数</p>
+                <p className="mt-1 text-xs font-normal text-slate-500">{t('当日创建的 user_problem 条数')}</p>
                 {todayState.created.length === 0 ? (
-                  <p className="mt-6 text-sm font-normal text-slate-400">今天还没有新题目入库</p>
+                  <p className="mt-6 text-sm font-normal text-slate-400">{t('今天还没有新题目入库')}</p>
                 ) : (
                   <ProblemList problems={todayState.created} />
                 )}
@@ -291,12 +294,12 @@ export default function Dashboard() {
               <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-card">
                 <div className="mb-4 flex items-center gap-2">
                   <History className="text-violet-600" size={18} />
-                  <p className="text-xs font-medium tracking-wide text-slate-400">今日复习</p>
+                  <p className="text-xs font-medium tracking-wide text-slate-400">{t('今日复习')}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="mb-1 text-[10px] font-medium uppercase tracking-widest text-slate-400">
-                      涉及题目
+                      {t('涉及题目')}
                     </p>
                     <p className="text-3xl font-semibold tracking-tight tabular-nums text-slate-900">
                       {todayState.reviewed.length}
@@ -304,16 +307,16 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="mb-1 text-xs font-medium tracking-wide text-slate-400">
-                      当日复习次数
+                      {t('当日复习次数')}
                     </p>
                     <p className="text-3xl font-semibold tracking-tight tabular-nums text-violet-700">{todayReviewSessions}</p>
                   </div>
                 </div>
                 <p className="mt-2 text-xs font-normal text-slate-500">
-                  次数为当日各题复习条数之和（一题可多条）
+                  {t('次数为当日各题复习条数之和（一题可多条）')}
                 </p>
                 {todayState.reviewed.length === 0 ? (
-                  <p className="mt-6 text-sm font-normal text-slate-400">今天还没有复习记录</p>
+                  <p className="mt-6 text-sm font-normal text-slate-400">{t('今天还没有复习记录')}</p>
                 ) : (
                   <ProblemList
                     problems={todayState.reviewed}

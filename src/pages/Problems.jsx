@@ -29,6 +29,7 @@ import {
 import { DetailDrawer } from '../components/DetailDrawer'
 import { EmbeddedBrowser } from '../components/EmbeddedBrowser'
 import { getBrowserOpenMode, openInSystemBrowser } from '../utils/browserOpen'
+import { useI18n } from '../i18n'
 
 // LeetCode 题库页（可与内置浏览器的笔记插件配合：点进题目后加载对应笔记）
 const LEETCODE_PROBLEMSET_URL = 'https://leetcode.cn/problemset/'
@@ -120,6 +121,7 @@ function CollapsibleSection({ label, badge, defaultOpen = false, children }) {
 }
 
 export default function Problems({ reviewMode = false }) {
+  const { t } = useI18n()
   // 列表状态
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
@@ -341,7 +343,7 @@ export default function Problems({ reviewMode = false }) {
     setActiveProblem(null)
     setItems((prev) => prev.filter((p) => p.id !== id))
     setTotal((t) => Math.max(0, t - 1))
-    setMsg('已删除')
+    setMsg(t('已删除'))
   }
 
   const handleAddProblem = async (value, type) => {
@@ -354,7 +356,7 @@ export default function Problems({ reviewMode = false }) {
       await fetchLeetCodeProblem(params)
       setInputValue('')
       setModalOpen(false)
-      setMsg('同步成功')
+      setMsg(t('同步成功'))
       await handleRefresh()
     } catch (e) {
       setMsg(`同步失败：${e.message}`)
@@ -363,8 +365,8 @@ export default function Problems({ reviewMode = false }) {
     }
   }
 
-  const sortLabel = SORT_OPTIONS.find((o) => o.id === sortMode)?.label || '题号'
-  const difficultyLabel = difficulty === 'All' ? '全部' : DIFFICULTIES[difficulty]?.label || difficulty
+  const sortLabel = t(SORT_OPTIONS.find((o) => o.id === sortMode)?.label || '题号')
+  const difficultyLabel = difficulty === 'All' ? t('全部') : t(DIFFICULTIES[difficulty]?.label || difficulty)
 
   const startIndex = (page - 1) * pageSize
   const endIndex = Math.min(startIndex + pageSize, total)
@@ -393,7 +395,7 @@ export default function Problems({ reviewMode = false }) {
       <aside className="scrollbar-hidden w-80 shrink-0 space-y-6 overflow-y-auto border-r border-slate-100 bg-slate-50/50 p-5">
         {/* 我的基础数据 */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-600">我的基础数据</h3>
+          <h3 className="text-sm font-semibold text-slate-600">{t('我的基础数据')}</h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="relative flex min-h-[88px] flex-col justify-between overflow-hidden rounded-2xl bg-primary-600 p-4 text-white shadow-card">
               <p className="relative z-[1] text-xs font-medium tracking-wide text-white/80">
@@ -414,12 +416,12 @@ export default function Problems({ reviewMode = false }) {
 
         {/* 快速检索 */}
         <section className="space-y-2.5">
-          <h3 className="text-sm font-semibold text-slate-600">快速检索</h3>
+          <h3 className="text-sm font-semibold text-slate-600">{t('快速检索')}</h3>
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
             <input
               type="text"
-              placeholder="编号/题名..."
+              placeholder={t('编号/题名...')}
               className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-primary-300 focus:ring-2 focus:ring-primary-50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -432,7 +434,7 @@ export default function Problems({ reviewMode = false }) {
           <CollapsibleSection
             label={
               <span className="flex min-w-0 items-center gap-2">
-                <span className="shrink-0 text-sm font-semibold text-slate-700">难度过滤</span>
+                <span className="shrink-0 text-sm font-semibold text-slate-700">{t('难度过滤')}</span>
               </span>
             }
             badge={
@@ -453,7 +455,7 @@ export default function Problems({ reviewMode = false }) {
                       : 'border border-transparent text-slate-600 hover:bg-white hover:text-slate-900'
                   }`}
                 >
-                  <span>{d === 'All' ? '全部' : DIFFICULTIES[d].label}</span>
+                  <span>{d === 'All' ? t('全部') : t(DIFFICULTIES[d].label)}</span>
                   {difficulty === d && <CheckCircle size={12} />}
                 </button>
               ))}
@@ -466,7 +468,7 @@ export default function Problems({ reviewMode = false }) {
           <CollapsibleSection
             label={
               <span className="flex min-w-0 items-center gap-2">
-                <span className="shrink-0 text-sm font-semibold text-slate-700">排序方式</span>
+                <span className="shrink-0 text-sm font-semibold text-slate-700">{t('排序方式')}</span>
               </span>
             }
             badge={
@@ -480,7 +482,7 @@ export default function Problems({ reviewMode = false }) {
                   }}
                   className="inline-flex items-center justify-center rounded p-0.5 transition-colors hover:bg-slate-100"
                   title={sortDirection === 'asc' ? '当前正序，点击切换倒序' : '当前倒序，点击切换正序'}
-                  aria-label="切换排序方向"
+                  aria-label={t('切换排序方向')}
                 >
                   <ChevronsUpDown size={13} className="text-slate-500" />
                 </button>
@@ -499,7 +501,7 @@ export default function Problems({ reviewMode = false }) {
                       : 'border border-transparent text-slate-600 hover:bg-white hover:text-slate-900'
                   }`}
                 >
-                  <span>{opt.label}</span>
+                  <span>{t(opt.label)}</span>
                   {sortMode === opt.id ? (
                     <div className="flex items-center gap-1">
                       {sortDirection === 'asc' ? <ArrowUpAZ size={12} /> : <ArrowDownAZ size={12} />}
@@ -514,7 +516,7 @@ export default function Problems({ reviewMode = false }) {
 
         {/* 知识专题 */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-600">知识专题</h3>
+          <h3 className="text-sm font-semibold text-slate-600">{t('知识专题')}</h3>
           <div className="flex flex-wrap gap-2">
             {allTags.map((tag) => (
               <button
@@ -531,7 +533,7 @@ export default function Problems({ reviewMode = false }) {
                 <span className="ml-1 text-[11px] text-slate-400">({tagCounts[tag] ?? 0})</span>
               </button>
             ))}
-            {allTags.length === 0 && <p className="px-1 text-[11px] text-slate-400">暂无标签</p>}
+            {allTags.length === 0 && <p className="px-1 text-[11px] text-slate-400">{t('暂无标签')}</p>}
           </div>
         </section>
       </aside>
@@ -556,7 +558,7 @@ export default function Problems({ reviewMode = false }) {
             <div className="flex items-center gap-3">
               {msg && <span className="max-w-xs truncate text-xs font-medium text-slate-400">{msg}</span>}
               {randomMode && (
-                <div className="flex items-center gap-1.5" aria-label="随机抽取题数">
+                <div className="flex items-center gap-1.5" aria-label={t('随机抽取题数')}>
                   {REVIEW_COUNTS.map((count) => (
                     <button
                       key={count}
@@ -579,7 +581,7 @@ export default function Problems({ reviewMode = false }) {
                 type="button"
                 onClick={handleOpenLeetcode}
                 className="flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50/60 px-4 py-1.5 text-[11px] font-semibold text-primary-700 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-100 active:scale-95"
-                title="在内置浏览器打开 LeetCode 题库，可直接进入题目练习（自动加载笔记）"
+                title={t('在内置浏览器打开 LeetCode 题库，可直接进入题目练习（自动加载笔记）')}
               >
                 VIEW_LEETCODE <ExternalLink size={13} />
               </button>
@@ -588,9 +590,9 @@ export default function Problems({ reviewMode = false }) {
                 onClick={handleRefresh}
                 disabled={refreshing}
                 className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[11px] font-normal text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                title="从服务器重新加载列表"
+                title={t('从服务器重新加载列表')}
               >
-                <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> 刷新
+                <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />{t('刷新')}
               </button>}
               {!randomMode && (
                 <button
@@ -601,24 +603,24 @@ export default function Problems({ reviewMode = false }) {
                   }}
                   className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-1.5 text-[11px] font-normal text-white shadow-lg shadow-primary-100 transition-all hover:bg-primary-700 active:scale-95"
                 >
-                  <Plus size={12} /> 新增题目
+                  <Plus size={12} />{t('新增题目')}
                 </button>
               )}
             </div>
           </div>
 
           {randomMode && (
-            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="今日复习统计">
+            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label={t('今日复习统计')}>
               <div className="flex items-center justify-between rounded-xl border border-violet-100 bg-violet-50/60 px-5 py-3">
-                <span className="text-xs font-medium text-violet-700">今日复习题目</span>
+                <span className="text-xs font-medium text-violet-700">{t('今日复习题目')}</span>
                 <span className="text-xl font-semibold tabular-nums text-violet-900">
-                  {todayReviewStats.loading ? '—' : todayReviewStats.problems} <span className="text-xs font-normal">题</span>
+                  {todayReviewStats.loading ? '—' : todayReviewStats.problems} <span className="text-xs font-normal">{t('题')}</span>
                 </span>
               </div>
               <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 px-5 py-3">
-                <span className="text-xs font-medium text-slate-600">今日复习次数</span>
+                <span className="text-xs font-medium text-slate-600">{t('今日复习次数')}</span>
                 <span className="text-xl font-semibold tabular-nums text-slate-900">
-                  {todayReviewStats.loading ? '—' : todayReviewStats.sessions} <span className="text-xs font-normal">次</span>
+                  {todayReviewStats.loading ? '—' : todayReviewStats.sessions} <span className="text-xs font-normal">{t('次')}</span>
                 </span>
               </div>
             </section>
@@ -627,18 +629,18 @@ export default function Problems({ reviewMode = false }) {
           <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card">
             <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-8 py-3.5 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-400">
               <div className="col-span-1">#</div>
-              <div className={randomMode ? 'col-span-3' : 'col-span-4'}>题名</div>
-              {showPassRate && <div className="col-span-1 text-center">通过率</div>}
-              <div className="col-span-1 text-center">难度</div>
-              <div className="col-span-2 text-center">完成状态</div>
-              {randomMode && <div className="col-span-1 text-center">复习次数</div>}
-              <div className="col-span-1 text-center">手感</div>
-              <div className="col-span-2 pr-4 text-right uppercase">打卡状态</div>
+              <div className={randomMode ? 'col-span-3' : 'col-span-4'}>{t('题名')}</div>
+              {showPassRate && <div className="col-span-1 text-center">{t('通过率')}</div>}
+              <div className="col-span-1 text-center">{t('难度')}</div>
+              <div className="col-span-2 text-center">{t('完成状态')}</div>
+              {randomMode && <div className="col-span-1 text-center">{t('复习次数')}</div>}
+              <div className="col-span-1 text-center">{t('手感')}</div>
+              <div className="col-span-2 pr-4 text-right uppercase">{t('打卡状态')}</div>
             </div>
 
             <div className="divide-y divide-slate-50">
               {loading && (
-                <div className="px-8 py-12 text-center text-sm font-medium text-slate-400">加载中…</div>
+                <div className="px-8 py-12 text-center text-sm font-medium text-slate-400">{t('加载中…')}</div>
               )}
               {!loading && items.length === 0 && (
                 <div className="px-8 py-12 text-center text-sm font-medium text-slate-400">
@@ -666,8 +668,8 @@ export default function Problems({ reviewMode = false }) {
                         {p.hasHtmlDemo ? (
                           <span
                             className="inline-flex shrink-0 text-primary-500 group-hover:text-primary-600"
-                            title="已保存解题演示"
-                            aria-label="已保存解题演示"
+                            title={t('已保存解题演示')}
+                            aria-label={t('已保存解题演示')}
                           >
                             <MonitorPlay size={14} strokeWidth={2.25} />
                           </span>
@@ -693,14 +695,14 @@ export default function Problems({ reviewMode = false }) {
                             DIFFICULTIES[p.difficulty]?.color || 'text-slate-500 bg-slate-50 border-slate-100'
                           }`}
                         >
-                          {DIFFICULTIES[p.difficulty]?.label || p.difficulty || '—'}
+                          {t(DIFFICULTIES[p.difficulty]?.label || p.difficulty || '—')}
                         </span>
                       </div>
                       <div className="col-span-2 flex justify-center">
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-widest ${meta.light}`}
                         >
-                          {meta.label}
+                          {t(meta.label)}
                         </span>
                       </div>
                       {randomMode && (
@@ -715,7 +717,7 @@ export default function Problems({ reviewMode = false }) {
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-widest ${statusM.light}`}
                         >
-                          {statusM.label}
+                          {t(statusM.label)}
                         </span>
                         <ChevronRight
                           size={14}
@@ -786,8 +788,7 @@ export default function Problems({ reviewMode = false }) {
               <div className="mx-auto mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-sm font-semibold tracking-tight text-primary-600 shadow-inner">
                 LC
               </div>
-              <h3 className="mb-1 text-center text-lg font-semibold tracking-tight text-slate-900">
-                从 LeetCode 同步
+              <h3 className="mb-1 text-center text-lg font-semibold tracking-tight text-slate-900">{t('从 LeetCode 同步')}
               </h3>
               <p className="mb-6 text-center text-xs font-normal tracking-wide text-slate-400">
                 {inputType === 'frontendId' ? '输入编号 (1, 2, 14)' : '输入 Slug (two-sum)'}
@@ -805,8 +806,7 @@ export default function Problems({ reviewMode = false }) {
                       ? 'bg-primary-100 text-primary-700'
                       : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                   }`}
-                >
-                  按序号
+                >{t('按序号')}
                 </button>
                 <button
                   type="button"
@@ -819,8 +819,7 @@ export default function Problems({ reviewMode = false }) {
                       ? 'bg-primary-100 text-primary-700'
                       : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                   }`}
-                >
-                  按 Slug
+                >{t('按 Slug')}
                 </button>
               </div>
 
@@ -845,8 +844,7 @@ export default function Problems({ reviewMode = false }) {
                     onClick={() => setModalOpen(false)}
                     disabled={fetching}
                     className="flex-1 py-3 text-sm font-medium text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50"
-                  >
-                    取消
+                  >{t('取消')}
                   </button>
                   <button
                     type="submit"
@@ -855,8 +853,7 @@ export default function Problems({ reviewMode = false }) {
                   >
                     {fetching ? (
                       <>
-                        <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-white"></div>
-                        加载中...
+                        <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-white"></div>{t('加载中...')}
                       </>
                     ) : (
                       '确认'

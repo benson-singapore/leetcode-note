@@ -7,8 +7,10 @@ import {
   listSessions, deleteSession, cancelChat,
   chatStream, listProviders,
 } from '../api/ai'
+import { useI18n } from '../i18n'
 
 export default function AIChat() {
+  const { t } = useI18n()
   const [sessions, setSessions] = useState([])
   const [activeId, setActiveId] = useState('')
   const [messages, setMessages] = useState([])
@@ -118,7 +120,7 @@ export default function AIChat() {
       {/* 会话列表 */}
       <div className="flex w-60 shrink-0 flex-col border-r border-neutral-200 bg-white">
         <div className="flex items-center justify-between px-4 py-3">
-          <span className="text-sm font-medium text-neutral-700">会话</span>
+          <span className="text-sm font-medium text-neutral-700">{t('会话')}</span>
           <button onClick={newSession} className="rounded-md p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-primary-600">
             <Plus size={16} />
           </button>
@@ -142,7 +144,7 @@ export default function AIChat() {
               </button>
             </div>
           ))}
-          {sessions.length === 0 && <div className="px-3 py-6 text-center text-xs text-neutral-400">暂无会话</div>}
+          {sessions.length === 0 && <div className="px-3 py-6 text-center text-xs text-neutral-400">{t('暂无会话')}</div>}
         </div>
       </div>
 
@@ -150,17 +152,17 @@ export default function AIChat() {
       <div className="flex flex-1 flex-col">
         {/* 顶栏：助手与模型选择 */}
         <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-3">
-          <span className="text-sm font-medium text-neutral-700">AI 问答</span>
+          <span className="text-sm font-medium text-neutral-700">{t('AI 问答')}</span>
           <div className="flex items-center gap-2">
             <select
               value={provider}
               onChange={(e) => changeProvider(e.target.value)}
               className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none"
             >
-              {providers.length === 0 && <option value="">未配置 AI 助手</option>}
+              {providers.length === 0 && <option value="">{t('未配置 AI 助手')}</option>}
               {providers.map((p) => (
                 <option key={p.name} value={p.name}>
-                  {p.label}{p.default ? '（默认）' : ''}
+                  {p.label}{p.default ? t('（默认）') : ''}
                 </option>
               ))}
             </select>
@@ -181,7 +183,7 @@ export default function AIChat() {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center text-sm text-neutral-400">
-              选择会话或直接输入消息开始对话（会自动创建会话）
+              {t('选择会话或直接输入消息开始对话（会自动创建会话）')}
             </div>
           )}
           {messages.map((m, i) => (
@@ -210,16 +212,16 @@ export default function AIChat() {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
               }}
               rows={2}
-              placeholder="输入问题，Enter 发送，Shift+Enter 换行"
+              placeholder={t('输入问题，Enter 发送，Shift+Enter 换行')}
               className="flex-1 resize-none rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:border-primary-400"
             />
             {streaming ? (
               <button onClick={stop} className="flex h-10 items-center gap-1.5 rounded-xl bg-neutral-200 px-4 text-sm text-neutral-600 hover:bg-neutral-300">
-                <Square size={14} /> 停止
+                <Square size={14} /> {t('停止')}
               </button>
             ) : (
               <button onClick={send} disabled={!input.trim()} className="flex h-10 items-center gap-1.5 rounded-xl bg-primary-500 px-4 text-sm text-white hover:bg-primary-600 disabled:opacity-40">
-                <Send size={14} /> 发送
+                <Send size={14} /> {t('发送')}
               </button>
             )}
           </div>

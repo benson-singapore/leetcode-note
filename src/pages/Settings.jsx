@@ -34,6 +34,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import packageJson from '../../package.json'
+import { useI18n } from '../i18n'
 import { getSettings, updateSettings, fetchLeetCodeProblem, getLeetCodeUserProfile, getLeetCodeSolvedStats, getLeetCodeSolvedList, importLeetCodeSolved } from '../api/leetcode'
 import {
   listAssistants,
@@ -58,6 +59,7 @@ const NAV = [
   { id: 'plugin', label: '插件同步', icon: Puzzle },
   { id: 'about', label: '关于', icon: Info },
 ]
+
 
 const inputCls =
   'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-primary-400 focus:ring-2 focus:ring-primary-50'
@@ -117,6 +119,7 @@ function Field({ label, hint, children }) {
 // DefaultChainSection 系统默认模型链配置（failover）
 // 链上第一个为系统默认模型；请求失败自动切换下一个，失败模型进入冷却期后恢复
 function DefaultChainSection({ assistants }) {
+  const { t } = useI18n()
   const [chain, setChain] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -192,7 +195,7 @@ function DefaultChainSection({ assistants }) {
       const d = res?.data ?? res
       setChain(Array.isArray(d?.chain) ? d.chain : [])
       setDirty(false)
-      flash('默认模型已保存', 'ok')
+      flash(t('默认模型已保存'), 'ok')
     } catch (e) {
       flash(`保存默认模型失败：${e.message}`, 'err')
     } finally {
@@ -208,9 +211,8 @@ function DefaultChainSection({ assistants }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold text-slate-900">默认模型配置</h3>
-            <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
-              系统默认
+            <h3 className="text-base font-semibold text-slate-900">{t('默认模型配置')}</h3>
+            <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">{t('系统默认')}
             </span>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-slate-400">
@@ -221,19 +223,16 @@ function DefaultChainSection({ assistants }) {
 
       {loading ? (
         <div className="flex items-center justify-center py-6 text-sm text-slate-400">
-          <Loader2 size={16} className="mr-2 animate-spin" />
-          加载默认模型…
+          <Loader2 size={16} className="mr-2 animate-spin" />{t('加载默认模型…')}
         </div>
       ) : enabledAssistants.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center text-xs text-slate-400">
-          请先在下方添加并启用 AI 助手，再配置默认模型
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center text-xs text-slate-400">{t('请先在下方添加并启用 AI 助手，再配置默认模型')}
         </div>
       ) : (
         <>
           <div className="space-y-2">
             {chain.length === 0 && (
-              <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4 text-center text-xs text-slate-400">
-                还没有配置默认模型，点击「添加模型」开始
+              <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4 text-center text-xs text-slate-400">{t('还没有配置默认模型，点击「添加模型」开始')}
               </p>
             )}
             {chain.map((entry, idx) => {
@@ -253,7 +252,7 @@ function DefaultChainSection({ assistants }) {
                     className="h-9 max-w-[45%] flex-1 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus:border-primary-400"
                   >
                     {enabledAssistants.some((x) => x.id === entry.assistantId) ? null : (
-                      <option value={entry.assistantId}>（助手已停用或删除）</option>
+                      <option value={entry.assistantId}>{t('（助手已停用或删除）')}</option>
                     )}
                     {enabledAssistants.map((a) => (
                       <option key={a.id} value={a.id}>
@@ -267,7 +266,7 @@ function DefaultChainSection({ assistants }) {
                     disabled={!hasAssistant}
                     className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 font-mono text-xs text-slate-700 outline-none focus:border-primary-400 disabled:opacity-50"
                   >
-                    {!entry.model && <option value="">选择模型</option>}
+                    {!entry.model && <option value="">{t('选择模型')}</option>}
                     {(models.find((m) => m.id === entry.model)
                       ? models
                       : [...models, { id: entry.model }]
@@ -282,7 +281,7 @@ function DefaultChainSection({ assistants }) {
                   <div className="flex shrink-0 items-center gap-0.5">
                     <button
                       type="button"
-                      title="上移"
+                      title={t('上移')}
                       disabled={idx === 0}
                       onClick={() => moveEntry(idx, -1)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -291,7 +290,7 @@ function DefaultChainSection({ assistants }) {
                     </button>
                     <button
                       type="button"
-                      title="下移"
+                      title={t('下移')}
                       disabled={idx === chain.length - 1}
                       onClick={() => moveEntry(idx, 1)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -300,7 +299,7 @@ function DefaultChainSection({ assistants }) {
                     </button>
                     <button
                       type="button"
-                      title="移除"
+                      title={t('移除')}
                       onClick={() => removeEntry(idx)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500"
                     >
@@ -308,8 +307,7 @@ function DefaultChainSection({ assistants }) {
                     </button>
                   </div>
                   {idx === 0 && (
-                    <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                      默认
+                    <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">{t('默认')}
                     </span>
                   )}
                 </div>
@@ -323,8 +321,7 @@ function DefaultChainSection({ assistants }) {
               onClick={addEntry}
               className="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:border-primary-300 hover:text-primary-600"
             >
-              <Plus size={14} />
-              添加模型
+              <Plus size={14} />{t('添加模型')}
             </button>
             <button
               type="button"
@@ -333,7 +330,7 @@ function DefaultChainSection({ assistants }) {
               className="flex items-center gap-1.5 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95 disabled:opacity-40 disabled:active:scale-100"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              {dirty ? '保存默认模型' : '已保存'}
+              {dirty ? t('保存默认模型') : t('已保存')}
             </button>
           </div>
         </>
@@ -397,6 +394,7 @@ function Toggle({ checked, onChange, disabled }) {
 }
 
 function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefault, onToggle, onToggleModel, onTest, testState }) {
+  const { t } = useI18n()
   const meta = TYPE_META[a.type] || TYPE_META.openai
   const Icon = meta.icon
   const enabledModels = (a.models || []).filter((m) => m.enabled).length
@@ -418,31 +416,29 @@ function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefaul
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-slate-900">{a.name}</span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-              {meta.label}
+              {t(meta.label)}
             </span>
             {isDefault && (
               <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                <Star size={10} className="fill-amber-500 text-amber-500" />
-                默认
+                <Star size={10} className="fill-amber-500 text-amber-500" />{t('默认')}
               </span>
             )}
             {!a.enabled && (
-              <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-400">
-                已停用
+              <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-400">{t('已停用')}
               </span>
             )}
           </div>
           <p className="mt-1 truncate font-mono text-xs text-slate-400">{metaLine}</p>
           <p className="mt-0.5 text-[11px] text-slate-400">
-            {meta.hint} · 启用模型 {enabledModels} / {(a.models || []).length}
+            {t(meta.hint)} · {t('启用模型 {enabled} / {total}', { enabled: enabledModels, total: (a.models || []).length })}
           </p>
 
           {/* 测速结果 */}
           {testState?.result && (
             <p className={`mt-0.5 text-[11px] font-medium ${testState.result.ok ? 'text-emerald-600' : 'text-rose-600'}`}>
               {testState.result.ok
-                ? `✓ 连通正常 ${testState.result.latencyMs}ms · ${testState.result.model}`
-                : `✕ 连通失败：${testState.result.error}`}
+                ? t('✓ 连通正常 {ms}ms · {model}', { ms: testState.result.latencyMs, model: testState.result.model })
+                : t('✕ 连通失败：{error}', { error: testState.result.error })}
             </p>
           )}
 
@@ -454,7 +450,7 @@ function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefaul
                   key={m.id}
                   type="button"
                   onClick={() => onToggleModel(m)}
-                  title={m.enabled ? '点击停用该模型' : '点击启用该模型'}
+                  title={m.enabled ? t('点击停用该模型') : t('点击启用该模型')}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all active:scale-95 ${
                     m.enabled
                       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -468,7 +464,7 @@ function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefaul
             </div>
           )}
           {(a.models || []).length === 0 && (
-            <p className="mt-3 text-[11px] text-amber-600">尚未配置模型，点击「编辑」添加</p>
+            <p className="mt-3 text-[11px] text-amber-600">{t('尚未配置模型，点击「编辑」添加')}</p>
           )}
         </div>
 
@@ -478,7 +474,7 @@ function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefaul
             <button
               type="button"
               onClick={onMakeDefault}
-              title="设为默认助手"
+              title={t('设为默认助手')}
               className="rounded-lg p-2 text-slate-300 transition-colors hover:bg-amber-50 hover:text-amber-500"
             >
               <Star size={16} />
@@ -488,7 +484,7 @@ function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefaul
             type="button"
             onClick={onTest}
             disabled={testState?.loading}
-            title="连通测速（默认用第一个启用模型）"
+            title={t('连通测速（默认用第一个启用模型）')}
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-sky-50 hover:text-sky-600 disabled:opacity-60"
           >
             {testState?.loading ? <Loader2 size={16} className="animate-spin" /> : <Gauge size={16} />}
@@ -496,7 +492,7 @@ function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefaul
           <button
             type="button"
             onClick={onEdit}
-            title="编辑"
+            title={t('编辑')}
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <Pencil size={16} />
@@ -504,7 +500,7 @@ function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefaul
           <button
             type="button"
             onClick={onDelete}
-            title="删除"
+            title={t('删除')}
             className="rounded-lg p-2 text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
           >
             <Trash2 size={16} />
@@ -516,6 +512,7 @@ function AssistantCard({ assistant: a, isDefault, onEdit, onDelete, onMakeDefaul
 }
 
 function AssistantEditor({ initial, onSave, onClose }) {
+  const { t } = useI18n()
   const isEdit = Boolean(initial?.id)
   const [form, setForm] = useState(() =>
     initial
@@ -568,7 +565,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
         return { ...f, models: [...f.models, ...found.filter((m) => !existing.has(m.id))] }
       })
     } catch (e) {
-      alert(`读取 CLI 模型失败：${e.message}`)
+      alert(t('读取 CLI 模型失败：{error}', { error: e.message }))
     } finally {
       setCliModelsLoading(false)
     }
@@ -612,17 +609,17 @@ function AssistantEditor({ initial, onSave, onClose }) {
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto p-6">
-          <Field label="助手名称">
+          <Field label={t('助手名称')}>
             <input
               className={inputCls}
-              placeholder="如 DeepSeek / 公司中转 / 本地 claude"
+              placeholder={t('如 DeepSeek / 公司中转 / 本地 claude')}
               value={form.name}
               onChange={(e) => set({ name: e.target.value })}
             />
           </Field>
 
           {/* 接入方式 */}
-          <Field label="接入方式" hint={isCli ? '通过本地命令行工具调用，无需 API Key' : '通过 HTTP API 调用，支持 OpenAI 兼容协议与 Anthropic'}>
+          <Field label={t('接入方式')} hint={isCli ? '通过本地命令行工具调用，无需 API Key' : '通过 HTTP API 调用，支持 OpenAI 兼容协议与 Anthropic'}>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { value: 'openai', label: 'API 接入', icon: Sparkles, desc: 'OpenAI 兼容 / Claude' },
@@ -653,13 +650,13 @@ function AssistantEditor({ initial, onSave, onClose }) {
 
           {!isCli && (
             <>
-              <Field label="Provider 类型">
+              <Field label={t('Provider 类型')}>
                 <select
                   className={inputCls}
                   value={form.type === 'cli' ? 'openai' : form.type}
                   onChange={(e) => set({ type: e.target.value })}
                 >
-                  <option value="openai">OpenAI 兼容（DeepSeek / Ollama 等）</option>
+                  <option value="openai">{t('OpenAI 兼容（DeepSeek / Ollama 等）')}</option>
                   <option value="anthropic">Anthropic Claude</option>
                 </select>
               </Field>
@@ -673,7 +670,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
                     onChange={(e) => set({ apiKey: e.target.value })}
                   />
                 </Field>
-                <Field label="Base URL（可选）" hint="留空使用官方默认地址">
+                <Field label={t('Base URL（可选）')} hint={t('留空使用官方默认地址')}>
                   <input
                     className={inputCls}
                     placeholder="https://api.deepseek.com/v1"
@@ -687,7 +684,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
 
           {isCli && (
             <div className="space-y-4">
-              <Field label="CLI 类型" hint="已内置适配的命令行工具，参数与输出解析由应用自动处理">
+              <Field label={t('CLI 类型')} hint={t('已内置适配的命令行工具，参数与输出解析由应用自动处理')}>
                 <select
                   className={inputCls}
                   value={form.cliKind}
@@ -698,22 +695,22 @@ function AssistantEditor({ initial, onSave, onClose }) {
                 >
                   {CLI_PRESETS.map((p) => (
                     <option key={p.kind} value={p.kind}>
-                      {p.label} — {p.desc}
+                      {t(p.label)} — {t(p.desc)}
                     </option>
                   ))}
                 </select>
               </Field>
               {form.cliKind === 'generic' ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="命令">
+                  <Field label={t('命令')}>
                     <input
                       className={inputCls}
-                      placeholder="如 ollama"
+                      placeholder={t('如 ollama')}
                       value={form.command}
                       onChange={(e) => set({ command: e.target.value })}
                     />
                   </Field>
-                  <Field label="参数（空格分隔）" hint="提示词通过 stdin 传入，逐行输出作为回复">
+                  <Field label={t('参数（空格分隔）')} hint={t('提示词通过 stdin 传入，逐行输出作为回复')}>
                     <input
                       className={inputCls}
                       placeholder="--verbose"
@@ -724,7 +721,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
                 </div>
               ) : (
                 <div className="rounded-xl bg-slate-50/80 px-4 py-3">
-                  <p className="text-[11px] font-medium text-slate-500">实际执行命令（模型参数按需自动附加）</p>
+                  <p className="text-[11px] font-medium text-slate-500">{t('实际执行命令（模型参数按需自动附加）')}</p>
                   <p className="mt-1 break-all font-mono text-xs text-slate-400">{cliPreset.preview}</p>
                 </div>
               )}
@@ -734,7 +731,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
           {/* 模型管理 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-slate-500">模型列表</label>
+              <label className="text-xs font-medium text-slate-500">{t('模型列表')}</label>
               <div className="flex items-center gap-3">
                 {isCli && form.cliKind !== 'generic' && (
                   <button
@@ -752,17 +749,15 @@ function AssistantEditor({ initial, onSave, onClose }) {
                   onClick={addModel}
                   className="flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700"
                 >
-                  <Plus size={13} />
-                  添加模型
+                  <Plus size={13} />{t('添加模型')}
                 </button>
               </div>
             </div>
             {isCli && form.cliKind !== 'generic' && (
-              <p className={hintCls}>可从本地 CLI 配置自动读取（codex 读 ~/.codex/config.toml，claude 读 ~/.claude/settings.json）</p>
+              <p className={hintCls}>{t('可从本地 CLI 配置自动读取（codex 读 ~/.codex/config.toml，claude 读 ~/.claude/settings.json）')}</p>
             )}
             {form.models.length === 0 && (
-              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-3 py-3 text-center text-[11px] text-slate-400">
-                还没有模型，点击「添加模型」
+              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-3 py-3 text-center text-[11px] text-slate-400">{t('还没有模型，点击「添加模型」')}
               </p>
             )}
             {form.models.map((m, i) => (
@@ -770,7 +765,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
                 <Toggle checked={m.enabled !== false} onChange={() => updateModel(i, { enabled: m.enabled === false })} />
                 <input
                   className={inputCls}
-                  placeholder="模型 ID，如 gpt-4o-mini"
+                  placeholder={t('模型 ID，如 gpt-4o-mini')}
                   value={m.id}
                   onChange={(e) => updateModel(i, { id: e.target.value })}
                 />
@@ -784,7 +779,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
               </div>
             ))}
             {form.models.length > 0 && (
-              <p className={hintCls}>开关控制模型的启用 / 停用，停用后对话下拉中不可选</p>
+              <p className={hintCls}>{t('开关控制模型的启用 / 停用，停用后对话下拉中不可选')}</p>
             )}
           </div>
         </div>
@@ -794,8 +789,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
             type="button"
             onClick={onClose}
             className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
-          >
-            取消
+          >{t('取消')}
           </button>
           <button
             type="button"
@@ -804,7 +798,7 @@ function AssistantEditor({ initial, onSave, onClose }) {
             className="flex items-center gap-2 rounded-lg bg-primary-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95 disabled:opacity-60"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
-            {isEdit ? '保存修改' : '创建助手'}
+            {isEdit ? t('保存修改') : '创建助手'}
           </button>
         </div>
       </div>
@@ -820,6 +814,7 @@ const REGIONS = [
 ]
 
 export default function Settings() {
+  const { t, language, setLanguage } = useI18n()
   const [settings, setSettings] = useState({})
   const [assistants, setAssistants] = useState([])
   const [aiDefault, setAiDefault] = useState('')
@@ -893,10 +888,10 @@ export default function Settings() {
           leetcode_username: prev.leetcode_username || data.realName || data.username,
         }))
       } else {
-        setProfileError('未获取到账号信息')
+        setProfileError(t('未获取到账号信息'))
       }
     } catch (e) {
-      setProfileError(e.message || '拉取账号信息失败')
+      setProfileError(e.message || t('拉取账号信息失败'))
     } finally {
       setProfileLoading(false)
     }
@@ -938,10 +933,10 @@ export default function Settings() {
       if (data?.numAcceptedQuestions) {
         setSolvedStats(data)
       } else {
-        setSolvedStatsError('未获取到刷题统计')
+        setSolvedStatsError(t('未获取到刷题统计'))
       }
     } catch (e) {
-      setSolvedStatsError(e.message || '拉取刷题统计失败')
+      setSolvedStatsError(e.message || t('拉取刷题统计失败'))
     } finally {
       setSolvedStatsLoading(false)
     }
@@ -959,8 +954,8 @@ export default function Settings() {
       const list = listRes?.data ?? listRes
       const slugs = (list?.questions || []).map((q) => q.titleSlug)
       if (!slugs.length) {
-        setImportState((s) => ({ ...s, running: false, phase: 'done', error: '未获取到已刷题列表' }))
-        flash('未获取到已刷题列表，请稍后重试', 'err')
+        setImportState((s) => ({ ...s, running: false, phase: 'done', error: t('未获取到已刷题列表') }))
+        flash(t('未获取到已刷题列表，请稍后重试'), 'err')
         return
       }
       setImportState((s) => ({ ...s, phase: 'import', total: slugs.length }))
@@ -988,13 +983,13 @@ export default function Settings() {
       setImportState((s) => ({ ...s, running: false, phase: 'done' }))
       flash(
         failed > 0
-          ? `导入完成：新增 ${imported} 题，已存在 ${skipped} 题，失败 ${failed} 题`
-          : `导入完成：新增 ${imported} 题，已存在 ${skipped} 题`,
+          ? t('导入完成：新增 {imported} 题，已存在 {skipped} 题，失败 {failed} 题', { imported, skipped, failed })
+          : t('导入完成：新增 {imported} 题，已存在 {skipped} 题', { imported, skipped }),
         failed > 0 ? 'err' : 'ok'
       )
     } catch (e) {
       setImportState((s) => ({ ...s, running: false, phase: 'done', error: e.message || '导入失败' }))
-      flash(`导入失败：${e.message}`, 'err')
+      flash(t('导入失败：{error}', { error: e.message }), 'err')
     }
   }
 
@@ -1050,7 +1045,7 @@ export default function Settings() {
       setAssistants(d?.list || [])
       setAiDefault(d?.default || '')
     } catch (e) {
-      flash(`加载 AI 助手失败：${e.message}`, 'err')
+      flash(t('加载 AI 助手失败：{error}', { error: e.message }), 'err')
     }
   }
 
@@ -1064,7 +1059,7 @@ export default function Settings() {
       }
       flash(text)
     } catch (e) {
-      flash(`保存失败：${e.message}`, 'err')
+      flash(t('保存失败：{error}', { error: e.message }), 'err')
     }
   }
 
@@ -1082,14 +1077,14 @@ export default function Settings() {
           updateSettings({ leetcode_cookie: cookie })
             .then(() => {
               setLoginState('success')
-              flash('LeetCode 登录成功，Cookie 已自动保存')
+              flash(t('LeetCode 登录成功，Cookie 已自动保存'))
               window.dispatchEvent(new Event('leetcode-account-changed'))
               loadProfile()
             })
             .catch(() => setLoginState('failed'))
         } else {
           setLoginState('failed')
-          flash(message || '登录未完成，请重试', 'err')
+          flash(message || t('登录未完成，请重试'), 'err')
         }
       })
     }).catch(() => {})
@@ -1104,9 +1099,9 @@ export default function Settings() {
     setKV('leetcode_region', region)
     try {
       await updateSettings({ leetcode_region: region })
-      flash(`已切换到${REGIONS.find((r) => r.value === region)?.label || region}`)
+      flash(t('已切换到{region}', { region: REGIONS.find((r) => r.value === region)?.label || region }))
     } catch (err) {
-      flash(`保存区域失败：${err.message}`, 'err')
+      flash(t('保存区域失败：{error}', { error: err.message }), 'err')
     }
   }
 
@@ -1118,7 +1113,7 @@ export default function Settings() {
       await invoke('open_leetcode_login', { region: settings.leetcode_region || 'cn' })
     } catch (e) {
       setLoginState('failed')
-      flash(`打开登录窗口失败: ${e}`, 'err')
+      flash(t('打开登录窗口失败: {error}', { error: e }), 'err')
     }
   }
 
@@ -1140,9 +1135,9 @@ export default function Settings() {
       setSolvedStatsError('')
       setAccountMenuOpen(false)
       window.dispatchEvent(new Event('leetcode-account-changed'))
-      flash('已退出 LeetCode 账号')
+      flash(t('已退出 LeetCode 账号'))
     } catch (e) {
-      flash(`退出失败：${e.message}`, 'err')
+      flash(t('退出失败：{error}', { error: e.message }), 'err')
     } finally {
       setLoggingOut(false)
     }
@@ -1171,9 +1166,9 @@ export default function Settings() {
     try {
       const res = await fetchLeetCodeProblem({ titleSlug: 'two-sum' })
       const title = res?.data?.title || res?.data?.translatedTitle
-      setTestResult({ ok: true, text: `连接成功，已验证抓取「${title || '两数之和'}」` })
+      setTestResult({ ok: true, text: t('连接成功，已验证抓取「{title}」', { title: title || t('两数之和') }) })
     } catch (e) {
-      setTestResult({ ok: false, text: `连接失败：${e.message}` })
+      setTestResult({ ok: false, text: t('连接失败：{error}', { error: e.message }) })
     } finally {
       setTesting(false)
     }
@@ -1183,9 +1178,9 @@ export default function Settings() {
     try {
       const res = await get('/api/v1/leetcode/cache/stats')
       setCacheInfo(res?.data || null)
-      flash('缓存统计已刷新')
+      flash(t('缓存统计已刷新'))
     } catch (e) {
-      flash(`读取缓存统计失败：${e.message}`, 'err')
+      flash(t('读取缓存统计失败：{error}', { error: e.message }), 'err')
     }
   }
 
@@ -1194,9 +1189,9 @@ export default function Settings() {
     try {
       await post('/api/v1/leetcode/cache/clear')
       setCacheInfo(null)
-      flash('题目缓存已清除')
+      flash(t('题目缓存已清除'))
     } catch (e) {
-      flash(`清除缓存失败：${e.message}`, 'err')
+      flash(t('清除缓存失败：{error}', { error: e.message }), 'err')
     } finally {
       setClearing(false)
     }
@@ -1207,36 +1202,36 @@ export default function Settings() {
     try {
       if (config.id) {
         await updateAssistant(config.id, config)
-        flash('AI 助手已更新')
+        flash(t('AI 助手已更新'))
       } else {
         await createAssistant(config)
-        flash('AI 助手已创建')
+        flash(t('AI 助手已创建'))
       }
       setAssistantEditor(null)
       loadAssistants()
     } catch (e) {
-      flash(`保存失败：${e.message}`, 'err')
+      flash(t('保存失败：{error}', { error: e.message }), 'err')
     }
   }
 
   const removeAssistant = async (a) => {
-    if (!window.confirm(`确定删除 AI 助手「${a.name}」吗？`)) return
+    if (!window.confirm(t('确定删除 AI 助手「{name}」吗？', { name: a.name }))) return
     try {
       await deleteAssistant(a.id)
-      flash('AI 助手已删除')
+      flash(t('AI 助手已删除'))
       loadAssistants()
     } catch (e) {
-      flash(`删除失败：${e.message}`, 'err')
+      flash(t('删除失败：{error}', { error: e.message }), 'err')
     }
   }
 
   const makeDefault = async (a) => {
     try {
       await setDefaultAssistant(a.id)
-      flash(`已将「${a.name}」设为默认助手`)
+      flash(t('已将「{name}」设为默认助手', { name: a.name }))
       loadAssistants()
     } catch (e) {
-      flash(`设置失败：${e.message}`, 'err')
+      flash(t('设置失败：{error}', { error: e.message }), 'err')
     }
   }
 
@@ -1245,7 +1240,7 @@ export default function Settings() {
       await toggleAssistant(a.id, !a.enabled)
       loadAssistants()
     } catch (e) {
-      flash(`操作失败：${e.message}`, 'err')
+      flash(t('操作失败：{error}', { error: e.message }), 'err')
     }
   }
 
@@ -1254,7 +1249,7 @@ export default function Settings() {
       await toggleModel(a.id, model.id, !model.enabled)
       loadAssistants()
     } catch (e) {
-      flash(`操作失败：${e.message}`, 'err')
+      flash(t('操作失败：{error}', { error: e.message }), 'err')
     }
   }
 
@@ -1275,15 +1270,15 @@ export default function Settings() {
   const connected = hasCookie
 
   const badge = connected
-    ? <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />已连接</span>
-    : <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-slate-400" />未配置</span>
+    ? <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t('已连接')}</span>
+    : <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-slate-400" />{t('未配置')}</span>
 
   return (
     <div className="flex h-full bg-white">
       {/* 左侧设置导航 */}
       <aside className="w-56 shrink-0 border-r border-slate-100 bg-white p-6">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">设置</h1>
-        <p className="mt-1 mb-6 text-xs text-slate-400">管理账户与刷题偏好</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t('设置')}</h1>
+        <p className="mt-1 mb-6 text-xs text-slate-400">{t('管理账户与刷题偏好')}</p>
         <nav className="space-y-1">
           {NAV.map((item) => (
             <button
@@ -1297,7 +1292,7 @@ export default function Settings() {
               }`}
             >
               <item.icon size={16} />
-              {item.label}
+              {t(item.label)}
             </button>
           ))}
         </nav>
@@ -1316,15 +1311,15 @@ export default function Settings() {
           {active === 'binding' && (
             <section className="space-y-5">
               <SectionHeader
-                title="账号绑定"
+                title={t('账号绑定')}
                 badge={badge}
-                desc="绑定 LeetCode 账号：自动拉取头像昵称、提交记录与已同步代码，数据仅保存在本地"
+                desc={t('绑定 LeetCode 账号：自动拉取头像昵称、提交记录与已同步代码，数据仅保存在本地')}
               />
             <Card
               icon={ShieldCheck}
               iconBg="bg-primary-600"
-              title="LeetCode 同步设置"
-              desc="点击「一键登录」在弹窗中登录后自动抓取 Cookie 与账号信息；也可以手动更换 Cookie。"
+              title={t('LeetCode 同步设置')}
+              desc={t('点击「一键登录」在弹窗中登录后自动抓取 Cookie 与账号信息；也可以手动更换 Cookie。')}
               footer={
                 <>
                   <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
@@ -1338,8 +1333,7 @@ export default function Settings() {
                       type="button"
                       onClick={loadCacheInfo}
                       className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95"
-                    >
-                      刷新缓存统计
+                    >{t('刷新缓存统计')}
                     </button>
                     <button
                       type="button"
@@ -1347,7 +1341,7 @@ export default function Settings() {
                       disabled={clearing}
                       className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50"
                     >
-                      {clearing ? '清除中…' : '清除缓存'}
+                      {clearing ? '清除中…' : t('清除缓存')}
                     </button>
                   </div>
                 </>
@@ -1359,13 +1353,13 @@ export default function Settings() {
                   <button
                     type="button"
                     onClick={() => setAccountMenuOpen((open) => !open)}
-                    aria-label="打开账号菜单"
+                    aria-label={t('打开账号菜单')}
                     aria-haspopup="menu"
                     aria-expanded={accountMenuOpen}
                     className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-primary-300 hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100"
                   >
                     {profile?.avatar ? (
-                      <img src={profile.avatar} alt="头像" className="h-full w-full object-cover" />
+                      <img src={profile.avatar} alt={t('头像')} className="h-full w-full object-cover" />
                     ) : (
                       <UserRound size={24} />
                     )}
@@ -1376,11 +1370,11 @@ export default function Settings() {
                       className="absolute left-0 top-[calc(100%+8px)] z-30 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
                     >
                       <div className="px-3 py-2">
-                        <p className="text-xs font-semibold text-slate-800">LeetCode 账号</p>
+                        <p className="text-xs font-semibold text-slate-800">{t('LeetCode 账号')}</p>
                         <p className="mt-0.5 truncate text-[11px] text-slate-400">
                           {hasCookie
-                            ? profile?.realName || profile?.username || '已配置登录凭证'
-                            : '尚未绑定账号'}
+                            ? profile?.realName || profile?.username || t('已配置登录凭证')
+                            : t('尚未绑定账号')}
                         </p>
                       </div>
                       <div className="my-1 border-t border-slate-100" />
@@ -1404,8 +1398,7 @@ export default function Settings() {
                             else setCookieEditing(true)
                           }}
                           className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-medium text-primary-700 transition hover:bg-primary-50"
-                        >
-                          绑定账号信息
+                        >{t('绑定账号信息')}
                         </button>
                       )}
                     </div>
@@ -1414,12 +1407,11 @@ export default function Settings() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-semibold text-slate-900">
-                      {profile?.realName || profile?.username || (hasCookie ? '已绑定账号' : '未绑定账号')}
+                      {profile?.realName || profile?.username || (hasCookie ? t('已绑定账号') : t('未绑定账号'))}
                     </span>
                     {connected && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        已连接
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t('已连接')}
                       </span>
                     )}
                   </div>
@@ -1431,7 +1423,7 @@ export default function Settings() {
                         : profileError
                           ? profileError
                           : hasCookie
-                            ? '账号信息加载失败，可点击「刷新账号信息」重试'
+                            ? t('账号信息加载失败，可点击「刷新账号信息」重试')
                             : '等待绑定 LeetCode 账号'}
                   </p>
                 </div>
@@ -1463,7 +1455,7 @@ export default function Settings() {
                 {isTauri() && (
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-slate-500">账号区域</span>
+                      <span className="text-xs font-medium text-slate-500">{t('账号区域')}</span>
                       <select
                         value={settings.leetcode_region || 'cn'}
                         onChange={changeRegion}
@@ -1489,12 +1481,11 @@ export default function Settings() {
                         type="button"
                         onClick={cancelLeetCodeLogin}
                         className="text-xs text-slate-400 hover:text-slate-600"
-                      >
-                        取消
+                      >{t('取消')}
                       </button>
                     )}
-                    {loginState === 'success' && <span className="text-xs text-primary-700">✓ 已登录</span>}
-                    {loginState === 'failed' && <span className="text-xs text-rose-500">登录失败，请重试</span>}
+                    {loginState === 'success' && <span className="text-xs text-primary-700">{t('✓ 已登录')}</span>}
+                    {loginState === 'failed' && <span className="text-xs text-rose-500">{t('登录失败，请重试')}</span>}
                   </div>
                 )}
 
@@ -1511,8 +1502,7 @@ export default function Settings() {
                       />
                     </Field>
                     <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                      <ShieldCheck size={12} />
-                      您的 Cookie 仅用于本地拉取数据，我们不会上传至任何云端服务器。
+                      <ShieldCheck size={12} />{t('您的 Cookie 仅用于本地拉取数据，我们不会上传至任何云端服务器。')}
                     </p>
                     <div className="flex items-center justify-between">
                       <div className="text-xs">
@@ -1535,17 +1525,15 @@ export default function Settings() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => persist({ leetcode_cookie: settings.leetcode_cookie || '' }, 'Cookie 已保存')}
+                          onClick={() => persist({ leetcode_cookie: settings.leetcode_cookie || '' }, t('Cookie 已保存'))}
                           className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
-                        >
-                          更新授权
+                        >{t('更新授权')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setCookieEditing(false)}
                           className="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
-                        >
-                          收起
+                        >{t('收起')}
                         </button>
                       </div>
                     </div>
@@ -1554,15 +1542,14 @@ export default function Settings() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs text-slate-400">
                       <KeyRound size={14} />
-                      {hasCookie ? '已配置登录凭证（默认隐藏）' : '尚未配置登录凭证'}
+                      {hasCookie ? t('已配置登录凭证（默认隐藏）') : t('尚未配置登录凭证')}
                     </div>
                     <button
                       type="button"
                       onClick={() => setCookieEditing(true)}
                       className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-95"
                     >
-                      <KeyRound size={14} />
-                      更换 Cookie
+                      <KeyRound size={14} />{t('更换 Cookie')}
                     </button>
                   </div>
                  )}
@@ -1573,15 +1560,15 @@ export default function Settings() {
              <Card
                icon={BarChart3}
                iconBg="bg-amber-500"
-               title="刷题统计"
-               desc="实时获取当前 LeetCode 账号的刷题进度与难度分布，并支持一键导入已刷题到本地题库。"
+               title={t('刷题统计')}
+               desc={t('实时获取当前 LeetCode 账号的刷题进度与难度分布，并支持一键导入已刷题到本地题库。')}
                footer={
                  <>
                    <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                      <DownloadCloud size={14} />
                      {importedTotal != null
-                       ? `已从 LeetCode 导入 ${importedTotal} 题到本地题库`
-                       : '导入的题目会保存到本地题库，可离线浏览与复习'}
+                       ? t('已从 LeetCode 导入 {count} 题到本地题库', { count: importedTotal })
+                       : t('导入的题目会保存到本地题库，可离线浏览与复习')}
                    </div>
                    <div className="flex items-center gap-3">
                      <button
@@ -1602,23 +1589,21 @@ export default function Settings() {
                        {importState?.running
                          ? <Loader2 size={14} className="animate-spin" />
                          : <DownloadCloud size={14} />}
-                       {importState?.running ? '导入中…' : '一键导入已刷题到题库'}
+                       {importState?.running ? '导入中…' : t('一键导入已刷题到题库')}
                      </button>
                    </div>
                  </>
                }
              >
                {!hasCookie ? (
-                 <div className="rounded-xl bg-slate-50/80 p-5 text-xs text-slate-400">
-                   绑定 LeetCode 账号后即可查看刷题统计与导入已刷题。
+                 <div className="rounded-xl bg-slate-50/80 p-5 text-xs text-slate-400">{t('绑定 LeetCode 账号后即可查看刷题统计与导入已刷题。')}
                  </div>
                ) : (
                  <div className="space-y-5">
                    {solvedStatsError && !statSummary && (
                      <div className="rounded-xl bg-rose-50/60 p-4 text-xs font-medium text-rose-600">
                        {solvedStatsError}
-                       <button type="button" onClick={loadSolvedStats} className="ml-2 underline underline-offset-2">
-                         重试
+                       <button type="button" onClick={loadSolvedStats} className="ml-2 underline underline-offset-2">{t('重试')}
                        </button>
                      </div>
                    )}
@@ -1628,7 +1613,7 @@ export default function Settings() {
                        {/* 概览数字 */}
                        <div className="grid grid-cols-3 gap-3">
                          {[
-                           { label: '已刷题数', value: statSummary.solved, accent: 'text-emerald-600' },
+                           { label: t('已刷题数'), value: statSummary.solved, accent: 'text-emerald-600' },
                            { label: '剩余题数', value: statSummary.untouched, accent: 'text-slate-700' },
                            { label: '尝试失败', value: statSummary.failed, accent: 'text-amber-600' },
                          ].map((item) => (
@@ -1641,15 +1626,14 @@ export default function Settings() {
 
                        {/* 难度分布 */}
                        <div className="space-y-3 rounded-xl bg-slate-50/80 p-4">
-                         <p className="text-xs font-medium text-slate-500">难度分布（已刷 / 总题量）</p>
+                         <p className="text-xs font-medium text-slate-500">{t('难度分布（已刷 / 总题量）')}</p>
                          {statSummary.byDifficulty.map((d) => {
                            const pct = d.total > 0 ? Math.min(100, Math.round((d.solved / d.total) * 100)) : 0
                            return (
                              <div key={d.key} className="space-y-1.5">
                                <div className="flex items-center justify-between text-xs">
                                  <span className="font-medium text-slate-600">{d.label}</span>
-                                 <span className="tabular-nums text-slate-400">
-                                   已刷 <span className={`font-semibold ${d.text}`}>{d.solved}</span> / {d.total}（{pct}%）
+                                 <span className="tabular-nums text-slate-400">{t('已刷')} <span className={`font-semibold ${d.text}`}>{d.solved}</span> / {d.total}（{pct}%）
                                  </span>
                                </div>
                                <div className="h-2 overflow-hidden rounded-full bg-slate-200/80">
@@ -1667,8 +1651,7 @@ export default function Settings() {
 
                    {solvedStatsLoading && !statSummary && (
                      <div className="flex items-center gap-2 rounded-xl bg-slate-50/80 p-4 text-xs text-slate-400">
-                       <Loader2 size={14} className="animate-spin" />
-                       正在从 LeetCode 拉取刷题统计…
+                       <Loader2 size={14} className="animate-spin" />{t('正在从 LeetCode 拉取刷题统计…')}
                      </div>
                    )}
 
@@ -1677,8 +1660,7 @@ export default function Settings() {
                      <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
                        {importState.phase === 'list' && (
                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                           <Loader2 size={14} className="animate-spin" />
-                           正在获取已刷题列表…
+                           <Loader2 size={14} className="animate-spin" />{t('正在获取已刷题列表…')}
                          </div>
                        )}
                        {importState.phase === 'import' && (
@@ -1706,12 +1688,12 @@ export default function Settings() {
                          <div className="flex items-center gap-2 text-xs">
                            {importState.error ? (
                              <>
-                               <span className="font-medium text-rose-600">✕ 导入失败：{importState.error}</span>
+                               <span className="font-medium text-rose-600">✕ {t('导入失败：{error}', { error: importState.error })}</span>
                              </>
                            ) : (
                              <span className="font-medium text-primary-700">
-                               ✓ 导入完成：新增 {importState.imported} 题，已存在 {importState.skipped} 题
-                               {importState.failed > 0 ? `，失败 ${importState.failed} 题` : ''}
+                               ✓ {t('导入完成：新增 {imported} 题，已存在 {skipped} 题', { imported: importState.imported, skipped: importState.skipped })}
+                               {importState.failed > 0 ? t('，失败 {failed} 题', { failed: importState.failed }) : ''}
                              </span>
                            )}
                          </div>
@@ -1728,11 +1710,11 @@ export default function Settings() {
           {active === 'ai' && (
             <section className="space-y-5">
               <SectionHeader
-                title="AI 助手"
-                desc="可添加多个 AI 助手：自定义 API 接入或使用本地 CLI 工具，每个助手下可管理多个模型并独立启用 / 停用"
+                title={t('AI 助手')}
+                desc={t('可添加多个 AI 助手：自定义 API 接入或使用本地 CLI 工具，每个助手下可管理多个模型并独立启用 / 停用')}
                 badge={
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
-                    共 {assistants.length} 个助手
+                    {t('共 {count} 个助手', { count: assistants.length })}
                   </span>
                 }
               />
@@ -1746,8 +1728,7 @@ export default function Settings() {
                   onClick={() => setAssistantEditor({ data: null })}
                   className="flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
                 >
-                  <Plus size={15} />
-                  新增 AI 助手
+                  <Plus size={15} />{t('新增 AI 助手')}
                 </button>
               </div>
 
@@ -1755,8 +1736,8 @@ export default function Settings() {
               {assistants.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-10 text-center">
                   <Sparkles size={28} className="mx-auto text-slate-300" />
-                  <p className="mt-3 text-sm font-medium text-slate-500">还没有 AI 助手</p>
-                  <p className="mt-1 text-xs text-slate-400">点击右上角「新增 AI 助手」接入 OpenAI 兼容 API、Claude 或本地 CLI</p>
+                  <p className="mt-3 text-sm font-medium text-slate-500">{t('还没有 AI 助手')}</p>
+                  <p className="mt-1 text-xs text-slate-400">{t('点击右上角「新增 AI 助手」接入 OpenAI 兼容 API、Claude 或本地 CLI')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1788,14 +1769,37 @@ export default function Settings() {
             </section>
           )}
 
+          {/* 通用设置：界面语言（置于通用设置最上方） */}
+          {active === 'general' && (
+            <section className="space-y-5">
+            <Card
+              icon={Globe}
+              iconBg="bg-indigo-500"
+              title={t('界面语言')}
+              desc={t('选择应用界面显示语言后，导航、列表与抽屉文案会立即切换。')}
+            >
+              <Field label={t('选择语言')} hint={t('选择应用界面显示语言')}>
+                <select
+                  value={language}
+                  onChange={(event) => setLanguage(event.target.value)}
+                  className={inputCls}
+                >
+                  <option value="zh">{t('中文')}</option>
+                  <option value="en">{t('英文')}</option>
+                </select>
+              </Field>
+            </Card>
+            </section>
+          )}
+
           {/* 通用设置：语言与列表显示 */}
           {active === 'general' && (
             <section className="space-y-5">
-              <SectionHeader title="通用设置" desc="统一管理学习目标、题目列表与浏览器行为" />
+              <SectionHeader title={t('通用设置')} desc={t('统一管理学习目标、题目列表与浏览器行为')} />
             <Card
               icon={SlidersHorizontal}
               iconBg="bg-sky-600"
-              title="默认语言与列表显示"
+              title={t('默认语言与列表显示')}
               footer={
                 <div className="flex w-full justify-end">
                   <button
@@ -1806,18 +1810,18 @@ export default function Settings() {
                         page_size: String(Math.min(100, Math.max(8, Number(settings.page_size) || 16))),
                         show_pass_rate: settings.show_pass_rate === 'true' ? 'true' : 'false',
                       },
-                      '通用设置已保存'
+                      t('通用设置已保存')
                     )}
                     className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
                   >
-                    保存
+                    {t('保存')}
                   </button>
                 </div>
               }
             >
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="默认目标语言" hint="在题目列表中优先显示该语言的提交记录">
+                  <Field label={t('默认目标语言')} hint={t('在题目列表中优先显示该语言的提交记录')}>
                     <select
                       value={settings.default_language || 'Python 3'}
                       onChange={(e) => setKV('default_language', e.target.value)}
@@ -1828,7 +1832,7 @@ export default function Settings() {
                       ))}
                     </select>
                   </Field>
-                  <Field label="列表每页条数" hint="题库列表分页大小（8 - 100，默认 16）">
+                  <Field label={t('列表每页条数')} hint={t('题库列表分页大小（8 - 100，默认 16）')}>
                     <input
                       type="number"
                       min="8"
@@ -1838,14 +1842,14 @@ export default function Settings() {
                       className={inputCls}
                     />
                   </Field>
-                  <Field label="显示通过率" hint="在题库列表中展示官方通过率列">
+                  <Field label={t('显示通过率')} hint={t('在题库列表中展示官方通过率列')}>
                     <select
                       value={settings.show_pass_rate || 'true'}
                       onChange={(e) => setKV('show_pass_rate', e.target.value)}
                       className={inputCls}
                     >
-                      <option value="true">显示</option>
-                      <option value="false">隐藏</option>
+                      <option value="true">{t('显示')}</option>
+                      <option value="false">{t('隐藏')}</option>
                     </select>
                   </Field>
                 </div>
@@ -1860,8 +1864,8 @@ export default function Settings() {
             <Card
               icon={GraduationCap}
               iconBg="bg-emerald-500"
-              title="每日目标与热力图"
-              desc="设置每日复习和学习目标，热力图会按两个目标的总数自动调整颜色深浅。"
+              title={t('每日目标与热力图')}
+              desc={t('设置每日复习和学习目标，热力图会按两个目标的总数自动调整颜色深浅。')}
               footer={
                 <div className="flex w-full justify-end">
                   <button
@@ -1871,17 +1875,17 @@ export default function Settings() {
                         daily_review_target: String(Math.min(50, Math.max(1, Number(settings.daily_review_target) || 3))),
                         daily_study_target: String(Math.min(50, Math.max(1, Number(settings.daily_study_target) || 3))),
                       },
-                      '每日目标已保存'
+                      t('每日目标已保存')
                     )}
                     className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
                   >
-                    保存
+                    {t('保存')}
                   </button>
                 </div>
               }
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="每日复习目标 (题)" hint="每天计划完成复习的题数">
+                <Field label={t('每日复习目标 (题)')} hint={t('每天计划完成复习的题数')}>
                   <input
                     type="number"
                     min="1"
@@ -1891,7 +1895,7 @@ export default function Settings() {
                     className={inputCls}
                   />
                 </Field>
-                <Field label="每日学习目标 (题)" hint="每天计划新增并学习的题数">
+                <Field label={t('每日学习目标 (题)')} hint={t('每天计划新增并学习的题数')}>
                   <input
                     type="number"
                     min="1"
@@ -1912,8 +1916,8 @@ export default function Settings() {
               <Card
                 icon={Globe}
                 iconBg="bg-sky-500"
-                title="题目页与内置浏览器"
-                desc="控制题目链接的打开位置，以及内置浏览器中提供的笔记和打卡功能。"
+                title={t('题目页与内置浏览器')}
+                desc={t('控制题目链接的打开位置，以及内置浏览器中提供的笔记和打卡功能。')}
                 footer={
                   <div className="flex w-full justify-end">
                     <button
@@ -1923,27 +1927,27 @@ export default function Settings() {
                           leetcode_open_mode: settings.leetcode_open_mode || 'embedded',
                           embedded_notes_enabled: settings.embedded_notes_enabled === 'false' ? 'false' : 'true',
                         },
-                        '浏览器设置已保存'
+                        t('浏览器设置已保存')
                       )}
                       className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95"
                     >
-                      保存
+                      {t('保存')}
                     </button>
                   </div>
                 }
               >
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="题目页打开方式" hint="VIEW_LEETCODE 和训练打卡按钮打开 LeetCode 题目页使用的浏览器">
+                  <Field label={t('题目页打开方式')} hint={t('VIEW_LEETCODE 和训练打卡按钮打开 LeetCode 题目页使用的浏览器')}>
                     <select
                       value={settings.leetcode_open_mode || 'embedded'}
                       onChange={(e) => setKV('leetcode_open_mode', e.target.value)}
                       className={inputCls}
                     >
-                      <option value="embedded">内置浏览器（应用内窗口，共享登录状态）</option>
-                      <option value="system">系统默认浏览器</option>
+                      <option value="embedded">{t('内置浏览器（应用内窗口，共享登录状态）')}</option>
+                      <option value="system">{t('系统默认浏览器')}</option>
                     </select>
                   </Field>
-                  <Field label="内置浏览器笔记与打卡按钮" hint="仅内置浏览器生效；开启后自动注入应用自带的笔记和打卡功能">
+                  <Field label={t('内置浏览器笔记与打卡按钮')} hint={t('仅内置浏览器生效；开启后自动注入应用自带的笔记和打卡功能')}>
                     <label className="flex min-h-10 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
                       <input
                         type="checkbox"
@@ -1951,11 +1955,11 @@ export default function Settings() {
                         onChange={(e) => {
                           const value = e.target.checked ? 'true' : 'false'
                           setKV('embedded_notes_enabled', value)
-                          persist({ embedded_notes_enabled: value }, '内置浏览器笔记设置已保存')
+                          persist({ embedded_notes_enabled: value }, t('内置浏览器笔记设置已保存'))
                         }}
                         className="h-4 w-4 accent-primary-600"
                       />
-                      自动加载 LeetCode 笔记与打卡功能
+                      {t('自动加载 LeetCode 笔记与打卡功能')}
                     </label>
                   </Field>
                 </div>
@@ -1967,47 +1971,42 @@ export default function Settings() {
           {active === 'plugin' && (
             <section className="space-y-5">
               <SectionHeader
-                title="插件同步"
-                desc="内置浏览器会自动注入同一套笔记功能；外部浏览器仍可安装油猴脚本实现数据双向同步"
+                title={t('插件同步')}
+                desc={t('内置浏览器会自动注入同一套笔记功能；外部浏览器仍可安装油猴脚本实现数据双向同步')}
               />
               <Card
                 icon={Puzzle}
                 iconBg="bg-amber-500"
-                title="Tampermonkey 油猴脚本"
-                desc="Tauri 内置浏览器无需安装扩展；系统浏览器请安装 Tampermonkey 脚本。两种方式均会读取和保存本应用本地数据库中的笔记数据"
+                title={t('Tampermonkey 油猴脚本')}
+                desc={t('Tauri 内置浏览器无需安装扩展；系统浏览器请安装 Tampermonkey 脚本。两种方式均会读取和保存本应用本地数据库中的笔记数据')}
               >
                 <div className="space-y-4">
                   {/* 后台服务地址 */}
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-slate-500">当前后台服务地址</p>
+                      <p className="text-xs font-medium text-slate-500">{t('当前后台服务地址')}</p>
                       <p className="mt-1 truncate font-mono text-sm text-slate-900">{serverHost || '获取中…'}</p>
                     </div>
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      运行中
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t('运行中')}
                     </span>
                   </div>
 
                   {/* 配置步骤 */}
                   <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-                    <p className="mb-3 text-xs font-medium text-slate-600">配置步骤</p>
+                    <p className="mb-3 text-xs font-medium text-slate-600">{t('配置步骤')}</p>
                     <ol className="space-y-2.5 text-xs leading-relaxed text-slate-500">
                       <li className="flex gap-2.5">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">1</span>
-                        在浏览器安装 Tampermonkey 扩展（Chrome / Edge / Firefox 均支持）
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">1</span>{t('在浏览器安装 Tampermonkey 扩展（Chrome / Edge / Firefox 均支持）')}
                       </li>
                       <li className="flex gap-2.5">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">2</span>
-                        点击下方「一键复制脚本」，脚本中的 API_HOST 已自动替换为当前后台地址 <span className="font-mono text-slate-700">{serverHost}</span>
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">2</span>{t('点击下方「一键复制脚本」，脚本中的 API_HOST 已自动替换为当前后台地址')} <span className="font-mono text-slate-700">{serverHost}</span>
                       </li>
                       <li className="flex gap-2.5">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">3</span>
-                        打开 Tampermonkey 管理面板 → 新建脚本 → 粘贴并保存（或拖入 .user.js 文件安装）
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">3</span>{t('打开 Tampermonkey 管理面板 → 新建脚本 → 粘贴并保存（或拖入 .user.js 文件安装）')}
                       </li>
                       <li className="flex gap-2.5">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">4</span>
-                        访问任意 leetcode.cn 题目页面，右侧会出现「笔记」按钮，打开即可与本应用同步笔记数据
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">4</span>{t('访问任意 leetcode.cn 题目页面，右侧会出现「笔记」按钮，打开即可与本应用同步笔记数据')}
                       </li>
                     </ol>
                   </div>
@@ -2025,7 +2024,7 @@ export default function Settings() {
                       className="flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 active:scale-95 disabled:opacity-60"
                     >
                       {copied ? <Check size={14} /> : <Copy size={14} />}
-                      {copied ? '已复制到剪贴板' : '一键复制脚本'}
+                      {copied ? t('已复制到剪贴板') : '一键复制脚本'}
                     </button>
                   </div>
                 </div>
@@ -2036,7 +2035,7 @@ export default function Settings() {
           {/* 关于 */}
           {active === 'about' && (
             <section className="space-y-5 pb-2">
-              <SectionHeader title="关于" desc="应用信息与功能介绍" />
+              <SectionHeader title={t('关于')} desc={t('应用信息与功能介绍')} />
 
               <div className="relative isolate overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-card">
                 <div className="absolute inset-0 -z-10 bg-gradient-to-br from-emerald-50 via-white to-lime-50/70" />
@@ -2044,13 +2043,12 @@ export default function Settings() {
                 <div className="flex flex-col gap-7 p-7 sm:flex-row sm:items-center sm:justify-between sm:p-9">
                   <div className="flex min-w-0 items-center gap-5">
                     <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.4rem] bg-gradient-to-br from-emerald-500 to-green-700 p-1 shadow-lg shadow-emerald-900/15 ring-1 ring-white/70">
-                      <img src="/logo.png" alt="LeetCode 刷题笔记应用 Logo" className="h-full w-full rounded-[1.1rem] object-cover" />
+                      <img src="/logo.png" alt={t('LeetCode 刷题笔记应用 Logo')} className="h-full w-full rounded-[1.1rem] object-cover" />
                     </div>
                     <div className="min-w-0">
                       <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">LEETCODE STUDY DESK</p>
-                      <h3 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">LeetCode 刷题笔记</h3>
-                      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
-                        把刷题、记录与复习放在一个地方。专注积累每一次解题思路，让复习节奏清晰可见。
+                      <h3 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{t('LeetCode 刷题笔记')}</h3>
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">{t('把刷题、记录与复习放在一个地方。专注积累每一次解题思路，让复习节奏清晰可见。')}
                       </p>
                     </div>
                   </div>
@@ -2059,7 +2057,7 @@ export default function Settings() {
                       <Sparkles size={17} />
                     </span>
                     <div>
-                      <p className="text-[10px] font-medium tracking-wide text-slate-400">当前版本</p>
+                      <p className="text-[10px] font-medium tracking-wide text-slate-400">{t('当前版本')}</p>
                       <p className="mt-0.5 font-mono text-sm font-semibold text-slate-800">v{APP_VERSION}</p>
                     </div>
                   </div>
@@ -2087,14 +2085,14 @@ export default function Settings() {
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card sm:p-6">
                 <div className="mb-4 flex items-center gap-2">
                   <Database size={16} className="text-emerald-700" />
-                  <h3 className="text-sm font-semibold text-slate-800">应用信息</h3>
+                  <h3 className="text-sm font-semibold text-slate-800">{t('应用信息')}</h3>
                 </div>
                 <div className="grid gap-x-10 sm:grid-cols-2">
                   {[
                     ['应用名称', 'LeetCode 刷题笔记'],
                     ['当前版本', `v${APP_VERSION}`],
                     ['技术架构', 'Tauri · React · Go (Gin)'],
-                    ['数据存储', 'SQLite · 本地优先'],
+                    [t('数据存储'), 'SQLite · 本地优先'],
                   ].map(([label, value], index) => (
                     <div key={label} className={`flex items-center justify-between gap-4 py-3 border-b border-slate-100 ${index < 2 ? 'sm:border-b' : 'sm:border-b-0'}`}>
                       <span className="text-xs text-slate-500">{label}</span>
@@ -2102,8 +2100,7 @@ export default function Settings() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-4 border-t border-slate-100 pt-4 text-[11px] leading-5 text-slate-400">
-                  复习热力图、LeetCode 账号联动与 Tampermonkey 插件同步，帮助你形成持续、可回顾的刷题记录。
+                <p className="mt-4 border-t border-slate-100 pt-4 text-[11px] leading-5 text-slate-400">{t('复习热力图、LeetCode 账号联动与 Tampermonkey 插件同步，帮助你形成持续、可回顾的刷题记录。')}
                 </p>
               </div>
             </section>

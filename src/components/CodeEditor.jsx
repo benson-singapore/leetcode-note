@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { Check } from 'lucide-react'
 import hljs from 'highlight.js'
@@ -198,11 +199,13 @@ export function CodeEditor({ activeProblem, updateProblem }) {
     applyCode(newV, { start: newStart, end: newEnd })
   }
 
+  const { t } = useI18n()
+
   const handleSaveCode = async () => {
     if (!activeProblem.id) return
 
     setIsSaving(true)
-    setSaveStatus('保存中...')
+    setSaveStatus(t('保存中...'))
 
     try {
       await updateUserProblem(activeProblem.userProblemId || activeProblem.id, {
@@ -212,11 +215,11 @@ export function CodeEditor({ activeProblem, updateProblem }) {
         notes: activeProblem.notes,
         code: code,
       })
-      setSaveStatus('已保存')
+      setSaveStatus(t('已保存'))
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (error) {
-      console.error('保存代码失败:', error)
-      setSaveStatus('保存失败')
+      console.error(t('保存代码失败:'), error)
+      setSaveStatus(t('保存失败'))
       setTimeout(() => setSaveStatus(''), 2000)
     } finally {
       setIsSaving(false)
@@ -242,10 +245,10 @@ export function CodeEditor({ activeProblem, updateProblem }) {
             {saveStatus && (
               <span
                 className={`text-[10px] font-bold flex items-center gap-1 ${
-                  saveStatus === '已保存' ? 'text-primary-400' : 'text-slate-400'
+                  saveStatus === t('已保存') ? 'text-primary-400' : 'text-slate-400'
                 }`}
               >
-                {saveStatus === '已保存' && <Check size={12} />}
+                {saveStatus === t('已保存') && <Check size={12} />}
                 {saveStatus}
               </span>
             )}
@@ -254,7 +257,7 @@ export function CodeEditor({ activeProblem, updateProblem }) {
               disabled={isSaving}
               className="px-2 py-1 bg-primary-600 text-white text-[10px] font-bold rounded hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSaving ? '保存中' : '保存'}
+              {isSaving ? t('保存中') : t('保存')}
             </button>
             <span className="text-primary-500 font-bold opacity-80 uppercase tracking-widest text-[10px]">
               {langLabel}

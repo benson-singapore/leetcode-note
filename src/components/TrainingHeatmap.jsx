@@ -1,6 +1,9 @@
 import { useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useI18n } from '../i18n'
 
+// 月份缩写：英文界面用英文，其余沿用中文
+const MONTH_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MONTH_ZH = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 
 const LEVEL_CLASS = [
@@ -70,7 +73,8 @@ function buildWeeksForRange(startDateStr, endDateStr, counts, problemCounts) {
   return weeks
 }
 
-function monthLabelsForWeeks(weeks) {
+function monthLabelsForWeeks(weeks, language) {
+  const months = language === 'en' ? MONTH_EN : MONTH_ZH
   let prevKey = null
   return weeks.map((w) => {
     const firstIn = w.find((c) => c.inRange)
@@ -79,7 +83,7 @@ function monthLabelsForWeeks(weeks) {
     const key = `${d.getFullYear()}-${d.getMonth()}`
     if (key === prevKey) return ''
     prevKey = key
-    return MONTH_ZH[d.getMonth()]
+    return months[d.getMonth()]
   })
 }
 
@@ -91,9 +95,11 @@ function cellClass(cell, dailyTarget) {
   return LEVEL_CLASS[lv]
 }
 
-const ROW_LABELS = ['日', '', '二', '', '四', '', '六']
+const ROW_LABELS_ZH = ['日', '', '二', '', '四', '', '六']
+const ROW_LABELS_EN = ['S', '', 'T', '', 'T', '', 'S']
 
 function HeatmapTooltip({ tip }) {
+  const { t } = useI18n()
   if (!tip) return null
   return createPortal(
     <div
@@ -105,17 +111,17 @@ function HeatmapTooltip({ tip }) {
       {tip.inRange ? (
         <>
           {tip.problems > 0 && (
-            <div className="font-semibold text-base text-white tabular-nums">{tip.problems} 道新题</div>
+            <div className="font-semibold text-base text-white tabular-nums">{tip.problems} {t('道新题')}</div>
           )}
           {tip.reviews > 0 && (
-            <div className="text-[11px] text-slate-300 mt-0.5 tabular-nums">{tip.reviews} 条复习记录</div>
+            <div className="text-[11px] text-slate-300 mt-0.5 tabular-nums">{tip.reviews} {t('条复习记录')}</div>
           )}
           {tip.reviews === 0 && tip.problems === 0 && (
-            <div className="text-[11px] text-slate-400">无活动</div>
+            <div className="text-[11px] text-slate-400">{t('无活动')}</div>
           )}
         </>
       ) : (
-        <div className="text-[11px] text-slate-400">不在统计窗口内</div>
+        <div className="text-[11px] text-slate-400">{t('不在统计窗口内')}</div>
       )}
     </div>,
     document.body
@@ -133,13 +139,14 @@ export function TrainingHeatmap({
   selectedDate,
   onDaySelect,
 }) {
+  const { t, language } = useI18n()
   const [tip, setTip] = useState(null)
 
   const weeks = useMemo(
     () => buildWeeksForRange(startDate, endDate, counts || {}, problemCounts || {}),
     [startDate, endDate, counts, problemCounts]
   )
-  const monthLabels = useMemo(() => monthLabelsForWeeks(weeks), [weeks])
+  const monthLabels = useMemo(() => monthLabelsForWeeks(weeks, language), [weeks, language])
 
   const showTip = useCallback((e, cell) => {
     const r = e.currentTarget.getBoundingClientRect()
@@ -172,7 +179,7 @@ export function TrainingHeatmap({
             className="flex select-none shrink-0 flex-col gap-1 pt-[24px] pr-1.5 text-[10px] font-medium text-slate-400"
             aria-hidden
           >
-            {ROW_LABELS.map((lab, i) => (
+            {(language === 'en' ? ROW_LABELS_EN : ROW_LABELS_ZH).map((lab, i) => (
               <span key={i} className="flex h-3.5 w-5 items-center justify-end text-[10px] leading-none">
                 {lab}
               </span>
@@ -224,17 +231,17 @@ export function TrainingHeatmap({
       </div>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-2 text-xs">
         <div className="flex items-center gap-2">
-          <span className="font-normal text-slate-500">更少</span>
+          <span className="font-normal text-slate-500">{t('更少')}</span>
           <div className="flex items-center gap-0.5">
             {LEVEL_CLASS.map((cls, i) => (
               <div key={i} className={`h-3.5 w-3.5 rounded-[3px] ${cls}`} />
             ))}
           </div>
-          <span className="font-normal text-slate-500">更多</span>
+          <span className="font-normal text-slate-500">{t('更多')}</span>
         </div>
         <p className="font-normal tabular-nums text-slate-400">
-          最近 {days} 天（{startDate} ~ {endDate}）· 每日目标 {dailyTarget} 题 · 复习累计{' '}
-          <span className="font-semibold text-primary-700">{total}</span> 条（按 user_problem 逐日计）
+          {t('最近 {days} 天（{start} ~ {end}）· 每日目标 {target} 题 · 复习累计', { days, start: startDate, end: endDate, target: dailyTarget })}{' '}
+          <span className="font-semibold text-primary-700">{total}</span> {t('条（按 user_problem 逐日计）')}
         </p>
       </div>
     </div>
