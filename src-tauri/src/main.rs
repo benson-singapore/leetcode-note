@@ -231,6 +231,7 @@ fn embedded_local_api_request(
         ("GET", "/api/v1/leetcode/user-problem/detail"),
         ("POST", "/api/v1/leetcode/user-problem/save-v2"),
         ("GET", "/api/v1/leetcode/user-synced-code"),
+        ("POST", "/api/v1/reviews"),
     ]
     .iter()
     .any(|(allowed_method, endpoint)| {
@@ -422,9 +423,14 @@ fn open_embedded_browser(
     url: String,
     notes_enabled: Option<bool>,
     api_host: Option<String>,
+    tool_mode: Option<String>,
 ) -> Result<(), String> {
     let notes_enabled = notes_enabled.unwrap_or(true);
     let api_host = api_host.unwrap_or_else(|| format!("http://{SERVER_HOST}:{SERVER_PORT_BASE}"));
+    let tool_mode = match tool_mode.as_deref() {
+        Some("training") => "training",
+        _ => "notes",
+    };
     let parsed: tauri::Url = url
         .parse()
         .map_err(|e| format!("无效 URL: {e}"))?;
@@ -436,7 +442,9 @@ fn open_embedded_browser(
     // 已打开则复用：地址变化时导航，否则只聚焦（避免重复加载丢失页面状态）
     if let Some(win) = app.get_webview_window(EMBED_BROWSER_WINDOW) {
         let enabled = if notes_enabled { "true" } else { "false" };
-        win.eval(&format!("sessionStorage.setItem('lcn-notes-enabled', '{enabled}')"))
+        win.eval(&format!(
+            "sessionStorage.setItem('lcn-notes-enabled', '{enabled}'); sessionStorage.setItem('lcn-tool-mode', '{tool_mode}')"
+        ))
             .map_err(|e| e.to_string())?;
         let same_page = win
             .url()
@@ -458,6 +466,9 @@ fn open_embedded_browser(
     if notes_enabled {
         target.query_pairs_mut().append_pair("__lcn_notes", "1");
     }
+    target
+        .query_pairs_mut()
+        .append_pair("__lcn_tool_mode", tool_mode);
 
     let api_host = api_host.trim_end_matches('/');
     let user_script = include_str!("../../tamper-monkey/leetcode-note-drawer.user.js")
@@ -469,8 +480,13 @@ fn open_embedded_browser(
         r#"(function() {{
           var u = new URL(location.href);
           var enabled = sessionStorage.getItem('lcn-notes-enabled') === 'true' || u.searchParams.get('__lcn_notes') === '1';
-          if (u.searchParams.has('__lcn_notes')) {{
+          var requestedMode = u.searchParams.get('__lcn_tool_mode');
+          if (requestedMode === 'notes' || requestedMode === 'training') {{
+            sessionStorage.setItem('lcn-tool-mode', requestedMode);
+          }}
+          if (u.searchParams.has('__lcn_notes') || u.searchParams.has('__lcn_tool_mode')) {{
             u.searchParams.delete('__lcn_notes');
+            u.searchParams.delete('__lcn_tool_mode');
             history.replaceState(history.state, '', u.pathname + u.search + u.hash);
           }}
           sessionStorage.setItem('lcn-notes-enabled', enabled ? 'true' : 'false');

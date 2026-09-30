@@ -37,7 +37,6 @@ import { getBrowserOpenMode, openInSystemBrowser } from '../utils/browserOpen'
 import {
   getProblem,
   updateUserProblem,
-  createReview,
   getReviews,
   deleteProblem,
 } from '../api/leetcode'
@@ -112,20 +111,12 @@ const STATUS_MAP = {
 
 export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose, loading }) {
   const [detailTab, setDetailTab] = useState('desc')
-  const [newReview, setNewReview] = useState({
-    comment: '',
-    status: 'New',
-    progressStatus: 'Reviewing',
-    personalDifficulty: 0,
-    code: '',
-    codeLanguage: '',
-    showForm: false,
-  })
   const [reviews, setReviews] = useState([])
   const [isLoadingReviews, setIsLoadingReviews] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [embeddedUrl, setEmbeddedUrl] = useState(null) // null = 内嵌浏览器关闭
+  const [embeddedToolMode, setEmbeddedToolMode] = useState('notes')
 
   useEffect(() => {
     setDetailTab('desc')
@@ -149,7 +140,10 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
     try {
       const res = await getProblem(activeProblem.id)
       const latest = res?.data || res
-      if (latest?.id === activeProblem.id) updateProblem(latest)
+      if (latest?.id === activeProblem.id) {
+        updateProblem(latest)
+        await loadReviews(latest.userProblemId || latest.user_problem_id || activeProblem.userProblemId)
+      }
     } catch (error) {
       console.error('刷新内置浏览器同步的题目数据失败:', error)
     }
@@ -161,9 +155,26 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
     const url = `https://leetcode.cn/problems/${activeProblem.titleSlug || activeProblem.title}`
     const mode = await getBrowserOpenMode()
     if (mode === 'system') {
-      openInSystemBrowser(url)
+      const target = new URL(url)
+      target.searchParams.set('__lcn_tool_mode', 'notes')
+      openInSystemBrowser(target.toString())
       return
     }
+    setEmbeddedToolMode('notes')
+    setEmbeddedUrl(url)
+  }
+
+  const handleOpenTraining = async () => {
+    if (!activeProblem?.id) return
+    const url = `https://leetcode.cn/problems/${activeProblem.titleSlug || activeProblem.title}`
+    const mode = await getBrowserOpenMode()
+    if (mode === 'system') {
+      const target = new URL(url)
+      target.searchParams.set('__lcn_tool_mode', 'training')
+      openInSystemBrowser(target.toString())
+      return
+    }
+    setEmbeddedToolMode('training')
     setEmbeddedUrl(url)
   }
 
@@ -181,63 +192,6 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
       setReviews([])
     } finally {
       setIsLoadingReviews(false)
-    }
-  }
-
-  const handleAddReview = async () => {
-    try {
-      let userProblemId = activeProblem.userProblemId
-      if (!userProblemId) {
-        // 该题还没有用户记录，先通过 upsert 创建（以题目 ID 作为键）
-        const created = await updateUserProblem(activeProblem.id, {
-          personalDifficulty: newReview.personalDifficulty || activeProblem.personalDifficulty,
-          status: newReview.status,
-          progressStatus: newReview.progressStatus,
-          notes: activeProblem.notes || '',
-          code: newReview.code,
-        })
-        userProblemId = created?.data?.id || created?.id
-        if (!userProblemId) throw new Error('创建题目打卡记录失败')
-        updateProblem({ ...activeProblem, userProblemId })
-      }
-
-      await createReview({
-        user_problem_id: userProblemId,
-        status: newReview.status,
-        progress_status: newReview.progressStatus,
-        personal_difficulty: newReview.personalDifficulty,
-        comment: newReview.comment,
-        code: newReview.code,
-        code_language: newReview.codeLanguage,
-      })
-
-      // 更新用户题目状态
-      await updateUserProblem(userProblemId || activeProblem.id, {
-        personalDifficulty: newReview.personalDifficulty || activeProblem.personalDifficulty,
-        status: newReview.status,
-        progressStatus: newReview.progressStatus,
-        notes: activeProblem.notes || '',
-        code: newReview.code,
-      })
-
-      // 重新加载复习记录
-      await loadReviews(userProblemId)
-
-      // 更新本地状态
-      updateProblem({
-        ...activeProblem,
-        status: newReview.status,
-        progressStatus: newReview.progressStatus,
-        personalDifficulty: newReview.personalDifficulty || activeProblem.personalDifficulty,
-        code: newReview.code,
-        userProblemId,
-      })
-
-      setNewReview({ ...newReview, comment: '', showForm: false })
-      return true
-    } catch (error) {
-      console.error('创建复习记录失败:', error)
-      throw error
     }
   }
 
@@ -429,9 +383,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                 <div className="h-px bg-slate-50"></div>
                 <ReviewSection
                   activeProblem={activeProblem}
-                  newReview={newReview}
-                  setNewReview={setNewReview}
-                  handleAddReview={handleAddReview}
+                  onOpenTraining={handleOpenTraining}
                   reviews={reviews}
                   isLoadingReviews={isLoadingReviews}
                 />
@@ -444,6 +396,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
         {embeddedUrl && (
           <EmbeddedBrowser
             url={embeddedUrl}
+            toolMode={embeddedToolMode}
             onClose={handleEmbeddedClose}
           />
         )}
@@ -1116,52 +1069,16 @@ function TagsSection({ activeProblem }) {
 
 function ReviewSection({
   activeProblem,
-  newReview,
-  setNewReview,
-  handleAddReview,
+  onOpenTraining,
   reviews,
   isLoadingReviews,
 }) {
-  const reviewStatusOptions = ['Confused', 'New', 'Struggling', 'Relearning', 'Stable', 'Mastered']
   const progressOptions = [
     { key: 'Unpracticed', label: '未开始' },
     { key: 'Reviewing', label: '复习中' },
     { key: 'Mastered', label: '已完成' },
   ]
-  const ratingOptions = [
-    { value: 1, label: '秒杀' },
-    { value: 2, label: '拿捏' },
-    { value: 3, label: '纠结' },
-    { value: 4, label: '烧脑' },
-    { value: 5, label: '地狱' },
-  ]
   const [selectedReview, setSelectedReview] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState('')
-
-  const openNewReview = () => {
-    setNewReview({
-      comment: '',
-      status: reviewStatusOptions.includes(activeProblem.status) ? activeProblem.status : 'New',
-      progressStatus: activeProblem.progressStatus || 'Reviewing',
-      personalDifficulty: activeProblem.personalDifficulty || 0,
-      code: activeProblem.code || '',
-      codeLanguage: activeProblem.codeLanguage || '',
-      showForm: true,
-    })
-  }
-
-  const submitReview = async () => {
-    setSaving(true)
-    setSaveError('')
-    try {
-      if (await handleAddReview()) setNewReview((current) => ({ ...current, showForm: false }))
-    } catch (error) {
-      setSaveError(error.message || '保存失败，请重试')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -1171,63 +1088,13 @@ function ReviewSection({
         </label>
         <button
           type="button"
-          onClick={openNewReview}
-          title="新增训练打卡"
+          onClick={onOpenTraining}
+          title="打开题目进行练习和测试"
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md active:scale-95 bg-primary-600 text-white shadow-primary-50"
         >
           <Plus size={18} />
         </button>
       </div>
-
-      {newReview.showForm && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/40 p-5" onMouseDown={(event) => event.target === event.currentTarget && setNewReview({ ...newReview, showForm: false })}>
-          <section role="dialog" aria-modal="true" aria-labelledby="review-dialog-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-            <header className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 id="review-dialog-title" className="text-base font-bold text-slate-800">新增训练打卡</h2>
-                <p className="mt-1 text-xs text-slate-500">记录本次状态、手感和代码快照</p>
-              </div>
-              <button type="button" onClick={() => setNewReview({ ...newReview, showForm: false })} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100" aria-label="关闭">
-                <X size={17} />
-              </button>
-            </header>
-            <div className="space-y-5">
-              <div>
-                <label className="mb-2 block text-xs font-semibold text-slate-600">掌握程度</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {reviewStatusOptions.map((key) => {
-                    const option = STATUS_MAP[key]
-                    return <button key={key} type="button" onClick={() => setNewReview({ ...newReview, status: key })} className={`rounded-lg border px-2 py-2 text-xs font-semibold transition-colors ${newReview.status === key ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{option?.label || key}</button>
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-semibold text-slate-600">打卡状态</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {progressOptions.map((option) => <button key={option.key} type="button" onClick={() => setNewReview({ ...newReview, progressStatus: option.key })} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${newReview.progressStatus === option.key ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{option.label}</button>)}
-                </div>
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-semibold text-slate-600">本次手感评分</label>
-                <div className="grid grid-cols-5 gap-2">
-                  {ratingOptions.map((option) => <button key={option.value} type="button" onClick={() => setNewReview({ ...newReview, personalDifficulty: option.value })} className={`rounded-lg border px-2 py-2 text-xs font-semibold transition-colors ${newReview.personalDifficulty === option.value ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}><span className="block text-sm">{'★'.repeat(option.value)}</span><span>{option.label}</span></button>)}
-                </div>
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-semibold text-slate-600">训练记录</label>
-                <textarea className="h-24 w-full resize-y rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100" placeholder="记录本次遇到的坑点或突破..." value={newReview.comment} onChange={(event) => setNewReview({ ...newReview, comment: event.target.value })} />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-semibold text-slate-600">代码快照{newReview.codeLanguage ? ` · ${newReview.codeLanguage}` : ''}</label>
-                <pre className="max-h-44 overflow-auto rounded-xl bg-slate-950 p-3 text-xs leading-5 text-slate-100">{newReview.code || '当前没有已保存的代码'}</pre>
-              </div>
-              {saveError && <p role="alert" className="text-xs font-medium text-rose-600">{saveError}</p>}
-              <button type="button" disabled={saving} onClick={submitReview} className="w-full rounded-xl bg-primary-600 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-primary-700 disabled:cursor-wait disabled:opacity-60">{saving ? '保存中…' : '保存打卡'}</button>
-            </div>
-          </section>
-        </div>,
-        document.body
-      )}
 
       <div className="space-y-5 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-slate-100">
         {isLoadingReviews ? (

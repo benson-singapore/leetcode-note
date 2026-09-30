@@ -1710,7 +1710,7 @@ export default function Settings() {
                     className={inputCls}
                   />
                 </Field>
-                <Field label="题目页打开方式" hint="VIEW_LEETCODE 按钮打开 LeetCode 题目页使用的浏览器">
+                <Field label="题目页打开方式" hint="VIEW_LEETCODE 和训练打卡按钮打开 LeetCode 题目页使用的浏览器">
                   <select
                     value={settings.leetcode_open_mode || 'embedded'}
                     onChange={(e) => setKV('leetcode_open_mode', e.target.value)}
@@ -1720,7 +1720,7 @@ export default function Settings() {
                     <option value="system">系统默认浏览器</option>
                   </select>
                 </Field>
-                <Field label="内置浏览器笔记按钮" hint="仅内置浏览器生效；开启后自动注入应用自带的笔记脚本">
+                <Field label="内置浏览器笔记与打卡按钮" hint="仅内置浏览器生效；开启后自动注入应用自带的笔记和打卡功能">
                   <label className="flex min-h-10 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
                     <input
                       type="checkbox"
@@ -1732,7 +1732,7 @@ export default function Settings() {
                       }}
                       className="h-4 w-4 accent-primary-600"
                     />
-                    自动加载 LeetCode 笔记功能
+                    自动加载 LeetCode 笔记与打卡功能
                   </label>
                 </Field>
               </div>

@@ -13,13 +13,13 @@ let openingPromise = null
 // Keep the close timer outside the component: a fast reopen creates a new
 // component instance, so an instance-local ref cannot cancel the old close.
 let closingTimer = null
-const openEmbedded = (url, notesEnabled, apiHost) => {
+const openEmbedded = (url, notesEnabled, apiHost, toolMode) => {
   if (closingTimer) {
     clearTimeout(closingTimer)
     closingTimer = null
   }
   if (!openingPromise) {
-    openingPromise = invoke('open_embedded_browser', { url, notesEnabled, apiHost }).finally(() => {
+    openingPromise = invoke('open_embedded_browser', { url, notesEnabled, apiHost, toolMode }).finally(() => {
       openingPromise = null
     })
   }
@@ -35,7 +35,7 @@ const openEmbedded = (url, notesEnabled, apiHost) => {
  * 注意：原生窗口与登录窗口共用默认 WebView 数据存储，
  * 因此登录后内嵌浏览器同样是已登录状态。
  */
-export function EmbeddedBrowser({ url, onClose }) {
+export function EmbeddedBrowser({ url, toolMode = 'notes', onClose }) {
   const [noticeVisible, setNoticeVisible] = useState(true)
 
   useEffect(() => {
@@ -43,7 +43,9 @@ export function EmbeddedBrowser({ url, onClose }) {
     // （React 18 StrictMode 开发模式下 effect 会 mount → unmount → mount）
     const open = async () => {
       if (!isTauri) {
-        window.open(url, '_blank', 'noreferrer')
+        const target = new URL(url)
+        target.searchParams.set('__lcn_tool_mode', toolMode)
+        window.open(target.toString(), '_blank', 'noreferrer')
         onClose?.()
         return
       }
@@ -53,7 +55,8 @@ export function EmbeddedBrowser({ url, onClose }) {
         await openEmbedded(
           url,
           values.embedded_notes_enabled !== 'false',
-          apiHost || 'http://127.0.0.1:17877'
+          apiHost || 'http://127.0.0.1:17877',
+          toolMode
         )
       } catch (error) {
         console.error('打开内嵌浏览器失败:', error)
@@ -75,7 +78,7 @@ export function EmbeddedBrowser({ url, onClose }) {
       }, 250)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url])
+  }, [url, toolMode])
 
   useEffect(() => {
     setNoticeVisible(true)

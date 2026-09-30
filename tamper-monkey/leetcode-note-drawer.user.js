@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         LeetCode Note Drawer
 // @namespace    http://tampermonkey.net/
-// @version      2026-09-23.1
-// @description  Add a note drawer to LeetCode problem pages
+// @version      2026-09-30.4
+// @description  Add training check-in and code snapshots to LeetCode problem pages
 // @author       You
 // @match        https://leetcode.cn/problems/**
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=leetcode.cn
@@ -86,6 +86,17 @@
         return { titleSlug, title, problemNumber };
     }
 
+    function getToolMode() {
+        const url = new URL(window.location.href);
+        const requested = url.searchParams.get('__lcn_tool_mode');
+        if (requested === 'notes' || requested === 'training') {
+            sessionStorage.setItem('lcn-tool-mode', requested);
+            url.searchParams.delete('__lcn_tool_mode');
+            history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+        }
+        return sessionStorage.getItem('lcn-tool-mode') === 'training' ? 'training' : 'notes';
+    }
+
     /**
      * 从本地后端拉取当前题目、指定语言在力扣上已同步的完整代码（不再从页面 .view-line 截取，避免虚拟滚动丢行）
      * @param {string} titleSlug 题目 slug
@@ -147,12 +158,15 @@
     }
 
     // 创建按钮
-    function createButton(label = '笔记') {
+    function createButton(label = '打卡') {
         const button = document.createElement('button');
+        button.type = 'button';
+        button.setAttribute('aria-label', label);
         button.innerHTML = `
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                <path d="M3 3v5h5"></path>
+                <path d="M12 7v5l4 2"></path>
             </svg>
             <span style="margin-left: 6px;">${label}</span>
         `;
@@ -1194,6 +1208,9 @@
                 existingReview?.remove();
                 return;
             }
+            // 入口改为训练打卡；清除旧版“笔记”按钮，避免同一工具栏重复入口。
+            existingNote?.remove();
+            const mode = getToolMode();
 
             const aiButton = document.querySelector('[aria-label="问下 Leet"], [aria-label*="Leet AI"], [data-cy="ai-assistant-button"]');
             const container = aiButton?.closest('.relative.flex.rounded');
@@ -1203,35 +1220,56 @@
                 else {
                     button.style.position = 'fixed';
                     button.style.top = '76px';
-                    button.style.right = button.id === 'leetcode-note-trigger' ? '24px' : '118px';
+                    button.style.right = '24px';
                     button.style.zIndex = '2147483000';
                     button.style.boxShadow = '0 4px 14px rgba(0,0,0,.25)';
                     document.body.appendChild(button);
                 }
             };
 
-            let reviewButton = existingReview;
-            if (!reviewButton) {
-                reviewButton = createButton('打卡');
+            const reviewButton = existingReview || createButton(mode === 'training' ? '打卡' : '笔记');
+            if (!existingReview) {
                 reviewButton.id = 'leetcode-review-trigger';
-                reviewButton.onclick = () => {
-                    const current = getProblemInfo();
-                    if (current.titleSlug) openReviewDialog(current);
-                };
                 mount(reviewButton);
             }
-
-            let noteButton = existingNote;
-            if (!noteButton) {
-                noteButton = createButton('笔记');
-                noteButton.id = 'leetcode-note-trigger';
-                const { overlay, drawer, iframe } = ensureDrawer();
-                noteButton.onclick = () => {
-                    const current = getProblemInfo();
-                    if (current.titleSlug) openDrawer(drawer, overlay, iframe, current.titleSlug);
-                };
-                mount(noteButton);
+            const buttonLabel = mode === 'training' ? '打卡' : '笔记';
+            const iconMarkup = mode === 'training'
+                ? '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path>'
+                : '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>';
+            // LeetCode 会重建工具栏节点时补回内容。只在内容确实缺失或模式变化时
+            // 更新子节点，避免触发下方 subtree MutationObserver 后循环重建按钮，
+            // 也避免点击过程中按钮子节点被替换导致 click 丢失。
+            reviewButton.type = 'button';
+            reviewButton.setAttribute('aria-label', buttonLabel);
+            const currentLabel = reviewButton.querySelector('span');
+            if (reviewButton.dataset.lcnLabel !== buttonLabel || !reviewButton.querySelector('svg') || !currentLabel || currentLabel.textContent !== buttonLabel) {
+                reviewButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconMarkup}</svg><span style="margin-left:6px">${buttonLabel}</span>`;
+                reviewButton.dataset.lcnLabel = buttonLabel;
             }
+            reviewButton.style.display = 'flex';
+            reviewButton.style.alignItems = 'center';
+            reviewButton.style.padding = '6px 12px';
+            reviewButton.style.background = '#2db55d';
+            reviewButton.style.color = '#fff';
+            reviewButton.style.border = 'none';
+            reviewButton.style.borderRadius = '6px';
+            reviewButton.style.fontSize = '13px';
+            reviewButton.style.fontWeight = '600';
+            reviewButton.style.cursor = 'pointer';
+            reviewButton.style.marginLeft = '8px';
+            reviewButton.style.transition = 'background .2s ease';
+            reviewButton.onmouseover = () => { reviewButton.style.background = '#27ae60'; };
+            reviewButton.onmouseout = () => { reviewButton.style.background = '#2db55d'; };
+            reviewButton.onclick = () => {
+                const current = getProblemInfo();
+                if (!current.titleSlug) return;
+                if (getToolMode() === 'training') {
+                    openReviewDialog(current);
+                    return;
+                }
+                const { overlay, drawer, iframe } = ensureDrawer();
+                openDrawer(drawer, overlay, iframe, current.titleSlug);
+            };
         };
 
         let scheduled = false;
