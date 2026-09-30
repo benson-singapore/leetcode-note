@@ -26,9 +26,14 @@ import {
   X,
   ChevronUp,
   ChevronDown,
+  BookOpenCheck,
+  BrainCircuit,
+  CalendarDays,
+  Database,
   Globe,
   LogOut,
 } from 'lucide-react'
+import packageJson from '../../package.json'
 import { getSettings, updateSettings, fetchLeetCodeProblem, getLeetCodeUserProfile, getLeetCodeSolvedStats, getLeetCodeSolvedList, importLeetCodeSolved } from '../api/leetcode'
 import {
   listAssistants,
@@ -59,6 +64,7 @@ const inputCls =
 
 const labelCls = 'mb-1.5 block text-xs font-medium text-slate-500'
 const hintCls = 'mt-1.5 text-[11px] font-normal text-slate-400'
+const APP_VERSION = packageJson.version
 
 function SectionHeader({ title, desc, badge }) {
   return (
@@ -2029,20 +2035,75 @@ export default function Settings() {
 
           {/* 关于 */}
           {active === 'about' && (
-            <section className="space-y-5">
-              <SectionHeader title="关于" />
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-card">
-                <div className="flex items-center gap-4">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-400 to-primary-700 text-lg font-bold text-white">
-                    L
-                  </span>
-                  <div>
-                    <p className="text-base font-semibold text-slate-900">LeetCode 刷题笔记</p>
-                    <p className="text-xs text-slate-400">v0.1.0 · Tauri + React + Go (Gin) + SQLite</p>
+            <section className="space-y-5 pb-2">
+              <SectionHeader title="关于" desc="应用信息与功能介绍" />
+
+              <div className="relative isolate overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-card">
+                <div className="absolute inset-0 -z-10 bg-gradient-to-br from-emerald-50 via-white to-lime-50/70" />
+                <div className="absolute -right-16 -top-24 -z-10 h-64 w-64 rounded-full bg-emerald-100/60 blur-3xl" />
+                <div className="flex flex-col gap-7 p-7 sm:flex-row sm:items-center sm:justify-between sm:p-9">
+                  <div className="flex min-w-0 items-center gap-5">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.4rem] bg-gradient-to-br from-emerald-500 to-green-700 p-1 shadow-lg shadow-emerald-900/15 ring-1 ring-white/70">
+                      <img src="/logo.png" alt="LeetCode 刷题笔记应用 Logo" className="h-full w-full rounded-[1.1rem] object-cover" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">LEETCODE STUDY DESK</p>
+                      <h3 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">LeetCode 刷题笔记</h3>
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                        把刷题、记录与复习放在一个地方。专注积累每一次解题思路，让复习节奏清晰可见。
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 self-start rounded-2xl border border-emerald-100 bg-white/80 px-4 py-3 shadow-sm sm:self-center">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                      <Sparkles size={17} />
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-medium tracking-wide text-slate-400">当前版本</p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold text-slate-800">v{APP_VERSION}</p>
+                    </div>
                   </div>
                 </div>
-                <p className="mt-4 text-xs leading-relaxed text-slate-500">
-                  本地优先的 LeetCode 刷题与复习管理工具：题库同步、间隔复习、复习热力图、AI 笔记助手与油猴脚本联动，数据全部保存在本地。
+
+                <div className="grid gap-px border-t border-emerald-100 bg-emerald-100/70 sm:grid-cols-3">
+                  {[
+                    { icon: BookOpenCheck, title: '题库与笔记', desc: '同步题目，沉淀解题思路' },
+                    { icon: CalendarDays, title: '间隔复习', desc: '规划复习节奏，追踪学习记录' },
+                    { icon: BrainCircuit, title: 'AI 学习助手', desc: '辅助整理思路与知识点' },
+                  ].map(({ icon: Icon, title, desc }) => (
+                    <div key={title} className="flex items-start gap-3 bg-white/90 px-5 py-4">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                        <Icon size={16} />
+                      </span>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-800">{title}</p>
+                        <p className="mt-1 text-[11px] leading-4 text-slate-500">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card sm:p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <Database size={16} className="text-emerald-700" />
+                  <h3 className="text-sm font-semibold text-slate-800">应用信息</h3>
+                </div>
+                <div className="grid gap-x-10 sm:grid-cols-2">
+                  {[
+                    ['应用名称', 'LeetCode 刷题笔记'],
+                    ['当前版本', `v${APP_VERSION}`],
+                    ['技术架构', 'Tauri · React · Go (Gin)'],
+                    ['数据存储', 'SQLite · 本地优先'],
+                  ].map(([label, value], index) => (
+                    <div key={label} className={`flex items-center justify-between gap-4 py-3 border-b border-slate-100 ${index < 2 ? 'sm:border-b' : 'sm:border-b-0'}`}>
+                      <span className="text-xs text-slate-500">{label}</span>
+                      <span className={`text-right text-xs font-medium text-slate-700 ${label === '当前版本' ? 'font-mono' : ''}`}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 border-t border-slate-100 pt-4 text-[11px] leading-5 text-slate-400">
+                  复习热力图、LeetCode 账号联动与 Tampermonkey 插件同步，帮助你形成持续、可回顾的刷题记录。
                 </p>
               </div>
             </section>
