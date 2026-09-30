@@ -885,14 +885,18 @@
         drawer.style.cssText = `
             position: fixed;
             top: 0;
-            right: -50%;
-            width: 50%;
+            right: -68%;
+            width: 68%;
             height: 100vh;
             background: white;
             z-index: 9999;
             box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         `;
+        if (window.innerWidth < 760) {
+            drawer.style.width = '94%';
+            drawer.style.right = '-94%';
+        }
 
         const iframe = document.createElement('iframe');
         iframe.style.cssText = `
@@ -910,6 +914,24 @@
 
     // 用于避免“快速切换题目/重复打开抽屉”时出现回显竞态
     let latestLoadRequestId = 0;
+
+    // 抽屉 / 遮罩复用：SPA 切换题目时只重建内容，不重复创建 DOM
+    let drawerBundle = null;
+    function ensureDrawer() {
+        if (drawerBundle && document.body && document.body.contains(drawerBundle.drawer)) {
+            return drawerBundle;
+        }
+        drawerBundle = createDrawer();
+        const { overlay, drawer } = drawerBundle;
+        overlay.onclick = () => closeDrawer(drawer, overlay);
+        // 保存成功后 iframe 内仍通过 postMessage 请求关闭
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'closeDrawer') {
+                closeDrawer(drawer, overlay);
+            }
+        });
+        return drawerBundle;
+    }
 
     // 清空 iframe 内 note / code / active 状态，避免接口返回空时残留旧值
     function clearIframeContent(iframe) {
@@ -1149,38 +1171,84 @@
     }
 
     function closeDrawer(drawer, overlay) {
-        drawer.style.right = '-50%';
+        drawer.style.right = window.innerWidth < 760 ? '-94%' : '-68%';
         overlay.style.opacity = '0';
         setTimeout(() => overlay.style.display = 'none', 300);
     }
 
     // 初始化
     function init() {
-        // 查找最后一个按钮容器（问下 Leet 按钮的父容器）
-        waitForElement('[aria-label="问下 Leet"]', (aiButton) => {
-            const container = aiButton.closest('.relative.flex.rounded');
-            if (!container) return;
+        // LeetCode 会调整工具栏和 Leet AI 按钮的 aria-label；优先挂到 AI 按钮旁，
+        // 找不到时使用固定位置，避免站点改版导致笔记入口完全消失。
+        // 兼容 SPA：从题库页（/problemset/）进入题目、或题目之间切换时自动挂载当前题目入口。
+        const mountButton = () => {
+            if (!document.body) return;
 
             const problemInfo = getProblemInfo();
+            const existingNote = document.getElementById('leetcode-note-trigger');
+            const existingReview = document.getElementById('leetcode-review-trigger');
 
-            // 创建按钮
-            const button = createButton();
-            container.parentNode.insertBefore(button, container.nextSibling);
+            // 非题目页（例如题库 /problemset/）：移除入口，避免残留
+            if (!problemInfo.titleSlug) {
+                existingNote?.remove();
+                existingReview?.remove();
+                return;
+            }
 
-            // 创建 Drawer
-            const { overlay, drawer, iframe } = createDrawer();
-
-            // 绑定事件
-            button.onclick = () => openDrawer(drawer, overlay, iframe, problemInfo.titleSlug);
-            overlay.onclick = () => closeDrawer(drawer, overlay);
-
-            // 保存成功后 iframe 内仍通过 postMessage 请求关闭
-            window.addEventListener('message', (event) => {
-                if (event.data.type === 'closeDrawer') {
-                    closeDrawer(drawer, overlay);
+            const aiButton = document.querySelector('[aria-label="问下 Leet"], [aria-label*="Leet AI"], [data-cy="ai-assistant-button"]');
+            const container = aiButton?.closest('.relative.flex.rounded');
+            const toolbar = container?.parentNode;
+            const mount = (button) => {
+                if (toolbar) toolbar.insertBefore(button, container.nextSibling);
+                else {
+                    button.style.position = 'fixed';
+                    button.style.top = '76px';
+                    button.style.right = button.id === 'leetcode-note-trigger' ? '24px' : '118px';
+                    button.style.zIndex = '2147483000';
+                    button.style.boxShadow = '0 4px 14px rgba(0,0,0,.25)';
+                    document.body.appendChild(button);
                 }
-            });
-        });
+            };
+
+            let reviewButton = existingReview;
+            if (!reviewButton) {
+                reviewButton = createButton('打卡');
+                reviewButton.id = 'leetcode-review-trigger';
+                reviewButton.onclick = () => {
+                    const current = getProblemInfo();
+                    if (current.titleSlug) openReviewDialog(current);
+                };
+                mount(reviewButton);
+            }
+
+            let noteButton = existingNote;
+            if (!noteButton) {
+                noteButton = createButton('笔记');
+                noteButton.id = 'leetcode-note-trigger';
+                const { overlay, drawer, iframe } = ensureDrawer();
+                noteButton.onclick = () => {
+                    const current = getProblemInfo();
+                    if (current.titleSlug) openDrawer(drawer, overlay, iframe, current.titleSlug);
+                };
+                mount(noteButton);
+            }
+        };
+
+        let scheduled = false;
+        const scheduleMount = () => {
+            if (scheduled) return;
+            scheduled = true;
+            window.setTimeout(() => {
+                scheduled = false;
+                mountButton();
+            }, 300);
+        };
+
+        mountButton();
+        // 持续观察 DOM 与轮询：SPA 路由变化 / 题目切换 / 容器重建时自动补挂或移除入口
+        const observer = new MutationObserver(scheduleMount);
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        window.setInterval(mountButton, 1500);
     }
 
     // 启动脚本
