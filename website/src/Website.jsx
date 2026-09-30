@@ -531,6 +531,86 @@ function PageReset() {
   return null;
 }
 
+const pageSeo = {
+  "/": {
+    zh: {
+      title: "LeetCode 笔记｜LeetCode 刷题记录、题解笔记与复习工具",
+      description: "LeetCode 笔记是一款本地优先的 LeetCode 刷题学习助手：同步已解题目、整理题解与笔记、随机复习，并用 AI 代码演示和学习热力图持续积累算法能力。",
+      keywords: "LeetCode 刷题工具, 力扣刷题记录, 算法题库, 刷题笔记, 算法复习工具, AI 代码演示, LeetCode 数据同步",
+    },
+    en: {
+      title: "LeetCode Notes | Problem Tracker, Coding Notes & Review",
+      description: "A local-first LeetCode study app to sync solved problems, keep solution notes, review with random practice, explore AI code walkthroughs, and track your learning calendar.",
+      keywords: "LeetCode study app, LeetCode problem tracker, coding practice notes, algorithm review, spaced repetition, AI code walkthrough, study heatmap",
+    },
+  },
+  "/features": {
+    zh: { title: "功能介绍｜LeetCode 笔记", description: "了解 LeetCode 笔记的账号同步、个人题库、Markdown 题解、随机复习、AI 学习助手、代码演示、内置浏览器、Tampermonkey 插件和学习日历。", keywords: "LeetCode 功能, 刷题数据同步, 算法题库管理, 随机复习, AI 算法演示, LeetCode 插件, 刷题热力图" },
+    en: { title: "Features | LeetCode Notes", description: "Explore LeetCode account sync, a personal problem library, Markdown notes, random review, AI assistance, code walkthroughs, a built-in browser, Tampermonkey sync, and a study calendar.", keywords: "LeetCode features, problem sync, coding notes, random review, AI algorithm visualization, Tampermonkey, coding study calendar" },
+  },
+  "/screenshots": {
+    zh: { title: "应用截图｜LeetCode 笔记", description: "浏览 LeetCode 笔记桌面应用的真实界面，查看题库管理、解题笔记、AI 演示、随机复习、学习日历与账号同步。", keywords: "LeetCode 笔记截图, 刷题软件界面, 算法学习应用, LeetCode 题库管理" },
+    en: { title: "App Screenshots | LeetCode Notes", description: "See the LeetCode Notes desktop app, including the problem library, solution notes, AI walkthroughs, random review, study calendar, and account sync.", keywords: "LeetCode Notes screenshots, coding practice app, algorithm study app, LeetCode problem library" },
+  },
+  "/updates": {
+    zh: { title: "更新日志｜LeetCode 笔记", description: "查看 LeetCode 笔记预览版功能和学习流程更新，包括题目同步、复习记录、AI 演示和学习日历。", keywords: "LeetCode 笔记更新, 刷题工具版本, 算法学习应用更新" },
+    en: { title: "Changelog | LeetCode Notes", description: "Read updates to the LeetCode Notes preview, including problem sync, review history, AI walkthroughs, and the study calendar.", keywords: "LeetCode Notes changelog, coding practice app updates, algorithm study software" },
+  },
+  "/download": {
+    zh: { title: "版本与下载｜LeetCode 笔记", description: "了解 LeetCode 笔记桌面应用预览版本、Tauri 2 桌面框架、本地 SQLite 数据存储和开发运行方式。", keywords: "LeetCode 笔记下载, LeetCode 桌面应用, Tauri 刷题软件, 本地算法题库" },
+    en: { title: "Download | LeetCode Notes", description: "Learn about the LeetCode Notes desktop preview, its Tauri 2 framework, local SQLite storage, and how to run it from source.", keywords: "LeetCode Notes download, LeetCode desktop app, Tauri coding practice, local problem library" },
+  },
+};
+
+function SeoMetadata() {
+  const { pathname } = useLocation();
+  const { language } = useLanguage();
+  useEffect(() => {
+    const feature = features.find((item) => item.path === pathname);
+    const localizedFeature = feature && getFeature(feature, language);
+    const meta = feature
+      ? {
+          title: `${localizedFeature.label} | ${language === "en" ? "LeetCode Notes" : "LeetCode 笔记"}`,
+          description: localizedFeature.summary,
+          keywords: language === "en"
+            ? `${localizedFeature.label}, LeetCode, coding practice, algorithm study, ${localizedFeature.points.join(", ")}`
+            : `${localizedFeature.label}, LeetCode 刷题, 算法学习, ${localizedFeature.points.join("，")}`,
+        }
+      : pageSeo[pathname]?.[language] ?? pageSeo["/"][language];
+
+    document.title = meta.title;
+    const setMeta = (selector, attribute, key, content) => {
+      let element = document.head.querySelector(selector);
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attribute, key);
+        document.head.appendChild(element);
+      }
+      element.setAttribute("content", content);
+    };
+    setMeta('meta[name="description"]', "name", "description", meta.description);
+    setMeta('meta[name="keywords"]', "name", "keywords", meta.keywords);
+    setMeta('meta[property="og:title"]', "property", "og:title", meta.title);
+    setMeta('meta[property="og:description"]', "property", "og:description", meta.description);
+    setMeta('meta[property="og:locale"]', "property", "og:locale", language === "en" ? "en_US" : "zh_CN");
+    setMeta('meta[name="twitter:title"]', "name", "twitter:title", meta.title);
+    setMeta('meta[name="twitter:description"]', "name", "twitter:description", meta.description);
+
+    const schema = document.getElementById("site-schema");
+    if (schema) {
+      schema.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: language === "en" ? "LeetCode Notes" : "LeetCode 笔记",
+        alternateName: language === "en" ? ["LeetCode 笔记", "LeetCode Study Notes"] : ["LeetCode Notes", "LeetCode 刷题笔记"],
+        description: meta.description,
+        inLanguage: language === "en" ? "en" : "zh-CN",
+      });
+    }
+  }, [pathname, language]);
+  return null;
+}
+
 function Brand({ footer = false }) {
   const { language } = useLanguage();
   return (
@@ -1496,6 +1576,7 @@ export default function Website() {
   return (
     <LanguageContext.Provider value={{ language, setLanguage }}>
       <PageReset />
+      <SeoMetadata />
       <Header />
       <Routes>
         <Route path="/" element={<HomePage />} />
