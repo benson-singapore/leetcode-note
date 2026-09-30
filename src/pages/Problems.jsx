@@ -7,11 +7,11 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  History,
   LayoutList,
   MonitorPlay,
   Plus,
   RefreshCw,
-  RotateCcw,
   Search,
 } from 'lucide-react'
 import {
@@ -23,6 +23,7 @@ import {
   fetchLeetCodeProblem,
   deleteProblem,
   getSettings,
+  getActivityDay,
 } from '../api/leetcode'
 import { DetailDrawer } from '../components/DetailDrawer'
 
@@ -57,6 +58,15 @@ const SORT_OPTIONS = [
 ]
 
 const DEFAULT_PAGE_SIZE = 16
+const REVIEW_COUNTS = [3, 5, 8, 10]
+
+function localDateYMD() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 function clampPageSize(n) {
   if (!Number.isFinite(n) || n <= 0) return 0
@@ -116,6 +126,8 @@ export default function Problems({ reviewMode = false }) {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [showPassRate, setShowPassRate] = useState(true)
   const [randomMode, setRandomMode] = useState(reviewMode)
+  const [reviewCount, setReviewCount] = useState(10)
+  const [todayReviewStats, setTodayReviewStats] = useState({ problems: 0, sessions: 0, loading: true })
   const [searchQuery, setSearchQuery] = useState('')
   const [difficulty, setDifficulty] = useState('All')
   const [sortMode, setSortMode] = useState('lcId')
@@ -123,7 +135,7 @@ export default function Problems({ reviewMode = false }) {
   const [selectedTags, setSelectedTags] = useState([])
 
   // 侧边栏数据
-  const [stats, setStats] = useState({ total: 0, mastered: 0 })
+  const [stats, setStats] = useState({ total: 0, mastered: 0, reviewing: 0 })
   const [allTags, setAllTags] = useState([])
   const [tagCounts, setTagCounts] = useState({})
 
@@ -154,7 +166,7 @@ export default function Problems({ reviewMode = false }) {
         }
         if (randomMode) {
           params.mode = 'reviewing_random'
-          params.count = 10
+          params.count = reviewCount
         }
         if (searchQuery.trim()) params.q = searchQuery.trim()
         if (selectedTags.length) params.tags = selectedTags.join(',')
@@ -170,7 +182,7 @@ export default function Problems({ reviewMode = false }) {
         setLoading(false)
       }
     },
-    [randomMode, searchQuery, difficulty, sortMode, sortDirection, selectedTags, pageSize]
+    [randomMode, reviewCount, searchQuery, difficulty, sortMode, sortDirection, selectedTags, pageSize]
   )
 
   // 读取设置中的分页大小 / 通过率显示开关
@@ -195,7 +207,21 @@ export default function Problems({ reviewMode = false }) {
   useEffect(() => {
     load(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [randomMode, difficulty, sortMode, sortDirection, selectedTags])
+  }, [randomMode, reviewCount, difficulty, sortMode, sortDirection, selectedTags])
+
+  useEffect(() => {
+    if (!reviewMode) return
+    getActivityDay({ date: localDateYMD() })
+      .then((res) => {
+        const problems = res?.data?.problems || []
+        setTodayReviewStats({
+          problems: problems.length,
+          sessions: problems.reduce((sum, p) => sum + (typeof p.reviewCount === 'number' ? p.reviewCount : 0), 0),
+          loading: false,
+        })
+      })
+      .catch(() => setTodayReviewStats({ problems: 0, sessions: 0, loading: false }))
+  }, [reviewMode])
 
   // 搜索防抖
   useEffect(() => {
@@ -211,7 +237,11 @@ export default function Problems({ reviewMode = false }) {
   useEffect(() => {
     Promise.all([getProblemStats(), getUserProblemStats()])
       .then(([p, u]) => {
-        setStats({ total: p?.data?.total ?? u?.data?.total ?? 0, mastered: u?.data?.mastered ?? 0 })
+        setStats({
+          total: p?.data?.total ?? u?.data?.total ?? 0,
+          mastered: u?.data?.mastered ?? 0,
+          reviewing: u?.data?.reviewing ?? 0,
+        })
       })
       .catch(() => {})
     getTagSummary()
@@ -341,11 +371,17 @@ export default function Problems({ reviewMode = false }) {
           <h3 className="text-sm font-semibold text-slate-600">我的基础数据</h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="relative flex min-h-[88px] flex-col justify-between overflow-hidden rounded-2xl bg-primary-600 p-4 text-white shadow-card">
-              <p className="relative z-[1] text-xs font-medium tracking-wide text-white/80">总计录入</p>
-              <p className="relative z-[1] text-3xl font-semibold tracking-tight tabular-nums">{stats.total}</p>
+              <p className="relative z-[1] text-xs font-medium tracking-wide text-white/80">
+                {reviewMode ? '待复习' : '总计录入'}
+              </p>
+              <p className="relative z-[1] text-3xl font-semibold tracking-tight tabular-nums">
+                {reviewMode ? stats.reviewing : stats.total}
+              </p>
             </div>
             <div className="relative flex min-h-[88px] flex-col justify-between overflow-hidden rounded-2xl bg-white p-4 text-slate-800 shadow-card ring-1 ring-slate-100">
-              <p className="relative z-[1] text-xs font-medium tracking-wide text-slate-500">已精通</p>
+              <p className="relative z-[1] text-xs font-medium tracking-wide text-slate-500">
+                {reviewMode ? '已精通 · 无需复习' : '已精通'}
+              </p>
               <p className="relative z-[1] text-3xl font-semibold tracking-tight tabular-nums text-emerald-600">{stats.mastered}</p>
             </div>
           </div>
@@ -482,7 +518,7 @@ export default function Problems({ reviewMode = false }) {
             <h2 className="flex min-w-0 items-center gap-3 text-base font-semibold tracking-tight text-slate-900">
               {randomMode ? (
                 <span className="rounded-lg bg-violet-600 p-1.5 text-white shadow-card">
-                  <RotateCcw size={16} />
+                  <History size={16} />
                 </span>
               ) : (
                 <span className="rounded-lg bg-primary-600 p-1.5 text-white shadow-card">
@@ -494,6 +530,26 @@ export default function Problems({ reviewMode = false }) {
 
             <div className="flex items-center gap-3">
               {msg && <span className="max-w-xs truncate text-xs font-medium text-slate-400">{msg}</span>}
+              {randomMode && (
+                <div className="flex items-center gap-1.5" aria-label="随机抽取题数">
+                  {REVIEW_COUNTS.map((count) => (
+                    <button
+                      key={count}
+                      type="button"
+                      onClick={() => setReviewCount(count)}
+                      aria-pressed={reviewCount === count}
+                      className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-all active:scale-95 ${
+                        reviewCount === count
+                          ? 'border-violet-600 bg-violet-600 text-white shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-violet-300 hover:text-violet-700'
+                      }`}
+                      title={`随机抽取 ${count} 题`}
+                    >
+                      随机 {count} 题
+                    </button>
+                  ))}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleRefresh}
@@ -502,7 +558,7 @@ export default function Problems({ reviewMode = false }) {
                 title="从服务器重新加载列表"
               >
                 <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> 刷新
-              </button>
+              </button>}
               {!randomMode && (
                 <button
                   type="button"
@@ -518,6 +574,23 @@ export default function Problems({ reviewMode = false }) {
             </div>
           </div>
 
+          {randomMode && (
+            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="今日复习统计">
+              <div className="flex items-center justify-between rounded-xl border border-violet-100 bg-violet-50/60 px-5 py-3">
+                <span className="text-xs font-medium text-violet-700">今日复习题目</span>
+                <span className="text-xl font-semibold tabular-nums text-violet-900">
+                  {todayReviewStats.loading ? '—' : todayReviewStats.problems} <span className="text-xs font-normal">题</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 px-5 py-3">
+                <span className="text-xs font-medium text-slate-600">今日复习次数</span>
+                <span className="text-xl font-semibold tabular-nums text-slate-900">
+                  {todayReviewStats.loading ? '—' : todayReviewStats.sessions} <span className="text-xs font-normal">次</span>
+                </span>
+              </div>
+            </section>
+          )}
+
           <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card">
             <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-8 py-3.5 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-400">
               <div className="col-span-1">#</div>
@@ -527,7 +600,7 @@ export default function Problems({ reviewMode = false }) {
               <div className="col-span-2 text-center">完成状态</div>
               {randomMode && <div className="col-span-1 text-center">复习次数</div>}
               <div className="col-span-1 text-center">手感</div>
-              <div className="col-span-2 pr-4 text-right uppercase">Status</div>
+              <div className="col-span-2 pr-4 text-right uppercase">打卡状态</div>
             </div>
 
             <div className="divide-y divide-slate-50">
@@ -541,7 +614,7 @@ export default function Problems({ reviewMode = false }) {
               )}
               {!loading &&
                 items.map((p) => {
-                  const meta = statusMeta(p)
+                  const meta = randomMode ? STATUS_MAP.Reviewing : statusMeta(p)
                   const statusM = statusMetaFor(p)
                   const isMastered = (p.progressStatus || p.status) === 'Mastered'
                   return (
