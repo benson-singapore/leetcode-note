@@ -86,7 +86,6 @@ func (r *ProblemRepository) GetProblemDetail(id string) (*models.ProblemDetail, 
 	return &d, nil
 }
 
-
 func (r *ProblemRepository) GetProblemByLcID(lcID string) (*models.Problem, error) {
 	var problem models.Problem
 	err := r.db.QueryRow(`
@@ -303,7 +302,7 @@ func (r *ProblemRepository) GetRandomReviewingProblemsForDisplay(count int, sear
 			p.created_at
 		FROM problems p
 		INNER JOIN user_problems up ON up.problem_id = p.id
-		WHERE COALESCE(up.progress_status, up.status) = 'Reviewing'
+		WHERE COALESCE(NULLIF(up.progress_status, ''), 'Unpracticed') = 'Reviewing'
 		  AND `+where+`
 		ORDER BY up.review_count ASC, RANDOM()
 		LIMIT ?

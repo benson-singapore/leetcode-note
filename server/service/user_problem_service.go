@@ -111,6 +111,11 @@ func (s *UserProblemService) GetStats() (*models.StatsResponse, error) {
 	return s.userProblemRepo.GetStats()
 }
 
+// EnsureImportedProblemReviewing puts an imported solved question in the review queue.
+func (s *UserProblemService) EnsureImportedProblemReviewing(problemID string) (bool, error) {
+	return s.userProblemRepo.EnsureImportedProblemReviewing(problemID)
+}
+
 // UpsertUserProblemNotes 更新或插入用户题目笔记
 func (s *UserProblemService) UpsertUserProblemNotes(id string, notes string) (*models.UserProblem, error) {
 	return s.userProblemRepo.UpsertUserProblemNotes(id, notes)

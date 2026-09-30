@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"fmt"
 	"leetcode-note-sidecar/config"
 	"leetcode-note-sidecar/models"
 	"leetcode-note-sidecar/service"
 	"leetcode-note-sidecar/utils"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -457,15 +457,26 @@ func (c *LeetCodeController) ImportSolved(ctx *gin.Context) {
 		if slug == "" {
 			continue
 		}
-		// 题库中已存在则跳过
+		// 题目已在题库时，仅确保个人记录进入复习中，不更新题目数据或其他个人状态。
 		if existing, err := c.problem.GetProblemByTitleSlug(slug); err == nil && existing != nil {
+			if _, err := c.userProblem.EnsureImportedProblemReviewing(existing.ID); err != nil {
+				log.Printf("[Controller] 设置已存在题目的复习状态失败: %s, %v\n", slug, err)
+				result.Failed++
+				continue
+			}
 			result.Skipped++
 			continue
 		}
 
 		// 从 LeetCode 抓取并同步到题库
-		if _, err := c.sync.SyncAndFetch(slug); err != nil {
+		problem, err := c.sync.SyncAndFetch(slug)
+		if err != nil {
 			log.Printf("[Controller] 导入已刷题目失败: %s, %v\n", slug, err)
+			result.Failed++
+			continue
+		}
+		if _, err := c.userProblem.EnsureImportedProblemReviewing(problem.ID); err != nil {
+			log.Printf("[Controller] 为新导入题目设置复习状态失败: %s, %v\n", slug, err)
 			result.Failed++
 			continue
 		}

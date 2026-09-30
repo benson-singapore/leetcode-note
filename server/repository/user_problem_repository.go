@@ -31,7 +31,7 @@ func (r *UserProblemRepository) CreateUserProblem(userProblem *models.UserProble
 func (r *UserProblemRepository) GetUserProblemByID(id string) (*models.UserProblem, error) {
 	var userProblem models.UserProblem
 	err := r.db.QueryRow(`
-		SELECT id, problem_id, personal_difficulty, status, COALESCE(progress_status, 'Reviewing'), COALESCE(review_count, 0), notes, code, last_review, created_at, updated_at, COALESCE(has_html_demo, 0)
+		SELECT id, problem_id, personal_difficulty, status, COALESCE(progress_status, 'Unpracticed'), COALESCE(review_count, 0), COALESCE(notes, ''), COALESCE(code, ''), last_review, created_at, updated_at, COALESCE(has_html_demo, 0)
 		FROM user_problems WHERE id = ?
 	`, id).Scan(&userProblem.ID, &userProblem.ProblemID, &userProblem.PersonalDifficulty, &userProblem.Status, &userProblem.ProgressStatus, &userProblem.ReviewCount,
 		&userProblem.Notes, &userProblem.Code, &userProblem.LastReview, &userProblem.CreatedAt, &userProblem.UpdatedAt, &userProblem.HasHtmlDemo)
@@ -44,7 +44,7 @@ func (r *UserProblemRepository) GetUserProblemByID(id string) (*models.UserProbl
 // GetAllUserProblems 获取所有用户题目记录
 func (r *UserProblemRepository) GetAllUserProblems() ([]models.UserProblem, error) {
 	rows, err := r.db.Query(`
-		SELECT id, problem_id, personal_difficulty, status, COALESCE(progress_status, 'Reviewing'), COALESCE(review_count, 0), notes, code, last_review, created_at, updated_at, COALESCE(has_html_demo, 0)
+		SELECT id, problem_id, personal_difficulty, status, COALESCE(progress_status, 'Unpracticed'), COALESCE(review_count, 0), COALESCE(notes, ''), COALESCE(code, ''), last_review, created_at, updated_at, COALESCE(has_html_demo, 0)
 		FROM user_problems ORDER BY created_at DESC
 	`)
 	if err != nil {
@@ -68,7 +68,7 @@ func (r *UserProblemRepository) GetAllUserProblems() ([]models.UserProblem, erro
 // GetUserProblemsByStatus 根据状态获取用户题目记录
 func (r *UserProblemRepository) GetUserProblemsByStatus(status string) ([]models.UserProblem, error) {
 	rows, err := r.db.Query(`
-		SELECT id, problem_id, personal_difficulty, status, COALESCE(progress_status, 'Reviewing'), COALESCE(review_count, 0), notes, code, last_review, created_at, updated_at, COALESCE(has_html_demo, 0)
+		SELECT id, problem_id, personal_difficulty, status, COALESCE(progress_status, 'Unpracticed'), COALESCE(review_count, 0), COALESCE(notes, ''), COALESCE(code, ''), last_review, created_at, updated_at, COALESCE(has_html_demo, 0)
 		FROM user_problems WHERE status = ? ORDER BY created_at DESC
 	`, status)
 	if err != nil {
@@ -124,7 +124,7 @@ func (r *UserProblemRepository) GetStats() (*models.StatsResponse, error) {
 func (r *UserProblemRepository) GetUserProblemByProblemID(problemID string) (*models.UserProblem, error) {
 	var userProblem models.UserProblem
 	err := r.db.QueryRow(`
-		SELECT id, problem_id, personal_difficulty, status, COALESCE(progress_status, 'Reviewing'), COALESCE(review_count, 0), notes, code, last_review, created_at, updated_at, COALESCE(has_html_demo, 0)
+		SELECT id, problem_id, personal_difficulty, status, COALESCE(progress_status, 'Unpracticed'), COALESCE(review_count, 0), COALESCE(notes, ''), COALESCE(code, ''), last_review, created_at, updated_at, COALESCE(has_html_demo, 0)
 		FROM user_problems WHERE problem_id = ? LIMIT 1
 	`, problemID).Scan(&userProblem.ID, &userProblem.ProblemID, &userProblem.PersonalDifficulty, &userProblem.Status, &userProblem.ProgressStatus, &userProblem.ReviewCount,
 		&userProblem.Notes, &userProblem.Code, &userProblem.LastReview, &userProblem.CreatedAt, &userProblem.UpdatedAt, &userProblem.HasHtmlDemo)
@@ -256,6 +256,41 @@ func (r *UserProblemRepository) GetDailyCreatedProblemCountsBetween(startDate, e
 		out[day] = c
 	}
 	return out, rows.Err()
+}
+
+// EnsureImportedProblemReviewing ensures an imported solved problem is in the
+// user's review queue without overwriting any other existing user problem data.
+func (r *UserProblemRepository) EnsureImportedProblemReviewing(problemID string) (created bool, err error) {
+	var id, progressStatus string
+	err = r.db.QueryRow(`
+		SELECT id, COALESCE(progress_status, 'Unpracticed')
+		FROM user_problems WHERE problem_id = ? LIMIT 1
+	`, problemID).Scan(&id, &progressStatus)
+	if err == nil {
+		if progressStatus == "Unpracticed" {
+			_, err = r.db.Exec(`
+				UPDATE user_problems
+				SET progress_status = 'Reviewing', updated_at = ?
+				WHERE id = ? AND COALESCE(progress_status, 'Unpracticed') = 'Unpracticed'
+			`, time.Now(), id)
+		}
+		return false, err
+	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+
+	now := time.Now()
+	_, err = r.db.Exec(`
+		INSERT INTO user_problems (
+			id, problem_id, personal_difficulty, status, progress_status,
+			review_count, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, uuid.New().String(), problemID, 3, "New", "Reviewing", 0, now, now)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // UpsertUserProblem 更新或插入用户题目记录（根据 problem_id，如果不存在则创建）
