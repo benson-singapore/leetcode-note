@@ -23,12 +23,14 @@ function formatYMD(d) {
   return `${y}-${m}-${day}`
 }
 
-function levelForCount(c) {
+function levelForCount(c, dailyTarget) {
   if (c <= 0) return 0
-  if (c === 1) return 1
-  if (c === 2) return 2
-  if (c <= 4) return 3
-  return 4
+  const target = Math.max(1, Number(dailyTarget) || 1)
+  if (c >= target) return 4
+  if (c * 4 >= target * 3) return 3
+  if (c * 2 >= target) return 2
+  if (c * 4 >= target) return 1
+  return 1
 }
 
 /** 含首尾：startKey ~ endKey（YYYY-MM-DD 字典序可比） */
@@ -81,11 +83,11 @@ function monthLabelsForWeeks(weeks) {
   })
 }
 
-function cellClass(cell) {
+function cellClass(cell, dailyTarget) {
   if (!cell.inRange) {
     return 'bg-slate-50/80 border border-transparent'
   }
-  const lv = levelForCount(cell.count)
+  const lv = levelForCount(cell.count, dailyTarget)
   return LEVEL_CLASS[lv]
 }
 
@@ -125,6 +127,7 @@ export function TrainingHeatmap({
   endDate,
   counts,
   problemCounts,
+  dailyTarget = 4,
   total,
   days = 365,
   selectedDate,
@@ -210,7 +213,7 @@ export function TrainingHeatmap({
                         cell.inRange && cell.date === selectedDate
                           ? 'z-20 ring-2 ring-primary-700 ring-offset-1 ring-offset-white'
                           : ''
-                      } ${cellClass(cell)}`}
+                      } ${cellClass(cell, dailyTarget)}`}
                     />
                   ))}
                 </div>
@@ -230,7 +233,7 @@ export function TrainingHeatmap({
           <span className="font-normal text-slate-500">更多</span>
         </div>
         <p className="font-normal tabular-nums text-slate-400">
-          最近 {days} 天（{startDate} ~ {endDate}）· 复习累计{' '}
+          最近 {days} 天（{startDate} ~ {endDate}）· 每日目标 {dailyTarget} 题 · 复习累计{' '}
           <span className="font-semibold text-primary-700">{total}</span> 条（按 user_problem 逐日计）
         </p>
       </div>

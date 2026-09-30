@@ -85,8 +85,10 @@ func (r *ReviewRepository) GetDailyReviewStatsBetween(startDate, endDate string)
 		SELECT strftime('%Y-%m-%d', created_at, 'localtime') AS day,
 		       COUNT(DISTINCT user_problem_id) AS cnt
 		FROM reviews
+		WHERE strftime('%Y-%m-%d', created_at, 'localtime') >= ?
+		  AND strftime('%Y-%m-%d', created_at, 'localtime') <= ?
 		GROUP BY strftime('%Y-%m-%d', created_at, 'localtime')
-	`)
+	`, startDate, endDate)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -110,8 +112,10 @@ func (r *ReviewRepository) GetDailyReviewStatsBetween(startDate, endDate string)
 		SELECT strftime('%Y-%m-%d', created_at, 'localtime') AS day,
 		       COUNT(1) AS cnt
 		FROM problems
+		WHERE strftime('%Y-%m-%d', created_at, 'localtime') >= ?
+		  AND strftime('%Y-%m-%d', created_at, 'localtime') <= ?
 		GROUP BY strftime('%Y-%m-%d', created_at, 'localtime')
-	`)
+	`, startDate, endDate)
 	if err != nil {
 		return nil, nil, err
 	}

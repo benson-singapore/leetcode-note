@@ -1855,7 +1855,7 @@ export default function Settings() {
               icon={GraduationCap}
               iconBg="bg-emerald-500"
               title="每日目标与热力图"
-              desc="设置每日复习目标，影响热力图颜色深浅与今日复习统计。"
+              desc="设置每日复习和学习目标，热力图会按两个目标的总数自动调整颜色深浅。"
               footer={
                 <div className="flex w-full justify-end">
                   <button
@@ -1863,6 +1863,7 @@ export default function Settings() {
                     onClick={() => persist(
                       {
                         daily_review_target: String(Math.min(50, Math.max(1, Number(settings.daily_review_target) || 3))),
+                        daily_study_target: String(Math.min(50, Math.max(1, Number(settings.daily_study_target) || 3))),
                       },
                       '每日目标已保存'
                     )}
@@ -1874,13 +1875,23 @@ export default function Settings() {
               }
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="每日复习目标 (题)" hint="决定热力图达到最深颜色的阈值">
+                <Field label="每日复习目标 (题)" hint="每天计划完成复习的题数">
                   <input
                     type="number"
                     min="1"
                     max="50"
                     value={settings.daily_review_target || '3'}
                     onChange={(e) => setKV('daily_review_target', e.target.value)}
+                    className={inputCls}
+                  />
+                </Field>
+                <Field label="每日学习目标 (题)" hint="每天计划新增并学习的题数">
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={settings.daily_study_target || '3'}
+                    onChange={(e) => setKV('daily_study_target', e.target.value)}
                     className={inputCls}
                   />
                 </Field>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Calendar, LayoutList } from 'lucide-react'
-import { getHeatmap, getActivityDay, getUserProblemsOnDate, getProblem } from '../api/leetcode'
+import { getHeatmap, getActivityDay, getUserProblemsOnDate, getProblem, getSettings } from '../api/leetcode'
 import { TrainingHeatmap } from '../components/TrainingHeatmap'
 import { HeatmapDayProblemTable } from '../components/HeatmapDayProblemTable'
 import { DetailDrawer } from '../components/DetailDrawer'
@@ -24,6 +24,7 @@ function clampDateStr(value, min, max) {
 // 日历统计：复习热力图 + 按日题目列表（今日题目 / 今日复习）
 export default function CalendarStats() {
   const [heatmapData, setHeatmapData] = useState(emptyHeatmap)
+  const [dailyTarget, setDailyTarget] = useState(6)
   const [heatmapLoading, setHeatmapLoading] = useState(true)
   const [heatmapError, setHeatmapError] = useState(null)
 
@@ -55,6 +56,17 @@ export default function CalendarStats() {
   useEffect(() => {
     loadHeatmap()
   }, [loadHeatmap])
+
+  useEffect(() => {
+    getSettings()
+      .then((res) => {
+        const settings = res?.data || res || {}
+        const reviewTarget = Number(settings.daily_review_target) || 3
+        const studyTarget = Number(settings.daily_study_target) || 3
+        setDailyTarget(Math.max(1, reviewTarget + studyTarget))
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!heatmapData.startDate || !heatmapData.endDate) return
@@ -149,6 +161,7 @@ export default function CalendarStats() {
               days={heatmapData.days}
               counts={heatmapData.counts}
               problemCounts={heatmapData.problemCounts}
+              dailyTarget={dailyTarget}
               total={heatmapData.total}
               selectedDate={selectedDate}
               onDaySelect={onHeatmapDaySelect}
