@@ -213,127 +213,243 @@
 
     function openReviewDialog(problemInfo) {
         document.getElementById('leetcode-review-overlay')?.remove();
-        const codeSnapshot = getPageEditorCode();
+        const openingCode = getPageEditorCode();
         const codeLanguage = getCurrentLangSlug();
         const overlay = document.createElement('div');
         overlay.id = 'leetcode-review-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,.48);display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+        // 内嵌浏览器顶部有 32px 自定义标题栏（z-index 更高），叠加层需从它下方开始，避免面板顶部被遮住
+        const embedTopbar = document.getElementById('lcn-embed-topbar');
+        const topOffset = embedTopbar ? Math.round(embedTopbar.getBoundingClientRect().height) : 0;
+        overlay.style.cssText = `position:fixed;top:${topOffset}px;left:0;right:0;bottom:0;z-index:2147483646;background:rgba(15,23,42,0);display:flex;align-items:stretch;justify-content:flex-end;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:background 220ms ease;`;
         const panel = document.createElement('div');
-        panel.style.cssText = 'width:min(620px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(15,23,42,.3);color:#1e293b;';
+        panel.style.cssText = 'display:flex;width:1000px;max-width:92vw;height:100%;min-height:0;overflow:hidden;background:#fff;box-shadow:-2px 0 8px rgba(0,0,0,.15);color:#1e293b;transform:translateX(100%);transition:transform 240ms cubic-bezier(.2,.8,.2,1);';
         overlay.appendChild(panel);
 
-        const heading = document.createElement('div');
-        heading.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;';
-        const headingText = document.createElement('div');
-        const title = document.createElement('div');
-        title.textContent = '训练打卡';
-        title.style.cssText = 'font-size:18px;font-weight:700;';
-        const subtitle = document.createElement('div');
-        subtitle.textContent = problemInfo.title || problemInfo.titleSlug;
-        subtitle.style.cssText = 'margin-top:5px;color:#64748b;font-size:12px;';
-        headingText.append(title, subtitle);
-        const closeButton = document.createElement('button');
-        closeButton.textContent = '×';
-        closeButton.style.cssText = 'border:0;background:#f1f5f9;border-radius:9px;width:32px;height:32px;font-size:22px;color:#64748b;cursor:pointer;';
-        closeButton.onclick = () => overlay.remove();
-        heading.append(headingText, closeButton);
-        panel.appendChild(heading);
+        let isClosing = false;
+        const closeOnEscape = (event) => {
+            if (event.key === 'Escape' && document.body.contains(overlay)) closeDrawer();
+        };
+        const closeDrawer = () => {
+            if (isClosing) return;
+            isClosing = true;
+            overlay.style.background = 'rgba(15,23,42,0)';
+            panel.style.transform = 'translateX(100%)';
+            document.removeEventListener('keydown', closeOnEscape);
+            window.setTimeout(() => overlay.remove(), 250);
+        };
 
-        const makeChoiceGroup = (label, choices, selectedValue, columns) => {
+        const codePane = document.createElement('section');
+        codePane.style.cssText = 'display:flex;flex:1 1 700px;min-width:0;flex-direction:column;padding:22px 24px 24px;';
+        const codeHeading = document.createElement('header');
+        codeHeading.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px;';
+        const codeTitleGroup = document.createElement('div');
+        const codeTitle = document.createElement('div');
+        codeTitle.textContent = problemInfo.title || problemInfo.titleSlug;
+        codeTitle.style.cssText = 'font-size:16px;font-weight:700;color:#262626;';
+        const codeSubtitle = document.createElement('div');
+        codeSubtitle.textContent = `代码实现 · ${codeLanguage}`;
+        codeSubtitle.style.cssText = 'margin-top:4px;font-size:11px;color:#8c8c8c;';
+        codeTitleGroup.append(codeTitle, codeSubtitle);
+        const codeActions = document.createElement('div');
+        codeActions.style.cssText = 'display:flex;gap:8px;';
+        const loadCodeButton = document.createElement('button');
+        loadCodeButton.type = 'button';
+        loadCodeButton.textContent = '↻ 读取当前代码';
+        loadCodeButton.style.cssText = 'border:0;background:#2db55d;color:#fff;padding:7px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:background .2s;';
+        loadCodeButton.onmouseover = () => { loadCodeButton.style.background = '#27ae60'; };
+        loadCodeButton.onmouseout = () => { loadCodeButton.style.background = '#2db55d'; };
+        const restoreCodeButton = document.createElement('button');
+        restoreCodeButton.type = 'button';
+        restoreCodeButton.textContent = '恢复打开时代码';
+        restoreCodeButton.style.cssText = 'border:1px solid #e5e5e5;background:#fff;color:#64748b;padding:7px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;';
+        restoreCodeButton.onmouseover = () => { restoreCodeButton.style.borderColor = '#2db55d'; restoreCodeButton.style.color = '#2db55d'; };
+        restoreCodeButton.onmouseout = () => { restoreCodeButton.style.borderColor = '#e5e5e5'; restoreCodeButton.style.color = '#64748b'; };
+        codeActions.append(loadCodeButton, restoreCodeButton);
+        codeHeading.append(codeTitleGroup, codeActions);
+
+        const editor = document.createElement('div');
+        editor.style.cssText = 'position:relative;display:flex;flex:1;min-height:0;overflow:hidden;border-radius:12px;background:#282c34;border:1px solid #20232b;';
+        const gutter = document.createElement('div');
+        gutter.style.cssText = 'width:48px;flex:none;overflow:hidden;padding:15px 10px 15px 0;text-align:right;white-space:pre;color:#718096;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;user-select:none;';
+        const highlightLayer = document.createElement('pre');
+        highlightLayer.setAttribute('aria-hidden', 'true');
+        highlightLayer.style.cssText = 'position:absolute;inset:0 0 0 48px;overflow:hidden;margin:0;padding:15px 18px 15px 8px;color:#abb2bf;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;tab-size:4;white-space:pre;pointer-events:none;';
+        const highlightedCode = document.createElement('code');
+        highlightedCode.style.cssText = 'display:block;min-width:max-content;font:inherit;white-space:pre;';
+        highlightLayer.appendChild(highlightedCode);
+        const codeEditor = document.createElement('textarea');
+        codeEditor.spellcheck = false;
+        codeEditor.className = 'lcn-review-code';
+        codeEditor.setAttribute('aria-label', '训练时的代码');
+        codeEditor.value = openingCode;
+        codeEditor.style.cssText = 'position:absolute;inset:0 0 0 48px;width:calc(100% - 48px);height:100%;resize:none;overflow:auto;border:0;outline:0;padding:15px 18px 15px 8px;background:transparent;color:transparent;-webkit-text-fill-color:transparent;caret-color:#f8fafc;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;tab-size:4;white-space:pre;';
+        const selectionStyle = document.createElement('style');
+        selectionStyle.textContent = '#leetcode-review-overlay textarea.lcn-review-code::selection{background:rgba(59,130,246,.35);color:transparent}';
+        const escapeHtml = (value) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+        const syntaxPattern = /(\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b(?:abstract|assert|async|await|boolean|break|byte|case|catch|char|class|const|continue|def|default|do|double|else|enum|extends|false|final|finally|float|for|from|function|if|implements|import|in|instanceof|int|interface|let|long|new|null|package|private|protected|public|return|short|static|super|switch|synchronized|this|throw|throws|true|try|var|void|while|yield|None|True|False|self)\b|\b\d+(?:\.\d+)?\b|\b[A-Za-z_$][\w$]*(?=\s*\())/g;
+        const updateHighlight = () => {
+            highlightedCode.innerHTML = codeEditor.value.replace(syntaxPattern, (token) => {
+                let color = '#abb2bf';
+                if (/^(\/\/|#|\/\*)/.test(token)) color = '#7f9f7f';
+                else if (/^["'`]/.test(token)) color = '#98c379';
+                else if (/^\d/.test(token)) color = '#d19a66';
+                else if (/^(abstract|assert|async|await|boolean|break|byte|case|catch|char|class|const|continue|def|default|do|double|else|enum|extends|false|final|finally|float|for|from|function|if|implements|import|in|instanceof|int|interface|let|long|new|null|package|private|protected|public|return|short|static|super|switch|synchronized|this|throw|throws|true|try|var|void|while|yield|None|True|False|self)$/.test(token)) color = '#c678dd';
+                else color = '#61afef';
+                return `<span style="color:${color}">${escapeHtml(token)}</span>`;
+            }) + (codeEditor.value.endsWith('\n') ? ' ' : '');
+        };
+        const updateGutter = () => {
+            const count = Math.max(1, codeEditor.value.split('\n').length);
+            gutter.textContent = Array.from({ length: count }, (_, index) => index + 1).join('\n');
+            gutter.scrollTop = codeEditor.scrollTop;
+        };
+        const updateEditorView = () => { updateGutter(); updateHighlight(); };
+        codeEditor.addEventListener('input', updateEditorView);
+        codeEditor.addEventListener('scroll', () => {
+            gutter.scrollTop = codeEditor.scrollTop;
+            highlightedCode.style.transform = `translate(${-codeEditor.scrollLeft}px,${-codeEditor.scrollTop}px)`;
+        });
+        loadCodeButton.onclick = () => { codeEditor.value = getPageEditorCode(); updateEditorView(); };
+        restoreCodeButton.onclick = () => { codeEditor.value = openingCode; updateEditorView(); };
+        editor.append(gutter, highlightLayer, codeEditor, selectionStyle);
+        codePane.append(codeHeading, editor);
+        panel.appendChild(codePane);
+
+        // 右侧表单栏：对齐「核心笔记」抽屉侧栏（背景 #f7f9f8、小号大写分组标题、竖向列表、实心绿选中态）
+        const formPane = document.createElement('aside');
+        formPane.style.cssText = 'display:flex;width:300px;max-width:44vw;flex:none;flex-direction:column;border-left:1px solid #f0f0f0;background:#f7f9f8;';
+        const formHeading = document.createElement('header');
+        formHeading.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 16px 4px;';
+        const formTitle = document.createElement('div');
+        formTitle.textContent = '训练打卡';
+        formTitle.style.cssText = 'font-size:15px;font-weight:700;color:#262626;';
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.textContent = '×';
+        closeButton.setAttribute('aria-label', '关闭打卡');
+        closeButton.style.cssText = 'width:30px;height:30px;border:0;border-radius:8px;background:#eef2f6;color:#8c8c8c;font-size:21px;line-height:1;cursor:pointer;transition:all .2s;';
+        closeButton.onmouseover = () => { closeButton.style.background = '#e2e8ee'; closeButton.style.color = '#262626'; };
+        closeButton.onmouseout = () => { closeButton.style.background = '#eef2f6'; closeButton.style.color = '#8c8c8c'; };
+        closeButton.onclick = closeDrawer;
+        formHeading.append(formTitle, closeButton);
+        formPane.appendChild(formHeading);
+        const formBody = document.createElement('div');
+        formBody.style.cssText = 'flex:1;overflow:auto;padding:6px 16px 16px;';
+
+        const makeChoiceList = (label, choices, selectedValue) => {
             const section = document.createElement('section');
-            section.style.cssText = 'margin:18px 0;';
-            const caption = document.createElement('div');
+            section.style.cssText = 'display:flex;flex-direction:column;gap:10px;margin:14px 0 0;';
+            const caption = document.createElement('span');
             caption.textContent = label;
-            caption.style.cssText = 'font-size:12px;font-weight:650;color:#475569;margin-bottom:8px;';
-            const grid = document.createElement('div');
-            grid.style.cssText = `display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:7px;`;
+            caption.style.cssText = 'font-size:10px;font-weight:700;color:#8c8c8c;text-transform:uppercase;letter-spacing:0.5px;';
+            const list = document.createElement('div');
+            list.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
             let selected = selectedValue;
             const buttons = [];
             choices.forEach((choice) => {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.textContent = choice.label;
-                button.style.cssText = 'border:1px solid #e2e8f0;background:#fff;color:#64748b;padding:9px 6px;border-radius:9px;font-size:11px;font-weight:600;cursor:pointer;';
+                button.style.cssText = 'background:#fff;border:1px solid #e5e5e5;padding:8px;border-radius:6px;font-size:11px;text-align:center;cursor:pointer;transition:all .2s;color:#262626;';
+                button.onmouseover = () => { if (selected !== choice.value) button.style.borderColor = '#2db55d'; };
+                button.onmouseout = () => { if (selected !== choice.value) button.style.borderColor = '#e5e5e5'; };
                 const paint = () => {
                     const active = selected === choice.value;
-                    button.style.borderColor = active ? '#16a34a' : '#e2e8f0';
-                    button.style.background = active ? '#f0fdf4' : '#fff';
-                    button.style.color = active ? '#15803d' : '#64748b';
+                    button.style.background = active ? '#2db55d' : '#fff';
+                    button.style.color = active ? '#fff' : '#262626';
+                    button.style.borderColor = active ? '#2db55d' : '#e5e5e5';
+                    button.style.fontWeight = active ? '600' : '400';
                 };
                 button.onclick = () => { selected = choice.value; buttons.forEach((paintButton) => paintButton()); };
                 buttons.push(paint);
                 paint();
-                grid.appendChild(button);
+                list.appendChild(button);
             });
-            section.append(caption, grid);
-            panel.appendChild(section);
+            section.append(caption, list);
+            formBody.appendChild(section);
             return () => selected;
         };
 
-        const getStatus = makeChoiceGroup('掌握程度', Object.entries(STATUS_MAP).map(([value, item]) => ({ value, label: item.label })), 'New', 3);
-        const getProgressStatus = makeChoiceGroup('打卡状态', Object.entries(PROGRESS_STATUS_MAP).map(([value, item]) => ({ value, label: item.label })), 'Reviewing', 3);
-        const getRating = makeChoiceGroup('手感评分', Object.entries(PERSONAL_RATINGS).map(([value, item]) => ({ value: Number(value), label: `${item.icon} ${item.label}` })), 0, 5);
+        const getStatus = makeChoiceList('掌握程度', Object.entries(STATUS_MAP).map(([value, item]) => ({ value, label: `${item.icon} ${item.label}` })), 'New');
 
-        const commentLabel = document.createElement('label');
+        const commentSection = document.createElement('section');
+        commentSection.style.cssText = 'display:flex;flex-direction:column;gap:10px;margin:18px 0 0;';
+        const commentLabel = document.createElement('span');
         commentLabel.textContent = '训练记录';
-        commentLabel.style.cssText = 'display:block;margin:18px 0 8px;font-size:12px;font-weight:650;color:#475569;';
+        commentLabel.style.cssText = 'font-size:10px;font-weight:700;color:#8c8c8c;text-transform:uppercase;letter-spacing:0.5px;';
         const comment = document.createElement('textarea');
         comment.placeholder = '记录本次遇到的坑点或突破...';
-        comment.style.cssText = 'width:100%;height:86px;resize:vertical;border:1px solid #e2e8f0;border-radius:10px;padding:11px;font-size:12px;outline:none;';
-        panel.append(commentLabel, comment);
+        comment.style.cssText = 'width:100%;height:150px;resize:vertical;border:1px solid #e5e5e5;border-radius:8px;padding:10px;background:#fff;font-size:12px;line-height:1.6;outline:none;color:#262626;transition:border-color .2s;';
+        comment.onfocus = () => { comment.style.borderColor = '#2db55d'; };
+        comment.onblur = () => { comment.style.borderColor = '#e5e5e5'; };
+        commentSection.append(commentLabel, comment);
+        formBody.appendChild(commentSection);
+        formPane.appendChild(formBody);
 
-        const codeLabel = document.createElement('div');
-        codeLabel.textContent = `本次代码快照 · ${codeLanguage}`;
-        codeLabel.style.cssText = 'margin:16px 0 8px;font-size:12px;font-weight:650;color:#475569;';
-        const code = document.createElement('pre');
-        code.textContent = codeSnapshot || '没有读取到编辑器代码';
-        code.style.cssText = 'max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;font:11px/1.6 ui-monospace,SFMono-Regular,monospace;';
-        panel.append(codeLabel, code);
-
+        const errorMessage = document.createElement('div');
+        errorMessage.style.cssText = 'display:none;padding:0 16px 10px;color:#dc2626;font-size:11px;';
+        formPane.appendChild(errorMessage);
         const footer = document.createElement('div');
-        footer.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:20px;';
-        const cancel = document.createElement('button');
-        cancel.textContent = '取消';
-        cancel.style.cssText = 'border:1px solid #e2e8f0;background:#fff;color:#475569;padding:10px 16px;border-radius:9px;font-weight:600;cursor:pointer;';
-        cancel.onclick = () => overlay.remove();
+        footer.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:14px 16px 18px;border-top:1px solid #f0f0f0;background:#f7f9f8;';
         const save = document.createElement('button');
         save.textContent = '保存打卡';
-        save.style.cssText = 'border:0;background:#16a34a;color:#fff;padding:10px 18px;border-radius:9px;font-weight:650;cursor:pointer;';
+        save.style.cssText = 'width:100%;border:0;background:#2db55d;color:#fff;padding:11px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(45,181,93,.2);transition:all .2s;';
+        save.onmouseover = () => { if (!save.disabled) { save.style.background = '#27ae60'; save.style.transform = 'translateY(-1px)'; } };
+        save.onmouseout = () => { save.style.background = '#2db55d'; save.style.transform = 'translateY(0)'; };
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = '取消';
+        cancel.style.cssText = 'background:transparent;border:0;color:#8c8c8c;font-size:12px;cursor:pointer;padding:4px;transition:color .2s;';
+        cancel.onmouseover = () => { cancel.style.color = '#262626'; };
+        cancel.onmouseout = () => { cancel.style.color = '#8c8c8c'; };
+        cancel.onclick = closeDrawer;
         save.onclick = async () => {
             save.disabled = true;
             save.textContent = '保存中…';
+            save.style.opacity = '0.7';
+            save.style.transform = 'translateY(0)';
+            errorMessage.style.display = 'none';
             try {
                 const existing = await apiRequest('GET', `/leetcode/user-problem/detail?titleSlug=${encodeURIComponent(problemInfo.titleSlug)}`);
+                const codeSnapshot = codeEditor.value;
                 const savedProblem = await apiRequest('POST', '/leetcode/user-problem/save-v2', {
                     titleSlug: problemInfo.titleSlug,
                     notes: existing?.notes || '',
                     code: codeSnapshot,
-                    personalDifficulty: getRating(),
+                    personalDifficulty: existing?.personalDifficulty || 0,
                     status: getStatus(),
-                    progressStatus: getProgressStatus(),
+                    progressStatus: existing?.progressStatus || 'Reviewing',
                 });
                 if (!savedProblem?.id) throw new Error('题目代码已保存，但没有取得题目记录编号');
                 await apiRequest('POST', '/reviews', {
                     user_problem_id: savedProblem.id,
                     status: getStatus(),
-                    progress_status: getProgressStatus(),
-                    personal_difficulty: getRating(),
                     comment: comment.value.trim(),
                     code: codeSnapshot,
                     code_language: codeLanguage,
                 });
                 save.textContent = '已保存 ✓';
-                window.setTimeout(() => overlay.remove(), 650);
+                window.setTimeout(closeDrawer, 650);
             } catch (error) {
                 console.error('[LeetCode Note] 保存训练打卡失败:', error);
                 save.disabled = false;
-                save.textContent = error.message || '保存失败，请重试';
+                save.style.opacity = '1';
+                save.textContent = '保存打卡';
+                errorMessage.textContent = error.message || '保存失败，请重试';
+                errorMessage.style.display = 'block';
             }
         };
-        footer.append(cancel, save);
-        panel.appendChild(footer);
-        overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) overlay.remove(); });
+        footer.append(save, cancel);
+        formPane.appendChild(footer);
+        panel.appendChild(formPane);
+        updateEditorView();
+        overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) closeDrawer(); });
+        document.addEventListener('keydown', closeOnEscape);
         document.body.appendChild(overlay);
+        window.requestAnimationFrame(() => {
+            overlay.style.background = 'rgba(15,23,42,.55)';
+            panel.style.transform = 'translateX(0)';
+        });
     }
 
     // 创建 Drawer HTML
