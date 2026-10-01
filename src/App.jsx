@@ -14,7 +14,10 @@ import {
   LogOut,
   BarChart3,
 } from 'lucide-react'
+import packageJson from '../package.json'
 import { getSettings, getLeetCodeUserProfile, getLeetCodeSolvedStats, updateSettings } from './api/leetcode'
+import { fetchLatestRelease, fetchReleaseByVersion, isNewerVersion, RELEASES_URL } from './utils/releaseCheck'
+import { openInSystemBrowser } from './utils/browserOpen'
 import { useI18n } from './i18n'
 import Dashboard from './pages/Dashboard.jsx'
 import Problems from './pages/Problems.jsx'
@@ -55,7 +58,53 @@ export default function App() {
   const [accountLoading, setAccountLoading] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [accountMessage, setAccountMessage] = useState('')
+  const [latestRelease, setLatestRelease] = useState(null)
+  const [currentRelease, setCurrentRelease] = useState(null)
+  const [releaseCheckError, setReleaseCheckError] = useState('')
+  const [currentReleaseError, setCurrentReleaseError] = useState('')
+  const [checkingForUpdates, setCheckingForUpdates] = useState(false)
+  const checkingReleaseRef = useRef(false)
+  const appUpdateAvailable = latestRelease
+    ? isNewerVersion(latestRelease.version, packageJson.version)
+    : false
   const accountMenuRef = useRef(null)
+
+  const checkForUpdates = useCallback(async () => {
+    if (checkingReleaseRef.current) return
+    checkingReleaseRef.current = true
+    setCheckingForUpdates(true)
+    const [latestResult, currentResult] = await Promise.allSettled([
+      fetchLatestRelease(),
+      fetchReleaseByVersion(packageJson.version),
+    ])
+    if (latestResult.status === 'fulfilled') {
+      setLatestRelease(latestResult.value)
+      setReleaseCheckError('')
+    } else {
+      setReleaseCheckError(latestResult.reason?.message || '无法检查更新')
+    }
+    if (currentResult.status === 'fulfilled') {
+      setCurrentRelease(currentResult.value)
+      setCurrentReleaseError('')
+    } else {
+      setCurrentReleaseError(currentResult.reason?.message || '无法获取当前版本更新日志')
+    }
+    checkingReleaseRef.current = false
+    setCheckingForUpdates(false)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const runCheck = () => {
+      if (active) checkForUpdates()
+    }
+    runCheck()
+    const timer = window.setInterval(runCheck, 10 * 60 * 1000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [checkForUpdates])
 
   const loadLeetCodeAccount = useCallback(async () => {
     setAccountLoading(true)
@@ -193,7 +242,7 @@ export default function App() {
               key={to}
               to={to}
               end={end}
-              title={collapsed ? t(label) : undefined}
+              title={collapsed ? `${t(label)}${to === '/settings' && appUpdateAvailable ? ` · ${t('有新版本可用')}` : ''}` : undefined}
               className={({ isActive }) =>
                 `flex items-center rounded-lg text-sm transition-colors ${
                   collapsed ? 'justify-center px-0 py-2' : 'gap-3 px-3 py-2'
@@ -204,7 +253,12 @@ export default function App() {
                 }`
               }
             >
-              <Icon size={18} className="shrink-0" />
+              <span className="relative flex shrink-0">
+                <Icon size={18} />
+                {to === '/settings' && appUpdateAvailable && (
+                  <span role="img" aria-label={t('有新版本可用')} className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500" />
+                )}
+              </span>
               {!collapsed && <span className="truncate">{t(label)}</span>}
             </NavLink>
           ))}
@@ -331,7 +385,21 @@ export default function App() {
             <Route path="problems/:id" element={<ProblemDetail />} />
             <Route path="calendar" element={<CalendarStats />} />
             <Route path="ai" element={<AIChat />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route
+              path="settings"
+              element={(
+                <SettingsPage
+                  latestRelease={latestRelease}
+                  currentRelease={currentRelease}
+                  updateAvailable={appUpdateAvailable}
+                  releaseCheckError={releaseCheckError}
+                  currentReleaseError={currentReleaseError}
+                  checkingForUpdates={checkingForUpdates}
+                  checkForUpdates={checkForUpdates}
+                  openReleasePage={() => openInSystemBrowser(RELEASES_URL)}
+                />
+              )}
+            />
             <Route path="*" element={<Dashboard />} />
           </Route>
         </Routes>

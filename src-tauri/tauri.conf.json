@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://localhost:1420 ipc: http://ipc.localhost; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' data: blob:"
+      "csp": "default-src 'self'; connect-src 'self' https://api.github.com http://127.0.0.1:* http://localhost:* ws://localhost:1420 ipc: http://ipc.localhost; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' data: blob:"
     },
     "trayIcon": {
       "id": "main-tray",

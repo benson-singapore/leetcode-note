@@ -6,6 +6,7 @@ export default {
   '复习': 'Review',
   '日历统计': 'Calendar',
   '设置': 'Settings',
+  '有新版本可用': 'A new version is available',
   '展开菜单': 'Expand menu',
   '收起菜单': 'Collapse menu',
 

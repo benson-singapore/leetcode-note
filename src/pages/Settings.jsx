@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {
   Link2,
   Sparkles,
@@ -813,7 +815,16 @@ const REGIONS = [
   { value: 'com', label: '国际站 (leetcode.com)' },
 ]
 
-export default function Settings() {
+export default function Settings({
+  latestRelease,
+  currentRelease,
+  updateAvailable,
+  releaseCheckError,
+  currentReleaseError,
+  checkingForUpdates,
+  checkForUpdates,
+  openReleasePage,
+}) {
   const { t, language, setLanguage } = useI18n()
   const [settings, setSettings] = useState({})
   const [assistants, setAssistants] = useState([])
@@ -2080,6 +2091,97 @@ export default function Settings() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className={`rounded-2xl border p-5 shadow-card sm:p-6 ${updateAvailable ? 'border-emerald-200 bg-emerald-50/60' : 'border-slate-200/80 bg-white'}`}>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-semibold text-slate-800">
+                        {updateAvailable ? t('发现新版本') : t('版本更新')}
+                      </h3>
+                      {updateAvailable && (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">{t('新版本')}</span>
+                      )}
+                    </div>
+                    {latestRelease ? (
+                      <>
+                        <p className="mt-2 text-xs text-slate-600">
+                          {updateAvailable
+                            ? <>{t('最新版本')} <span className="font-mono font-semibold text-emerald-800">v{latestRelease.version}</span>{latestRelease.name.replace(/^v/i, '') !== latestRelease.version && ` · ${latestRelease.name}`}</>
+                            : t('当前已是最新版本')}
+                        </p>
+                        {latestRelease.publishedAt && (
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            {t('发布时间')}：{new Date(latestRelease.publishedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                        {updateAvailable && latestRelease.body && (
+                          <div className="mt-4 max-h-64 overflow-y-auto rounded-xl border border-emerald-100 bg-white/80 p-4">
+                            <p className="mb-2 text-[11px] font-semibold text-slate-600">{t('更新日志')}</p>
+                            <div className="break-words text-xs leading-6 text-slate-600 [&_a]:text-emerald-700 [&_a]:underline [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:ml-4 [&_ol]:my-2 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{latestRelease.body}</ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
+                        {updateAvailable && !latestRelease.body && (
+                          <p className="mt-3 text-xs text-slate-500">{t('此版本暂未提供更新日志')}</p>
+                        )}
+                      </>
+                    ) : releaseCheckError ? (
+                      <p role="status" className="mt-2 text-xs text-amber-700">{t('检查更新失败')}：{releaseCheckError}</p>
+                    ) : (
+                      <p role="status" className="mt-2 text-xs text-slate-500">{t('正在检查更新…')}</p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={checkForUpdates}
+                      disabled={checkingForUpdates}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      <RefreshCw size={14} className={checkingForUpdates ? 'animate-spin' : ''} />
+                      {checkingForUpdates ? t('同步中…') : t('手动刷新')}
+                    </button>
+                    {updateAvailable && (
+                      <button
+                        type="button"
+                        onClick={openReleasePage}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-800"
+                      >
+                        <DownloadCloud size={15} />
+                        {t('前往下载')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card sm:p-6">
+                <h3 className="text-sm font-semibold text-slate-800">{t('当前版本更新日志')}</h3>
+                {currentRelease ? (
+                  <>
+                    <p className="mt-2 text-xs text-slate-500">
+                      v{currentRelease.version}{currentRelease.publishedAt && ` · ${new Date(currentRelease.publishedAt).toLocaleDateString()}`}
+                    </p>
+                    {currentRelease.body ? (
+                      <div className="mt-4 max-h-64 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                        <div className="break-words text-xs leading-6 text-slate-600 [&_a]:text-emerald-700 [&_a]:underline [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:ml-4 [&_ol]:my-2 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentRelease.body}</ReactMarkdown>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-slate-500">{t('此版本暂未提供更新日志')}</p>
+                    )}
+                  </>
+                ) : currentReleaseError ? (
+                  <p role="status" className="mt-2 text-xs text-slate-500">{t('当前版本更新日志暂不可用')}：{currentReleaseError}</p>
+                ) : checkingForUpdates ? (
+                  <p role="status" className="mt-2 text-xs text-slate-500">{t('正在获取当前版本更新日志…')}</p>
+                ) : (
+                  <p role="status" className="mt-2 text-xs text-slate-500">{t('GitHub 暂无当前版本的发布说明')}</p>
+                )}
               </div>
 
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card sm:p-6">
