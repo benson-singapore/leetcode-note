@@ -60,7 +60,14 @@ func (f *LeetCodeFrequency) GetFrequencyByFrontendID(frontendID string) (float64
 // GetQuestionInfoByFrontendID 根据前端 ID 获取题目完整信息（包括 titleSlug 和 frequency）
 func (f *LeetCodeFrequency) GetQuestionInfoByFrontendID(frontendID string) (*QuestionInfo, error) {
 	log.Printf("[Frequency] 开始获取题目信息: frontendID=%s\n", frontendID)
-	cookie, _ := config.GetSetting("leetcode_cookie")
+	cookie, err := config.GetSetting("leetcode_cookie")
+	if err != nil {
+		return nil, err
+	}
+	cookie, userAgent, err := config.LeetCodeRequestAuth(cookie)
+	if err != nil {
+		return nil, err
+	}
 
 	query := `
     query problemsetQuestionListV2($filters: QuestionFilterInput, $limit: Int, $searchKeyword: String, $skip: Int, $sortBy: QuestionSortByInput, $categorySlug: String) {
@@ -174,7 +181,7 @@ func (f *LeetCodeFrequency) GetQuestionInfoByFrontendID(frontendID string) (*Que
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Referer", "https://leetcode.cn/problemset/")
 	req.Header.Set("Cookie", cookie)
 

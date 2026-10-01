@@ -55,6 +55,10 @@ func (g *LeetCodeGraphQL) FetchUserQuestionProgress() (*UserQuestionProgress, er
 	if cookie == "" {
 		return nil, fmt.Errorf("未配置 LeetCode Cookie，请先在设置中绑定账号")
 	}
+	cookie, userAgent, err := config.LeetCodeRequestAuth(cookie)
+	if err != nil {
+		return nil, err
+	}
 
 	profile, err := g.FetchUserProfile()
 	if err != nil {
@@ -83,7 +87,7 @@ func (g *LeetCodeGraphQL) FetchUserQuestionProgress() (*UserQuestionProgress, er
 	req.Header.Set("operation-name", "userQuestionProgress")
 	req.Header.Set("Origin", "https://leetcode.cn")
 	req.Header.Set("Referer", "https://leetcode.cn/")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36")
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
@@ -185,6 +189,10 @@ func (g *LeetCodeGraphQL) FetchSolvedQuestions() (*SolvedListResult, error) {
 	if cookie == "" {
 		return nil, fmt.Errorf("未配置 LeetCode Cookie，请先在设置中绑定账号")
 	}
+	cookie, userAgent, err := config.LeetCodeRequestAuth(cookie)
+	if err != nil {
+		return nil, err
+	}
 
 	csrf := config.ExtractLeetCodeCSRF(cookie)
 	req, err := http.NewRequest("GET", "https://leetcode.cn/api/problems/all/", nil)
@@ -197,7 +205,7 @@ func (g *LeetCodeGraphQL) FetchSolvedQuestions() (*SolvedListResult, error) {
 	req.Header.Set("x-csrftoken", csrf)
 	req.Header.Set("Origin", "https://leetcode.cn")
 	req.Header.Set("Referer", "https://leetcode.cn/problemset/")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36")
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")

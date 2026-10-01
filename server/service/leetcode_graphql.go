@@ -160,6 +160,10 @@ query questionData($titleSlug: String!) {
 		return nil, err
 	}
 
+	cookies, userAgent, err := config.LeetCodeRequestAuth(cookies)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequest("POST", "https://leetcode.cn/graphql/", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
@@ -167,7 +171,7 @@ query questionData($titleSlug: String!) {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookies)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Referer", "https://leetcode.cn/problems/"+titleSlug+"/")
 
 	resp, err := g.client.Do(req)
@@ -237,6 +241,10 @@ func (g *LeetCodeGraphQL) FetchSyncedUserCode(questionSlug, langSlug string) (*S
 	if cookie == "" {
 		return nil, fmt.Errorf("未配置 LeetCode Cookie，请先在设置中更新")
 	}
+	cookie, userAgent, err := config.LeetCodeRequestAuth(cookie)
+	if err != nil {
+		return nil, err
+	}
 
 	csrf := config.ExtractLeetCodeCSRF(cookie)
 
@@ -267,7 +275,7 @@ func (g *LeetCodeGraphQL) FetchSyncedUserCode(questionSlug, langSlug string) (*S
 	req.Header.Set("operation-name", "syncedCode")
 	req.Header.Set("Origin", "https://leetcode.cn")
 	req.Header.Set("Referer", "https://leetcode.cn/problems/"+questionSlug+"/")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := g.client.Do(req)
 	if err != nil {
@@ -347,6 +355,10 @@ func (g *LeetCodeGraphQL) FetchUserProfile() (*LeetCodeUserProfile, error) {
 	if cookie == "" {
 		return nil, fmt.Errorf("未配置 LeetCode Cookie，请先在设置中绑定账号")
 	}
+	cookie, userAgent, err := config.LeetCodeRequestAuth(cookie)
+	if err != nil {
+		return nil, err
+	}
 
 	csrf := config.ExtractLeetCodeCSRF(cookie)
 
@@ -376,7 +388,7 @@ func (g *LeetCodeGraphQL) FetchUserProfile() (*LeetCodeUserProfile, error) {
 	req.Header.Set("operation-name", "globalData")
 	req.Header.Set("Origin", "https://leetcode.cn")
 	req.Header.Set("Referer", "https://leetcode.cn/")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36")
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
