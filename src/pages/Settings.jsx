@@ -918,7 +918,9 @@ export default function Settings({
     cloudflarePopupOpeningRef.current = true
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_leetcode_cloudflare_verification', { region: 'cn' })
+      await invoke('open_leetcode_cloudflare_verification', {
+        region: settingsRef.current.leetcode_region || 'cn',
+      })
       return true
     } finally {
       cloudflarePopupOpeningRef.current = false

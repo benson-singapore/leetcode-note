@@ -12,19 +12,15 @@ const SERVER_HOST: &str = "127.0.0.1";
 const CLOUDFLARE_WINDOW: &str = "leetcode-cloudflare";
 const CLOUDFLARE_VERIFICATION_SCRIPT: &str = r#"(() => {
   const challenge = /just a moment|checking your browser|verify you are human|performing security verification|attention required/i;
-  const key = '__leetcodeCloudflareChallengeSeen';
   let sending = false;
   let sent = false;
   const check = async () => {
     if (sending || sent || document.readyState !== 'complete') return;
     const text = `${document.title || ''} ${document.body?.innerText?.slice(0, 1200) || ''}`;
-    if (challenge.test(text)) {
-      try { sessionStorage.setItem(key, '1'); } catch (_) {}
-      return;
-    }
-    let seen = false;
-    try { seen = sessionStorage.getItem(key) === '1'; } catch (_) {}
-    if (!seen) return;
+    // 仍停留在 Cloudflare 挑战页时先不抓取，等待用户手动完成验证。
+    if (challenge.test(text)) return;
+    // 页面已加载且不在挑战页：尝试抓取 Cookie。
+    // Rust 端只在确实存在 cf_clearance 时才会成功，因此可安全地在普通页面反复尝试。
     sending = true;
     try {
       sent = await window.__TAURI_INTERNALS__.invoke('capture_leetcode_cloudflare_cookies', {
@@ -218,7 +214,10 @@ fn open_leetcode_cloudflare_verification(
     } else {
         "leetcode.cn"
     };
-    let target: tauri::Url = format!("https://{host}/graphql/")
+    // 打开站点首页而非 /graphql/ 接口：浏览器通常已持有有效 cf_clearance，
+    // 直接访问接口只会返回 GraphQL 的 JSON 报错；首页可正常显示内容，
+    // 若确实被拦截则由 Cloudflare 展示人机验证页，用户手动完成后脚本自动抓取。
+    let target: tauri::Url = format!("https://{host}/")
         .parse()
         .map_err(|e| format!("无效的验证地址: {e}"))?;
     tauri::WebviewWindowBuilder::new(&app, CLOUDFLARE_WINDOW, tauri::WebviewUrl::External(target))
