@@ -16,11 +16,18 @@ description: 为 LeetCode Note 编排桌面端版本发布：确认版本、生�
 
 ## 版本契约
 
-以下三个文件必须同步为 `X.Y.Z`（不带 `v`）：
+以下文件必须同步为 `X.Y.Z`（不带 `v`）：
 
 - `src-tauri/tauri.conf.json`：`version`
 - `src-tauri/Cargo.toml`：`[package].version`
 - 根目录 `package.json`：`version`
+- `README.md` 与 `README.en.md`：顶部徽章中的版本号，形如
+
+  ```
+  <img alt="Preview" src="https://img.shields.io/badge/version-X.Y.Z%20preview-16a34a" />
+  ```
+
+  两个 README 都要改，保留 `%20preview` 与颜色后缀 `-16a34a`。该徽章长期停留在首发版本，是历史遗漏；每次发布都必须一并更新，否则视为版本未同步完成。
 
 本仓库没有独立 `frontend/package.json`。tag 与 GitHub Release 使用 `vX.Y.Z`。
 
@@ -40,7 +47,7 @@ description: 为 LeetCode Note 编排桌面端版本发布：确认版本、生�
    ```
 
    若没有历史 tag，省略 `--from-tag`，按首发处理。基于证据创建 `docs/update/vX.Y.Z.md`。日志先于 tag 提交；Actions 将其直接用作 Release 正文。运行尚未完成时，只能写预期平台和产物，不能声称构建成功。
-3. 同步三个版本文件。检查 diff 和日志，再单次提交版本文件、更新日志及新增工作流。
+3. 同步版本文件：`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`、根目录 `package.json`，以及 `README.md` 和 `README.en.md` 顶部的版本徽章（两处都要改）。检查 diff 和日志，再单次提交版本文件、README、更新日志及新增工作流。
 4. 推送 `master`，创建并推送新 tag：
 
    ```bash
@@ -51,7 +58,7 @@ description: 为 LeetCode Note 编排桌面端版本发布：确认版本、生�
 
    仅在用户明确确认替换已有 tag 后，才能执行移动/删除远端 tag 的操作。
 5. 用 `gh run list --limit 5` 找到该 tag 对应的 run，执行 `gh run watch <run-id> --exit-status`。失败时读 `gh run view <run-id> --log-failed` 并提交修复；不能把失败称为发布成功。
-6. run 成功后核验：所有平台 job 成功；Release `vX.Y.Z` 存在且不是 draft；正文与 `docs/update/vX.Y.Z.md` 一致；附件至少包含 macOS `.dmg`、Windows `.msi`/`.exe`、Linux `.AppImage`/`.deb`/`.rpm`；本地 `master` 与 `origin/master` 同步。只有逐项核实后才能宣告完成。
+6. run 成功后核验：所有平台 job 成功；Release `vX.Y.Z` 存在且不是 draft；正文与 `docs/update/vX.Y.Z.md` 一致；附件至少包含 macOS `.dmg`、Windows `.msi`/`.exe`、Linux `.AppImage`/`.deb`/`.rpm`；`README.md` 与 `README.en.md` 的版本徽章均为 `X.Y.Z`；本地 `master` 与 `origin/master` 同步。只有逐项核实后才能宣告完成。
 
 ## 平台目标
 
