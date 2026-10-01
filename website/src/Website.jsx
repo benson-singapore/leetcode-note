@@ -399,29 +399,71 @@ const features = [
   },
 ];
 
-const updates = [
-  {
-    date: "2026.09",
-    version: "v0.1.0",
-    title: "LeetCode 笔记预览版",
-    items: [
-      "账号绑定、刷题统计与已解决题目导入",
-      "个人题库、解题笔记和重复复习记录",
-      "AI 学习助手与交互式代码演示",
-      "学习热力图、内置浏览器与 Tampermonkey 同步",
-    ],
-  },
-  {
-    date: "2026.09",
-    version: "v0.0.9",
-    title: "学习流程完善",
-    items: [
-      "增加插件侧训练打卡",
-      "加入按日学习与复习历史",
-      "完善题库筛选与题目详情",
-    ],
-  },
-];
+const GITHUB_RELEASES_API = "https://api.github.com/repos/benson-singapore/leetcode-note/releases?per_page=100";
+const GITHUB_RELEASES_PAGE = "https://github.com/benson-singapore/leetcode-note/releases";
+
+function useGitHubReleases() {
+  const [state, setState] = useState({ releases: [], loading: true, error: false });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(GITHUB_RELEASES_API, {
+      headers: { Accept: "application/vnd.github+json" },
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
+        return response.json();
+      })
+      .then((releases) => {
+        const published = releases
+          .filter((release) => !release.draft && release.published_at)
+          .sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+        setState({ releases: published, loading: false, error: false });
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") setState({ releases: [], loading: false, error: true });
+      });
+    return () => controller.abort();
+  }, []);
+  return state;
+}
+
+function ReleaseNotes({ body }) {
+  const lines = (body || "").split(/\r?\n/);
+  const blocks = [];
+  for (let index = 0; index < lines.length;) {
+    const line = lines[index].trim();
+    if (!line) { index += 1; continue; }
+    const heading = line.match(/^#{1,4}\s+(.+)$/);
+    if (heading) {
+      blocks.push({ type: "heading", text: heading[1].replace(/`/g, "") });
+      index += 1;
+      continue;
+    }
+    if (/^[-*]\s+/.test(line)) {
+      const items = [];
+      while (index < lines.length && /^\s*[-*]\s+/.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*[-*]\s+/, "").replace(/`([^`]+)`/g, "$1"));
+        index += 1;
+      }
+      blocks.push({ type: "list", items });
+      continue;
+    }
+    const paragraphs = [line];
+    index += 1;
+    while (index < lines.length && lines[index].trim() && !/^\s*(#{1,4}\s+|[-*]\s+)/.test(lines[index])) {
+      paragraphs.push(lines[index].trim());
+      index += 1;
+    }
+    blocks.push({ type: "paragraph", text: paragraphs.join(" ").replace(/`([^`]+)`/g, "$1") });
+  }
+  return (
+    <div className="release-notes-body">
+      {blocks.map((block, index) => block.type === "heading" ? <h3 key={index}>{block.text}</h3> : block.type === "list" ? <ul key={index}>{block.items.map((item) => <li key={item}><Check size={14} />{item}</li>)}</ul> : <p key={index}>{block.text}</p>)}
+    </div>
+  );
+}
+
 
 const featureEnglish = {
   account: {
@@ -507,11 +549,6 @@ const screenshotEnglish = [
   ["Choose your account and sync method", "Account settings · Manage your LeetCode connection"],
   ["Take notes right on LeetCode", "Tampermonkey · Sync notes and practice check-ins"],
   ["Connect your LeetCode account", "Account sync · View stats and import solved problems"],
-];
-
-const updateEnglish = [
-  { title: "LeetCode Notes Preview", items: ["Account connection, practice stats, and solved problem import", "Personal library, solution notes, and repeat review history", "AI study assistant and interactive code walkthroughs", "Study heatmap, built-in browser, and Tampermonkey sync"] },
-  { title: "A smoother study workflow", items: ["Added plugin-based training check-ins", "Added daily study and review history", "Improved library filters and problem details"] },
 ];
 
 function PageReset() {
@@ -1382,6 +1419,7 @@ function ScreenshotsPage() {
 
 function UpdatesPage() {
   const { language, t } = useLanguage();
+  const { releases, loading, error } = useGitHubReleases();
   return (
     <main className="page-shell content-page updates-page">
       <PageIntro
@@ -1393,14 +1431,14 @@ function UpdatesPage() {
             <span>{t("让练习越来越顺手。")}</span>
           </>
         }
-        description={t("查看当前预览版已经包含的功能，以及近期学习流程的改进。")}
+        description={language === "en" ? "Release notes are loaded directly from GitHub, so this page follows the published versions." : "直接读取 GitHub 已发布的版本与更新内容，版本记录会随 Release 自动更新。"}
       />
       <div className="updates-timeline">
-        {updates.map((update, index) => {
-          const title = language === "en" ? updateEnglish[index].title : update.title;
-          const items = language === "en" ? updateEnglish[index].items : update.items;
+        {loading && <div className="release-state"><RefreshCw size={16} />{language === "en" ? "Loading releases from GitHub…" : "正在从 GitHub 读取版本信息…"}</div>}
+        {error && <div className="release-state release-state-error">{language === "en" ? "GitHub release data could not be loaded. Open the releases page to see the latest notes." : "暂时无法读取 GitHub 版本信息，请前往 GitHub Releases 查看最新更新。"} <a href={GITHUB_RELEASES_PAGE} target="_blank" rel="noreferrer">GitHub Releases <ArrowUpRight size={14} /></a></div>}
+        {releases.map((release, index) => {
           return (
-          <article className="update-card" key={update.version}>
+          <article className="update-card" key={release.id}>
             <div className="update-marker">
               <span>
                 {index === 0 ? <Sparkles size={17} /> : <RefreshCw size={16} />}
@@ -1408,28 +1446,20 @@ function UpdatesPage() {
             </div>
             <div className="update-content">
               <div className="update-meta">
-                <span>{update.date}</span>
-                <b>{update.version}</b>
-                {index === 0 && <i>{t("当前版本")}</i>}
+                <span>{new Intl.DateTimeFormat(language === "en" ? "en-US" : "zh-CN", { dateStyle: "medium" }).format(new Date(release.published_at))}</span>
+                <b>{release.tag_name}</b>
+                {index === 0 && <i>{language === "en" ? "LATEST" : "最新版本"}</i>}
               </div>
-              <h2>{title}</h2>
-              <ul>
-                {items.map((item) => (
-                  <li key={item}>
-                    <Check size={15} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
+              <h2>{release.name || release.tag_name}</h2>
+              <ReleaseNotes body={release.body} />
+              <a className="release-source-link" href={release.html_url} target="_blank" rel="noreferrer">{language === "en" ? "View release on GitHub" : "在 GitHub 查看此版本"} <ArrowUpRight size={14} /></a>
             </div>
           </article>
           );
         })}
       </div>
-      <div className="updates-footnote">
-        <span className="live-dot" />
-        {t("版本记录为官网预览内容，正式发布后会持续更新。")}
-      </div>
+      {!loading && !error && releases.length === 0 && <div className="release-state">{language === "en" ? "No published releases yet." : "目前还没有已发布的版本。"}</div>}
+      <div className="updates-footnote"><span className="live-dot" />{language === "en" ? "Release details are provided by GitHub." : "版本信息与更新内容来自 GitHub Releases。"}</div>
     </main>
   );
 }

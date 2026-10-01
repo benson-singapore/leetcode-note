@@ -1974,6 +1974,79 @@ button:focus-visible {
 .download-platform-note svg {
   color: #4ca35d;
 }
+.release-source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #438251;
+  text-decoration: none;
+}
+
+.release-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e7eee8;
+  border-radius: 9px;
+  color: #7e8d81;
+  background: #fbfdfb;
+  font-size: 10px;
+}
+
+.release-state-error {
+  display: block;
+  line-height: 1.7;
+}
+
+.release-state-error a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 5px;
+  color: #497f55;
+  text-decoration: none;
+}
+
+.release-notes-body {
+  color: #6f7e73;
+  font-size: 10px;
+  line-height: 1.75;
+}
+
+.release-notes-body h3 {
+  margin: 14px 0 5px;
+  color: #46594b;
+  font-size: 11px;
+}
+
+.release-notes-body h3:first-child {
+  margin-top: 0;
+}
+
+.release-notes-body p {
+  margin: 0 0 8px;
+}
+
+.release-notes-body ul {
+  display: grid;
+  gap: 5px;
+  margin: 6px 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.release-notes-body li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.release-notes-body li svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #64a271;
+}
 .not-found {
   min-height: 68vh;
   display: flex;
