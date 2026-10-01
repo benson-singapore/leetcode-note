@@ -54,6 +54,23 @@ import {
 import { get, post, isTauri, resolveBase } from '../api/client'
 import pluginScriptRaw from '../../tamper-monkey/leetcode-note-drawer.user.js?raw'
 
+const formatLeetCodeError = (error, fallback) => {
+  const message = String(error?.message || '')
+  const status = message.match(/HTTP\s+(\d{3})/i)?.[1]
+  const isHtml = /<!doctype\s+html|<html[\s>]|<head[\s>]|just a moment/i.test(message)
+
+  if (isHtml) {
+    return status === '403'
+      ? 'LeetCode 的安全验证拦截了请求（HTTP 403），这不一定表示登录失效。请稍后重试。'
+      : status === '401'
+        ? '登录凭证可能已失效，请重新登录或更换 Cookie 后重试。'
+      : 'LeetCode 返回了网页验证页面，暂时无法获取数据，请稍后重试。'
+  }
+  if (status === '401') return '登录凭证可能已失效，请重新登录或更换 Cookie 后重试。'
+  if (status === '403') return 'LeetCode 暂时拒绝了请求，请检查登录状态或稍后重试。'
+  return message || fallback
+}
+
 const NAV = [
   { id: 'binding', label: '账号绑定', icon: Link2 },
   { id: 'ai', label: 'AI 助手', icon: Sparkles },
@@ -902,7 +919,7 @@ export default function Settings({
         setProfileError(t('未获取到账号信息'))
       }
     } catch (e) {
-      setProfileError(e.message || t('拉取账号信息失败'))
+      setProfileError(formatLeetCodeError(e, t('拉取账号信息失败')))
     } finally {
       setProfileLoading(false)
     }
@@ -947,7 +964,7 @@ export default function Settings({
         setSolvedStatsError(t('未获取到刷题统计'))
       }
     } catch (e) {
-      setSolvedStatsError(e.message || t('拉取刷题统计失败'))
+      setSolvedStatsError(formatLeetCodeError(e, t('拉取刷题统计失败')))
     } finally {
       setSolvedStatsLoading(false)
     }
@@ -1278,10 +1295,12 @@ export default function Settings({
   }
 
   const hasCookie = Boolean(settings.leetcode_cookie)
-  const connected = hasCookie
+  const connected = hasCookie && !profileError
 
   const badge = connected
     ? <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t('已连接')}</span>
+    : profileError
+      ? <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />{profileError.includes('安全验证') ? '请求受限' : '需检查登录'}</span>
     : <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-slate-400" />{t('未配置')}</span>
 
   return (
@@ -1420,13 +1439,14 @@ export default function Settings({
                     <span className="truncate text-sm font-semibold text-slate-900">
                       {profile?.realName || profile?.username || (hasCookie ? t('已绑定账号') : t('未绑定账号'))}
                     </span>
-                    {connected && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t('已连接')}
+                    {hasCookie && (
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${connected ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                        {connected ? t('已连接') : profileError.includes('安全验证') ? '请求受限' : '需检查登录'}
                       </span>
                     )}
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-slate-400">
+                  <p className={`mt-0.5 truncate text-xs ${profileError ? 'text-amber-700' : 'text-slate-400'}`}>
                     {profile?.username
                       ? `@${profile.username}`
                       : profileLoading
@@ -1612,12 +1632,25 @@ export default function Settings({
                ) : (
                  <div className="space-y-5">
                    {solvedStatsError && !statSummary && (
-                     <div className="rounded-xl bg-rose-50/60 p-4 text-xs font-medium text-rose-600">
-                       {solvedStatsError}
-                       <button type="button" onClick={loadSolvedStats} className="ml-2 underline underline-offset-2">{t('重试')}
-                       </button>
-                     </div>
-                   )}
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <Info size={16} className="mt-0.5 shrink-0 text-amber-600" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-700">暂时无法获取刷题统计</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">{solvedStatsError}</p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {solvedStatsError.includes('安全验证')
+                              ? '这是 LeetCode 安全验证拦截，重新登录未必能解决；请稍后重试。'
+                              : '请检查上方登录状态，必要时重新登录或更换 Cookie。'}
+                          </p>
+                        </div>
+                      </div>
+                      <button type="button" onClick={loadSolvedStats} disabled={solvedStatsLoading} className="shrink-0 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-medium text-amber-800 shadow-sm transition hover:bg-amber-50 disabled:opacity-50">
+                        {solvedStatsLoading ? '正在重试…' : t('重试')}
+                      </button>
+                    </div>
+                  )}
+                  )}
 
                    {statSummary && (
                      <>
