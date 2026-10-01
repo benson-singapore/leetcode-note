@@ -1849,6 +1849,40 @@ button:focus-visible {
   font: 6px var(--mono);
   letter-spacing: 0.08em;
 }
+.release-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 17px;
+  padding: 12px 0;
+  border-top: 1px solid #eaf0eb;
+}
+.release-picker label {
+  color: #738177;
+  font-size: 10px;
+  font-weight: 600;
+}
+.release-picker select {
+  width: min(340px, 72%);
+  min-height: 36px;
+  padding: 0 32px 0 11px;
+  border: 1px solid #dce7dd;
+  border-radius: 7px;
+  outline: none;
+  color: #4e6253;
+  background: #fff;
+  font-family: inherit;
+  font-size: 10px;
+}
+.release-picker select:focus-visible {
+  border-color: #91bf99;
+  box-shadow: 0 0 0 3px rgb(115 172 126 / 13%);
+}
+.release-picker select:disabled {
+  color: #a1aaa3;
+  background: #f8faf8;
+}
 .release-specs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1974,6 +2008,37 @@ button:focus-visible {
 .download-platform-note svg {
   color: #4ca35d;
 }
+.release-product > div:nth-child(2) > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.release-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #54ad66;
+  box-shadow: 0 0 0 3px #e6f5e8;
+}
+.release-product h2 {
+  font-size: 20px;
+}
+.release-product p {
+  font-size: 11px;
+}
+.release-version b {
+  font-size: 22px;
+}
+.release-specs small {
+  font-size: 10px;
+}
+.release-specs b {
+  font-size: 12px;
+}
+.release-notice {
+  font-size: 10px;
+}
+.release-notice a,
 .release-source-link {
   display: inline-flex;
   align-items: center;
@@ -1981,7 +2046,144 @@ button:focus-visible {
   color: #438251;
   text-decoration: none;
 }
-
+.platform-downloads {
+  margin-top: 36px;
+}
+.platform-downloads-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+.platform-downloads-heading h2,
+.download-changelog h2 {
+  margin: 9px 0 5px;
+  color: #35443a;
+  font-size: 22px;
+  letter-spacing: -0.035em;
+}
+.platform-downloads-heading p {
+  margin: 0;
+  color: #849187;
+  font-size: 11px;
+}
+.platform-downloads-heading > a,
+.download-changelog > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #58805f;
+  font-size: 10px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.platform-card {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #e5ece6;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.platform-card.is-recommended {
+  border-color: #bcdcc1;
+  background: linear-gradient(145deg, #fff 50%, #f6fbf6);
+  box-shadow: 0 7px 22px rgb(53 94 60 / 6%);
+}
+.platform-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 36px;
+  margin-bottom: 12px;
+}
+.platform-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #e7eee8;
+  border-radius: 9px;
+  color: #577260;
+  background: #f8fbf8;
+}
+.platform-card-heading h3 {
+  margin: 0 0 3px;
+  color: #3b4b40;
+  font-size: 13px;
+}
+.platform-card-heading p {
+  margin: 0;
+  color: #929c94;
+  font-size: 8px;
+}
+.recommended-label {
+  margin-left: auto;
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: #468352;
+  background: #edf7ef;
+  font: 6px var(--mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.platform-assets {
+  display: grid;
+  gap: 6px;
+}
+.asset-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 8px;
+  border: 1px solid #edf1ed;
+  border-radius: 7px;
+  color: #53645a;
+  background: #fbfcfb;
+  text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.asset-link:hover {
+  border-color: #c8dfcc;
+  background: #f5faf5;
+}
+.asset-link > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.asset-link b {
+  color: #4c6252;
+  font-size: 9px;
+  font-weight: 600;
+}
+.asset-link small {
+  overflow: hidden;
+  color: #9aa39c;
+  font: 7px var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asset-link svg {
+  flex: 0 0 auto;
+  color: #5b9a68;
+}
+.platform-empty {
+  margin: 0;
+  padding: 12px 8px;
+  color: #929c94;
+  font-size: 9px;
+  line-height: 1.6;
+}
 .release-state {
   display: flex;
   align-items: center;
@@ -1993,12 +2195,10 @@ button:focus-visible {
   background: #fbfdfb;
   font-size: 10px;
 }
-
 .release-state-error {
   display: block;
   line-height: 1.7;
 }
-
 .release-state-error a {
   display: inline-flex;
   align-items: center;
@@ -2007,27 +2207,36 @@ button:focus-visible {
   color: #497f55;
   text-decoration: none;
 }
-
+.download-changelog {
+  margin-top: 28px;
+  padding: 20px 22px;
+  border: 1px solid #e8eee9;
+  border-radius: 10px;
+  background: #fbfdfb;
+}
+.download-changelog > div:first-child {
+  margin-bottom: 12px;
+}
+.download-changelog h2 {
+  margin-bottom: 0;
+  font-size: 18px;
+}
 .release-notes-body {
   color: #6f7e73;
   font-size: 10px;
   line-height: 1.75;
 }
-
 .release-notes-body h3 {
   margin: 14px 0 5px;
   color: #46594b;
   font-size: 11px;
 }
-
 .release-notes-body h3:first-child {
   margin-top: 0;
 }
-
 .release-notes-body p {
   margin: 0 0 8px;
 }
-
 .release-notes-body ul {
   display: grid;
   gap: 5px;
@@ -2035,17 +2244,25 @@ button:focus-visible {
   padding: 0;
   list-style: none;
 }
-
 .release-notes-body li {
   display: flex;
   align-items: flex-start;
   gap: 7px;
 }
-
 .release-notes-body li svg {
   flex: 0 0 auto;
   margin-top: 2px;
   color: #64a271;
+}
+.download-changelog > a {
+  margin-top: 11px;
+}
+.download-page .dev-card {
+  margin-top: 26px;
+}
+.download-platform-note {
+  font-size: 9px;
+  line-height: 1.7;
 }
 .not-found {
   min-height: 68vh;
@@ -3113,5 +3330,46 @@ button,
   .gallery-thumbnails button {
     flex-basis: 96px;
     width: 96px;
+  }
+
+  .platform-downloads {
+    margin-top: 28px;
+  }
+
+  .platform-downloads-heading {
+    align-items: flex-start;
+  }
+
+  .platform-downloads-heading h2 {
+    font-size: 19px;
+  }
+
+  .platform-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-card {
+    padding: 13px;
+  }
+
+  .download-changelog {
+    margin-top: 20px;
+    padding: 15px;
+  }
+
+  .release-product h2 {
+    font-size: 16px;
+  }
+
+  .release-product p {
+    font-size: 9px;
+  }
+
+  .release-version b {
+    font-size: 16px;
+  }
+
+  .release-specs b {
+    font-size: 10px;
   }
 }

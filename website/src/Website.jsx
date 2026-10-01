@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  Apple,
   BookOpenCheck,
   BrainCircuit,
   CalendarDays,
@@ -11,6 +12,7 @@ import {
   Download,
   History,
   Menu,
+  Monitor,
   NotebookPen,
   Puzzle,
   RefreshCw,
@@ -428,6 +430,64 @@ function useGitHubReleases() {
   return state;
 }
 
+function useDetectedDevice() {
+  const [device, setDevice] = useState(() => detectDevice());
+  useEffect(() => {
+    const userAgentData = navigator.userAgentData;
+    if (!userAgentData?.getHighEntropyValues) return;
+    userAgentData.getHighEntropyValues(["architecture"]).then(({ architecture }) => {
+      if (architecture) setDevice((current) => ({
+        ...current,
+        architecture: /arm/i.test(architecture) ? "arm64" : /x86|x64/i.test(architecture) ? "x64" : current.architecture,
+      }));
+    }).catch(() => {});
+  }, []);
+  return device;
+}
+
+function detectDevice() {
+  const ua = navigator.userAgent || "";
+  const platform = navigator.userAgentData?.platform || navigator.platform || ua;
+  const source = `${platform} ${ua}`.toLowerCase();
+  const os = /mac|iphone|ipad/.test(source)
+    ? "mac"
+    : /win/.test(source)
+      ? "windows"
+      : /linux|x11/.test(source)
+        ? "linux"
+        : "unknown";
+  const architecture = /arm64|aarch64/.test(source)
+    ? "arm64"
+    : /x86_64|x64|win64|amd64/.test(source)
+      ? "x64"
+      : "unknown";
+  return { os, architecture };
+}
+
+function getReleaseAssets(release) {
+  const assets = release?.assets ?? [];
+  return {
+    mac: assets.filter((asset) => /\.dmg$/i.test(asset.name)),
+    windows: assets.filter((asset) => /\.(exe|msi)$/i.test(asset.name)),
+    linux: assets.filter((asset) => /\.(appimage|deb|rpm)$/i.test(asset.name)),
+  };
+}
+
+function getAssetArchitecture(asset) {
+  const name = asset.name.toLowerCase();
+  if (/aarch64|arm64/.test(name)) return "arm64";
+  if (/x64|amd64|x86_64/.test(name)) return "x64";
+  return "unknown";
+}
+
+function getAssetLabel(asset, language) {
+  const name = asset.name.toLowerCase();
+  const format = name.endsWith(".dmg") ? "DMG" : name.endsWith(".msi") ? "MSI" : name.endsWith(".exe") ? (language === "en" ? "Setup" : "安装程序") : name.endsWith(".deb") ? "DEB" : name.endsWith(".rpm") ? "RPM" : "AppImage";
+  const arch = getAssetArchitecture(asset);
+  const archLabel = arch === "arm64" ? (language === "en" ? "Apple silicon" : "Apple 芯片") : arch === "x64" ? (language === "en" ? "Intel / x64" : "Intel / x64") : "";
+  return [archLabel, format].filter(Boolean).join(" · ");
+}
+
 function ReleaseNotes({ body }) {
   const lines = (body || "").split(/\r?\n/);
   const blocks = [];
@@ -463,7 +523,6 @@ function ReleaseNotes({ body }) {
     </div>
   );
 }
-
 
 const featureEnglish = {
   account: {
@@ -1464,14 +1523,46 @@ function UpdatesPage() {
   );
 }
 
+function PlatformDownloadCard({ platform, title, subtitle, icon: Icon, assets, recommended, language, architecture }) {
+  const sortedAssets = [...assets].sort((a, b) => {
+    const aMatch = getAssetArchitecture(a) === architecture;
+    const bMatch = getAssetArchitecture(b) === architecture;
+    return Number(bMatch) - Number(aMatch);
+  });
+  return (
+    <section className={`platform-card${recommended ? " is-recommended" : ""}`} id={`download-${platform}`}>
+      <div className="platform-card-heading">
+        <span className="platform-icon"><Icon size={19} /></span>
+        <div><h3>{title}</h3><p>{subtitle}</p></div>
+        {recommended && <span className="recommended-label">{language === "en" ? "YOUR DEVICE" : "当前设备"}</span>}
+      </div>
+      {sortedAssets.length ? <div className="platform-assets">{sortedAssets.map((asset) => (
+        <a className="asset-link" href={asset.browser_download_url} key={asset.id}>
+          <span><b>{getAssetLabel(asset, language)}</b><small>{asset.name} · {(asset.size / 1024 / 1024).toFixed(1)} MB</small></span>
+          <Download size={16} />
+        </a>
+      ))}</div> : <p className="platform-empty">{language === "en" ? "No installer for this platform in this release." : "此版本暂未提供该平台安装包。"}</p>}
+    </section>
+  );
+}
+
 function DownloadPage() {
   const { language, t } = useLanguage();
-  const [notice, setNotice] = useState(
-    t("官网预览页面暂未配置安装包下载地址。正式发布后会在这里提供对应平台的版本。 "),
-  );
-  useEffect(() => {
-    setNotice(t("官网预览页面暂未配置安装包下载地址。正式发布后会在这里提供对应平台的版本。 "));
-  }, [language]);
+  const { releases, loading, error } = useGitHubReleases();
+  const device = useDetectedDevice();
+  const [selectedReleaseTag, setSelectedReleaseTag] = useState("");
+  const release = releases.find((item) => item.tag_name === selectedReleaseTag) || releases[0];
+  const assets = getReleaseAssets(release);
+  const recommendedAssets = assets[device.os] ?? [];
+  const selectedAsset = recommendedAssets.find((asset) => getAssetArchitecture(asset) === device.architecture)
+    || (device.os === "windows" ? recommendedAssets.find((asset) => asset.name.toLowerCase().endsWith(".exe")) : null)
+    || (device.os === "linux" ? recommendedAssets.find((asset) => asset.name.toLowerCase().endsWith(".appimage")) : null)
+    || (device.os !== "mac" && recommendedAssets[0]);
+  const deviceNames = { mac: language === "en" ? "macOS" : "macOS", windows: "Windows", linux: "Linux", unknown: language === "en" ? "your system" : "当前设备" };
+  const launchDownload = () => {
+    if (selectedAsset) window.location.assign(selectedAsset.browser_download_url);
+    else document.getElementById(device.os === "unknown" ? "platform-downloads" : `download-${device.os}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
   return (
     <main className="page-shell content-page download-page">
       <PageIntro
@@ -1483,26 +1574,32 @@ function DownloadPage() {
             <span>{t("准备好你的学习桌面。")}</span>
           </>
         }
-        description={t("LeetCode 笔记当前处于预览阶段。了解版本状态、支持平台和本地开发方式。")}
+        description={language === "en" ? "Get the latest desktop build for your system. Version details and installers stay in sync with GitHub Releases." : "下载适合你设备的桌面版本。版本号、更新内容与各平台安装包均同步自 GitHub Releases。"}
       />
       <div className="release-card">
         <div className="release-product">
           <img src={appLogo} alt="" />
           <div>
-            <span>LOCAL-FIRST STUDY APP</span>
+            <span>LOCAL-FIRST STUDY APP <i className="release-live-dot" /> {loading ? (language === "en" ? "SYNCING RELEASE" : "正在同步版本") : error ? "GITHUB RELEASES" : release === releases[0] ? (language === "en" ? "LATEST RELEASE" : "最新发布版本") : (language === "en" ? "ARCHIVE RELEASE" : "历史版本")}</span>
             <h2>LeetCode {language === "en" ? "Notes" : "笔记"}</h2>
-            <p>{t("桌面学习助手 · 预览版")}</p>
+            <p>{release?.name || (loading ? (language === "en" ? "Loading release information…" : "正在获取版本信息…") : error ? (language === "en" ? "Unable to reach GitHub right now" : "暂时无法连接 GitHub") : (language === "en" ? "Desktop study companion" : "桌面学习助手"))}</p>
           </div>
           <div className="release-version">
-            <b>0.1.0</b>
-            <span>PREVIEW</span>
+            <b>{release?.tag_name || "—"}</b>
+            <span>{release?.prerelease ? "PRE-RELEASE" : "STABLE"}</span>
           </div>
+        </div>
+        <div className="release-picker">
+          <label htmlFor="release-version-select">{language === "en" ? "Version history" : "版本历史"}</label>
+          <select id="release-version-select" value={release?.tag_name || ""} disabled={loading || releases.length === 0} onChange={(event) => setSelectedReleaseTag(event.target.value)}>
+            {releases.map((item) => <option value={item.tag_name} key={item.id}>{item.tag_name} · {new Intl.DateTimeFormat(language === "en" ? "en-US" : "zh-CN", { dateStyle: "medium" }).format(new Date(item.published_at))}{item.prerelease ? (language === "en" ? " · Preview" : " · 预览版") : ""}</option>)}
+          </select>
         </div>
         <div className="release-specs">
           <div>
             <small>{t("当前版本")}</small>
             <b>
-              v0.1.0 <span>{t("预览")}</span>
+              {release?.tag_name || "—"} <span>{release?.prerelease ? (language === "en" ? "Preview" : "预览版") : (language === "en" ? "Latest" : "最新")}</span>
             </b>
           </div>
           <div>
@@ -1515,31 +1612,37 @@ function DownloadPage() {
           </div>
           <div>
             <small>{language === "en" ? "Release date" : "版本日期"}</small>
-            <b>2026.09</b>
+            <b>{release?.published_at ? new Intl.DateTimeFormat(language === "en" ? "en-US" : "zh-CN", { dateStyle: "medium" }).format(new Date(release.published_at)) : "—"}</b>
           </div>
         </div>
         <div className="release-download-actions">
           <button
             type="button"
             className="button button-primary button-large"
-            onClick={() =>
-              setNotice(
-                t("安装包发布准备中；目前可以从源码运行桌面应用，具体步骤见下方开发指南。 "),
-              )
-            }
+            onClick={launchDownload}
+            disabled={loading || (!release && !error)}
           >
             <Download size={17} />
-            {t("获取预览版")} <ArrowUpRight size={15} />
+            {selectedAsset ? (language === "en" ? `Download for ${deviceNames[device.os]}` : `下载 ${deviceNames[device.os]} 版`) : (language === "en" ? "Choose your installer" : "选择适合的安装包")} <ArrowUpRight size={15} />
           </button>
           <Link className="button button-secondary button-large" to="/updates">
-            {t("阅读更新日志")} <ArrowRight size={15} />
+            {language === "en" ? "What's new" : "查看更新日志"} <ArrowRight size={15} />
           </Link>
         </div>
         <p className="release-notice">
           <span className="live-dot" />
-          {notice}
+          {error ? <>{language === "en" ? "Live release data could not be loaded. " : "暂时无法读取实时版本信息。"}<a href={GITHUB_RELEASES_PAGE} target="_blank" rel="noreferrer">{language === "en" ? "Open GitHub Releases" : "前往 GitHub Releases"}</a></> : release ? <>{language === "en" ? "Download links are served directly by GitHub. " : "安装包由 GitHub Releases 直接提供。"}<a href={release.html_url} target="_blank" rel="noreferrer">{language === "en" ? "View release" : "查看版本详情"}</a></> : (language === "en" ? "Connecting to GitHub Releases…" : "正在连接 GitHub Releases…")}
         </p>
       </div>
+      <section className="platform-downloads" id="platform-downloads">
+        <div className="platform-downloads-heading"><div><span className="eyebrow"><i /> DOWNLOADS</span><h2>{language === "en" ? "Choose your platform" : "选择你的设备"}</h2><p>{language === "en" ? `Detected ${deviceNames[device.os]}${device.architecture !== "unknown" ? ` · ${device.architecture}` : ""}. You can also choose another build.` : `已识别系统：${deviceNames[device.os]}${device.architecture !== "unknown" ? ` · ${device.architecture}` : ""}。也可以手动选择其他平台。`}</p></div><a href={GITHUB_RELEASES_PAGE} target="_blank" rel="noreferrer">{language === "en" ? "All releases" : "全部版本"}<ArrowUpRight size={14} /></a></div>
+        {loading ? <div className="release-state"><RefreshCw size={16} />{language === "en" ? "Loading installers…" : "正在读取安装包…"}</div> : release && <div className="platform-grid">
+          <PlatformDownloadCard platform="mac" title="macOS" subtitle={language === "en" ? "DMG · Intel and Apple silicon" : "DMG · Intel 与 Apple 芯片"} icon={Apple} assets={assets.mac} recommended={device.os === "mac"} language={language} architecture={device.architecture} />
+          <PlatformDownloadCard platform="windows" title="Windows" subtitle={language === "en" ? "NSIS installer and MSI · x64" : "安装程序与 MSI · x64"} icon={Monitor} assets={assets.windows} recommended={device.os === "windows"} language={language} architecture={device.architecture} />
+          <PlatformDownloadCard platform="linux" title="Linux" subtitle={language === "en" ? "AppImage · DEB · RPM · x64" : "AppImage · DEB · RPM · x64"} icon={Monitor} assets={assets.linux} recommended={device.os === "linux"} language={language} architecture={device.architecture} />
+        </div>}
+      </section>
+      {release?.body && <section className="download-changelog"><div><span className="eyebrow"><i /> LATEST UPDATE</span><h2>{language === "en" ? "What's in this release" : "本次更新内容"}</h2></div><ReleaseNotes body={release.body} /><Link to="/updates">{language === "en" ? "See all release notes" : "查看全部更新日志"}<ArrowRight size={14} /></Link></section>}
       <div className="dev-card">
         <div>
           <span className="eyebrow">
@@ -1564,10 +1667,7 @@ function DownloadPage() {
           </Link>
         </div>
       </div>
-      <div className="download-platform-note">
-        <Check size={15} />
-        {t("Tauri 项目支持按目标平台构建；正式安装包和下载渠道将在发布后补充。")}
-      </div>
+      <div className="download-platform-note"><Check size={15} />{language === "en" ? "Platform detection runs in your browser. When the browser hides processor details, all available builds remain listed above." : "平台检测在浏览器中完成；若浏览器不提供芯片信息，上方仍会列出该系统的全部可用安装包。"}</div>
     </main>
   );
 }
