@@ -9,6 +9,37 @@ use tauri_plugin_shell::ShellExt;
 
 const SIDECAR_NAME: &str = "leetcode-note-server";
 const SERVER_HOST: &str = "127.0.0.1";
+const CLOUDFLARE_WINDOW: &str = "leetcode-cloudflare";
+const CLOUDFLARE_VERIFICATION_SCRIPT: &str = r#"(() => {
+  const challenge = /just a moment|checking your browser|verify you are human|performing security verification|attention required/i;
+  const key = '__leetcodeCloudflareChallengeSeen';
+  let sending = false;
+  let sent = false;
+  const check = async () => {
+    if (sending || sent || document.readyState !== 'complete') return;
+    const text = `${document.title || ''} ${document.body?.innerText?.slice(0, 1200) || ''}`;
+    if (challenge.test(text)) {
+      try { sessionStorage.setItem(key, '1'); } catch (_) {}
+      return;
+    }
+    let seen = false;
+    try { seen = sessionStorage.getItem(key) === '1'; } catch (_) {}
+    if (!seen) return;
+    sending = true;
+    try {
+      sent = await window.__TAURI_INTERNALS__.invoke('capture_leetcode_cloudflare_cookies', {
+        userAgent: navigator.userAgent,
+        region: location.hostname.endsWith('.com') ? 'com' : 'cn'
+      });
+    } catch (_) {
+      sent = false;
+    } finally {
+      sending = false;
+    }
+  };
+  setInterval(check, 1200);
+  document.addEventListener('DOMContentLoaded', check);
+})();"#;
 /// 默认端口：浏览器调试时 Vite 代理固定指向它；被占用时自动向后寻找
 const SERVER_PORT_BASE: u16 = 17877;
 
@@ -154,6 +185,90 @@ fn close_leetcode_login(app: tauri::AppHandle) {
     if let Some(win) = app.get_webview_window("leetcode-login") {
         let _ = win.close();
     }
+}
+
+#[derive(Serialize, Clone)]
+struct CloudflareVerificationPayload {
+    cookie: String,
+    user_agent: String,
+    region: String,
+}
+
+/// 打开 LeetCode 页面供用户完成 Cloudflare 验证。通过后页面脚本会请求 capture 命令。
+#[tauri::command]
+fn open_leetcode_cloudflare_verification(
+    app: tauri::AppHandle,
+    region: Option<String>,
+) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(CLOUDFLARE_WINDOW) {
+        win.show().ok();
+        win.set_focus().ok();
+        return Ok(());
+    }
+
+    let is_com = matches!(region.as_deref(), Some("com"));
+    let host = if is_com {
+        "leetcode.com"
+    } else {
+        "leetcode.cn"
+    };
+    let target: tauri::Url = format!("https://{host}/graphql/")
+        .parse()
+        .map_err(|e| format!("无效的验证地址: {e}"))?;
+    tauri::WebviewWindowBuilder::new(&app, CLOUDFLARE_WINDOW, tauri::WebviewUrl::External(target))
+        .title("LeetCode 安全验证")
+        .inner_size(1000.0, 720.0)
+        .center()
+        .initialization_script(CLOUDFLARE_VERIFICATION_SCRIPT)
+        .build()
+        .map_err(|e| format!("打开 LeetCode 验证窗口失败: {e}"))?;
+
+    Ok(())
+}
+
+/// 从已完成验证的 WebView 读取 clearance cookie，并把 WebView UA 一起交给前端本地保存。
+#[tauri::command]
+fn capture_leetcode_cloudflare_cookies(
+    app: tauri::AppHandle,
+    user_agent: String,
+    region: String,
+) -> Result<bool, String> {
+    let Some(win) = app.get_webview_window(CLOUDFLARE_WINDOW) else {
+        return Ok(false);
+    };
+    let is_com = region == "com";
+    let region = if is_com { "com" } else { "cn" };
+    let host = if is_com {
+        "leetcode.com"
+    } else {
+        "leetcode.cn"
+    };
+    let url: tauri::Url = format!("https://{host}/")
+        .parse()
+        .map_err(|e| format!("无效的 Cookie 地址: {e}"))?;
+    let cookies = win.cookies_for_url(url).map_err(|e| e.to_string())?;
+    if !cookies.iter().any(|cookie| cookie.name() == "cf_clearance") {
+        return Ok(false);
+    }
+
+    let cookie = cookies
+        .iter()
+        .filter(|cookie| {
+            let name = cookie.name();
+            name.starts_with("cf_") || name.starts_with("__cf")
+        })
+        .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
+        .collect::<Vec<_>>()
+        .join("; ");
+    let payload = CloudflareVerificationPayload {
+        cookie,
+        user_agent,
+        region: region.to_string(),
+    };
+    tauri::Emitter::emit_to(&app, "main", "leetcode-cloudflare-verified", payload)
+        .map_err(|e| e.to_string())?;
+    let _ = win.close();
+    Ok(true)
 }
 
 // ===== 内嵌 LeetCode 浏览器 =====
@@ -699,6 +814,8 @@ fn main() {
             open_leetcode_login,
             capture_login_cookie,
             close_leetcode_login,
+            open_leetcode_cloudflare_verification,
+            capture_leetcode_cloudflare_cookies,
             embedded_local_api_request,
             set_embedded_zoom,
             open_embedded_browser,

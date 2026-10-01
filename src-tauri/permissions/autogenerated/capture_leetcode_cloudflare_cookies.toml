@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-capture-leetcode-cloudflare-cookies"
+description = "Enables the capture_leetcode_cloudflare_cookies command without any pre-configured scope."
+commands.allow = ["capture_leetcode_cloudflare_cookies"]
+
+[[permission]]
+identifier = "deny-capture-leetcode-cloudflare-cookies"
+description = "Denies the capture_leetcode_cloudflare_cookies command without any pre-configured scope."
+commands.deny = ["capture_leetcode_cloudflare_cookies"]

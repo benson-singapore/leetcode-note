@@ -71,6 +71,12 @@ const formatLeetCodeError = (error, fallback) => {
   return message || fallback
 }
 
+const isCloudflareChallengeError = (error) => {
+  const message = String(error?.message || '').toLowerCase()
+  return message.includes('just a moment')
+    || (message.includes('cloudflare') && /403|challenge|verification/.test(message))
+}
+
 const NAV = [
   { id: 'binding', label: '账号绑定', icon: Link2 },
   { id: 'ai', label: 'AI 助手', icon: Sparkles },
@@ -844,6 +850,9 @@ export default function Settings({
 }) {
   const { t, language, setLanguage } = useI18n()
   const [settings, setSettings] = useState({})
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
+  const cloudflarePopupOpeningRef = useRef(false)
   const [assistants, setAssistants] = useState([])
   const [aiDefault, setAiDefault] = useState('')
   const [assistantEditor, setAssistantEditor] = useState(null) // null | {data} 编辑现有 | {data:null} 新增
@@ -902,8 +911,21 @@ export default function Settings({
     setTimeout(() => setCopied(false), 2500)
   }
 
-  const loadProfile = async () => {
-    if (!settings.leetcode_cookie) return
+  const requestCloudflareVerification = async () => {
+    if (!isTauri()) return false
+    if (cloudflarePopupOpeningRef.current) return true
+    cloudflarePopupOpeningRef.current = true
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('open_leetcode_cloudflare_verification', { region: 'cn' })
+      return true
+    } finally {
+      cloudflarePopupOpeningRef.current = false
+    }
+  }
+
+  const loadProfile = async (allowCloudflarePrompt = true) => {
+    if (!settingsRef.current.leetcode_cookie) return
     setProfileLoading(true)
     setProfileError('')
     try {
@@ -919,7 +941,14 @@ export default function Settings({
         setProfileError(t('未获取到账号信息'))
       }
     } catch (e) {
-      setProfileError(formatLeetCodeError(e, t('拉取账号信息失败')))
+      if (allowCloudflarePrompt && isTauri() && isCloudflareChallengeError(e)) {
+        setProfileError('请在弹出的 LeetCode 窗口中完成 Cloudflare 验证；通过后会自动重试。')
+        requestCloudflareVerification().catch((openError) => {
+          setProfileError(`无法打开验证窗口：${openError.message || openError}`)
+        })
+      } else {
+        setProfileError(formatLeetCodeError(e, t('拉取账号信息失败')))
+      }
     } finally {
       setProfileLoading(false)
     }
@@ -951,8 +980,8 @@ export default function Settings({
     return { solved, failed, untouched, total: solved + failed + untouched, byDifficulty }
   }, [solvedStats])
 
-  const loadSolvedStats = async () => {
-    if (!settings.leetcode_cookie) return
+  const loadSolvedStats = async (allowCloudflarePrompt = true) => {
+    if (!settingsRef.current.leetcode_cookie) return
     setSolvedStatsLoading(true)
     setSolvedStatsError('')
     try {
@@ -964,7 +993,14 @@ export default function Settings({
         setSolvedStatsError(t('未获取到刷题统计'))
       }
     } catch (e) {
-      setSolvedStatsError(formatLeetCodeError(e, t('拉取刷题统计失败')))
+      if (allowCloudflarePrompt && isTauri() && isCloudflareChallengeError(e)) {
+        setSolvedStatsError('请在弹出的 LeetCode 窗口中完成 Cloudflare 验证；通过后会自动重试。')
+        requestCloudflareVerification().catch((openError) => {
+          setSolvedStatsError(`无法打开验证窗口：${openError.message || openError}`)
+        })
+      } else {
+        setSolvedStatsError(formatLeetCodeError(e, t('拉取刷题统计失败')))
+      }
     } finally {
       setSolvedStatsLoading(false)
     }
@@ -1048,16 +1084,62 @@ export default function Settings({
     const syncAccountSettings = () => {
       getSettings().then((res) => {
         const latestSettings = res.data || res
+        const previousCookie = settingsRef.current.leetcode_cookie
+        const latestCookie = latestSettings.leetcode_cookie
         setSettings(latestSettings)
+        setProfile(null)
+        setProfileError('')
+        setSolvedStats(null)
+        setSolvedStatsError('')
         if (!latestSettings.leetcode_cookie) {
-          setProfile(null)
-          setSolvedStats(null)
-          setSolvedStatsError('')
+          return
+        }
+        // Cookie 值未变化时，依赖 Cookie 的自动加载 effect 不会触发，需在此主动刷新。
+        if (latestCookie === previousCookie) {
+          loadProfile()
+          loadSolvedStats()
         }
       }).catch(() => {})
     }
     window.addEventListener('leetcode-account-changed', syncAccountSettings)
     return () => window.removeEventListener('leetcode-account-changed', syncAccountSettings)
+  }, [])
+
+  useEffect(() => {
+    if (!isTauri()) return
+    let unlisten
+    let cancelled = false
+    import('@tauri-apps/api/event').then(async ({ listen }) => {
+      unlisten = await listen('leetcode-cloudflare-verified', async ({ payload }) => {
+        if (cancelled) return
+        const userAgent = payload.user_agent || payload.userAgent || ''
+        if (!payload.cookie || !userAgent) {
+          setProfileError('验证完成，但没有读取到完整的 Cloudflare Cookie 与 User-Agent。')
+          setSolvedStatsError('验证完成，但没有读取到完整的 Cloudflare Cookie 与 User-Agent。')
+          return
+        }
+        try {
+          await updateSettings({
+            leetcode_cf_cookie: payload.cookie,
+            leetcode_cf_user_agent: userAgent,
+          })
+          setProfileError('')
+          setSolvedStatsError('')
+          setProfile(null)
+          setSolvedStats(null)
+          loadProfile(false)
+          loadSolvedStats(false)
+        } catch (error) {
+          const message = `Cloudflare 验证信息保存失败：${error.message || error}`
+          setProfileError(message)
+          setSolvedStatsError(message)
+        }
+      })
+    }).catch(() => {})
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
   }, [])
 
   useEffect(() => {
@@ -1107,7 +1189,6 @@ export default function Settings({
               setLoginState('success')
               flash(t('LeetCode 登录成功，Cookie 已自动保存'))
               window.dispatchEvent(new Event('leetcode-account-changed'))
-              loadProfile()
             })
             .catch(() => setLoginState('failed'))
         } else {
@@ -1159,6 +1240,7 @@ export default function Settings({
       await updateSettings({ leetcode_cookie: '', leetcode_username: '' })
       setSettings((prev) => ({ ...prev, leetcode_cookie: '', leetcode_username: '' }))
       setProfile(null)
+      setProfileError('')
       setSolvedStats(null)
       setSolvedStatsError('')
       setAccountMenuOpen(false)
@@ -1649,7 +1731,6 @@ export default function Settings({
                         {solvedStatsLoading ? '正在重试…' : t('重试')}
                       </button>
                     </div>
-                  )}
                   )}
 
                    {statSummary && (

@@ -17,6 +17,7 @@
     "allow-open-leetcode-login",
     "allow-capture-login-cookie",
     "allow-close-leetcode-login",
+    "allow-open-leetcode-cloudflare-verification",
     "allow-open-embedded-browser",
     "allow-close-embedded-browser",
     "allow-open-in-system-browser"

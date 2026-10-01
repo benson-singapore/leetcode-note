@@ -9,6 +9,8 @@ fn main() {
             "open_leetcode_login",
             "capture_login_cookie",
             "close_leetcode_login",
+            "open_leetcode_cloudflare_verification",
+            "capture_leetcode_cloudflare_cookies",
             "embedded_local_api_request",
             "open_embedded_browser",
             "close_embedded_browser",

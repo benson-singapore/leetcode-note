@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "leetcode-cloudflare-verification",
+  "description": "允许 LeetCode 验证页面回传验证后的 Cookie",
+  "windows": ["leetcode-cloudflare"],
+  "remote": {
+    "urls": ["https://leetcode.cn/*", "https://leetcode.com/*"]
+  },
+  "permissions": [
+    "allow-capture-leetcode-cloudflare-cookies"
+  ]
+}
