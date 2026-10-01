@@ -28,6 +28,7 @@ const englishCopy = {
   "按你的学习节奏，逐项了解": "Explore at your own pace", "查看全部功能": "View all features",
   "写下思路，记住方法，然后继续向前。": "Capture the idea. Keep the method. Move forward.", "为每一次认真练习": "For every thoughtful practice session",
   "版权所有": "Copyright", "（欢迎创意引用）": "(Creative references welcome)", "把刷题过程，变成自己的知识": "Turn practice into lasting knowledge",
+  "GitHub 仓库": "GitHub Repository",
   "让每一次练习": "Make every practice session", "都 ": "", "留下来。": "count.",
   "少一点重复整理，多一点真正理解。": "Spend less time organizing and more time understanding.", "了解版本与下载": "Explore the release", "探索功能": "Explore features",
   "数据本地保存": "Your data stays local", "题目和笔记一起管理": "Problems and notes, together", "AI 能力按需配置": "Configure AI your way",
@@ -862,6 +863,9 @@ function Footer() {
           <Link to="/features">{t("功能介绍")}</Link>
           <Link to="/screenshots">{t("应用预览")}</Link>
           <Link to="/updates">{t("更新日志")}</Link>
+          <a href="https://github.com/benson-singapore/leetcode-note" target="_blank" rel="noopener noreferrer">
+            {t("GitHub 仓库")}
+          </a>
         </div>
         <span className="footer-copy">
           © 2026 LeetCode {language === "en" ? "Notes" : "笔记"} <i /> {t("为每一次认真练习")} <i /> {t("版权所有")}{" "}
