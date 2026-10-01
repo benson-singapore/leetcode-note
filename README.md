@@ -10,7 +10,7 @@
     <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24c8db?logo=tauri&logoColor=white" />
     <img alt="Go" src="https://img.shields.io/badge/Go-sidecar-00add8?logo=go&logoColor=white" />
     <img alt="SQLite" src="https://img.shields.io/badge/SQLite-local-003b57?logo=sqlite&logoColor=white" />
-    <img alt="Preview" src="https://img.shields.io/badge/version-0.1.0%20preview-16a34a" />
+    <img alt="Preview" src="https://img.shields.io/badge/version-0.2.2%20preview-16a34a" />
   </p>
 </div>
 
