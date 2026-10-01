@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-  <img src="docs/image/iShot_2026-09-30_15.54.00.png" alt="LeetCode 笔记数据看板" width="88%" />
+  <img src="docs/image/iShot_2026-09-30_15.54.09.png" alt="LeetCode 笔记数据看板" width="88%" />
 </p>
 
 ## 为什么做 LeetCode 笔记

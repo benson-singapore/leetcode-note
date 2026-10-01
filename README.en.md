@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-  <img src="docs/image/iShot_2026-09-30_15.54.00.png" alt="LeetCode Notes dashboard" width="88%" />
+  <img src="docs/image/iShot_2026-09-30_15.54.09.png" alt="LeetCode Notes dashboard" width="88%" />
 </p>
 
 ## Why LeetCode Notes
