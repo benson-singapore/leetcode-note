@@ -49,9 +49,13 @@ jobs:
         shell: pwsh
         run: choco install wixtoolset nsis -y --no-progress
 
+      # 注意：不能仅用 go-version-file 读取 server/go.mod 的 `go 1.24.0`。
+      # Go 1.24 的 TLS ClientHello 指纹会被 LeetCode 前的 Cloudflare 判定为
+      # 爬虫并返回 403（Just a moment...），导致打包后的应用无法同步数据；
+      # Go 1.25+ 的指纹可正常通过。这里显式固定到已验证可用的 1.26.x。
       - uses: actions/setup-go@v5
         with:
-          go-version-file: server/go.mod
+          go-version: "1.26.x"
           cache-dependency-path: server/go.sum
 
       - uses: actions/setup-node@v4

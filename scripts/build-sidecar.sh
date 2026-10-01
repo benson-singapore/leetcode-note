@@ -10,6 +10,19 @@ LDFLAGS="-s -w"
 
 mkdir -p "$OUT_DIR"
 
+# Go 1.24 的 TLS ClientHello 指纹会被 LeetCode 前的 Cloudflare 判为爬虫并返回
+# 403（Just a moment...），打包后的应用将无法同步账号数据；Go 1.25+ 已验证可通过。
+# CI 已显式固定 1.26.x，这里对本地构建给出显式告警，避免再次踩坑。
+if command -v go >/dev/null 2>&1; then
+  GOVER="$(go env GOVERSION 2>/dev/null | sed 's/^go//')"
+  GOMAJ="${GOVER%%.*}"
+  GOMIN="${GOVER#*.}"; GOMIN="${GOMIN%%.*}"
+  if [ -n "$GOMAJ" ] && [ -n "$GOMIN" ] && [ "$GOMAJ" -eq 1 ] 2>/dev/null && [ "$GOMIN" -lt 25 ] 2>/dev/null; then
+    echo "[sidecar] ⚠️  检测到 Go $GOVER：其 TLS 指纹会被 Cloudflare 拦截（HTTP 403），"
+    echo "[sidecar] ⚠️  打包后的应用将无法同步 LeetCode 数据，请升级到 Go 1.25+。"
+  fi
+fi
+
 # 探测当前 Rust target triple（优先 cargo rustc -vV）
 detect_triple() {
   if command -v rustc >/dev/null 2>&1; then
