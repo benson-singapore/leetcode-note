@@ -53,6 +53,23 @@ run-sidecar: ## 单独运行 Go sidecar（端口 PORT，默认 17877）
 build: ## 打包桌面应用（自动包含 sidecar 构建）
 	npm run tauri build
 
+# macOS Apple Silicon (M1/M2/M3) 本地安装包目标架构
+MACOS_ARM_TARGET ?= aarch64-apple-darwin
+
+.PHONY: build-macos-m1
+build-macos-m1: ## 本地打包 macOS M1 安装包（ad-hoc 签名，便于本机测试）
+	@command -v rustup >/dev/null || { echo "❌ 缺少 rustup"; exit 1; }
+	@rustup target list --installed | grep -q '^$(MACOS_ARM_TARGET)$$' \
+		|| rustup target add $(MACOS_ARM_TARGET)
+	@echo "==> 构建 Go sidecar ($(MACOS_ARM_TARGET))"
+	bash scripts/build-sidecar.sh $(MACOS_ARM_TARGET)
+	@echo "==> 构建 Tauri 安装包 ($(MACOS_ARM_TARGET)，ad-hoc 签名)"
+	TAURI_ENV_TARGET_TRIPLE=$(MACOS_ARM_TARGET) APPLE_SIGNING_IDENTITY=- \
+		npx tauri build --target $(MACOS_ARM_TARGET)
+	@echo "✅ 打包完成，产物位于：src-tauri/target/$(MACOS_ARM_TARGET)/release/bundle/"
+	@find src-tauri/target/$(MACOS_ARM_TARGET)/release/bundle -maxdepth 3 \
+		\( -name '*.dmg' -o -name '*.app' \) -print | sed 's/^/   /'
+
 .PHONY: sidecar
 sidecar: ## 仅构建 Go sidecar（可传 TARGET=aarch64-apple-darwin 等）
 	bash scripts/build-sidecar.sh $(TARGET)
@@ -96,6 +113,6 @@ clean-dist: ## 删除前端构建产物
 
 .PHONY: help
 help: ## 显示所有可用命令
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / \
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / \
 		{ printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2 } \
 		/^# =+/ { getline; print "\n" $$0 }' $(MAKEFILE_LIST)
