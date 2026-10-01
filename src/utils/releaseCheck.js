@@ -1,4 +1,5 @@
 export const RELEASES_URL = 'https://github.com/benson-singapore/leetcode-note/releases'
+export const DOWNLOAD_PAGE_URL = 'https://leetcode-note.benson.in.net/download'
 const LATEST_RELEASE_API = 'https://api.github.com/repos/benson-singapore/leetcode-note/releases/latest'
 const RELEASES_API = 'https://api.github.com/repos/benson-singapore/leetcode-note/releases/tags'
 

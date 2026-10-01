@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import packageJson from '../package.json'
 import { getSettings, getLeetCodeUserProfile, getLeetCodeSolvedStats, updateSettings } from './api/leetcode'
-import { fetchLatestRelease, fetchReleaseByVersion, isNewerVersion, RELEASES_URL } from './utils/releaseCheck'
+import { fetchLatestRelease, fetchReleaseByVersion, isNewerVersion, DOWNLOAD_PAGE_URL } from './utils/releaseCheck'
 import { openInSystemBrowser } from './utils/browserOpen'
 import { useI18n } from './i18n'
 import Dashboard from './pages/Dashboard.jsx'
@@ -396,7 +396,7 @@ export default function App() {
                   currentReleaseError={currentReleaseError}
                   checkingForUpdates={checkingForUpdates}
                   checkForUpdates={checkForUpdates}
-                  openReleasePage={() => openInSystemBrowser(RELEASES_URL)}
+                  openDownloadPage={() => openInSystemBrowser(DOWNLOAD_PAGE_URL)}
                 />
               )}
             />
