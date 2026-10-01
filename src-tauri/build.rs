@@ -3,8 +3,8 @@ fn main() {
     // 只允许调用在 ACL 清单中登记过、且被 capability 授予权限的命令，
     // 否则会以 "Command xxx not allowed by ACL" 拒绝。
     // 登记后即可在 src-tauri/capabilities/*.json 中用 allow-<command> 授权。
-    tauri_build::try_build(
-        tauri_build::Attributes::new().app_manifest(tauri_build::AppManifest::new().commands(&[
+    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
+        tauri_build::AppManifest::new().commands(&[
             "get_server_info",
             "open_leetcode_login",
             "capture_login_cookie",
@@ -15,7 +15,7 @@ fn main() {
             "open_embedded_browser",
             "close_embedded_browser",
             "open_in_system_browser",
-        ])),
-    )
+        ]),
+    ))
     .expect("failed to run tauri-build");
 }

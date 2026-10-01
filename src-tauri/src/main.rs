@@ -71,7 +71,11 @@ fn open_leetcode_login(app: tauri::AppHandle, region: Option<String>) -> Result<
     }
 
     let is_com = matches!(region.as_deref(), Some("com"));
-    let domain: &str = if is_com { "leetcode.com" } else { "leetcode.cn" };
+    let domain: &str = if is_com {
+        "leetcode.com"
+    } else {
+        "leetcode.cn"
+    };
     let login_url: tauri::Url = if is_com {
         "https://leetcode.com/accounts/login/"
     } else {
@@ -132,7 +136,9 @@ fn emit_login_cookies(app: &tauri::AppHandle, url: &str) {
     // 等待 Cookie 写盘完成
     std::thread::sleep(Duration::from_millis(1500));
 
-    let parsed_url: tauri::Url = url.parse().unwrap_or_else(|_| "https://leetcode.cn/".parse().unwrap());
+    let parsed_url: tauri::Url = url
+        .parse()
+        .unwrap_or_else(|_| "https://leetcode.cn/".parse().unwrap());
     let cookies = match win.cookies_for_url(parsed_url) {
         Ok(c) => c,
         Err(e) => {
@@ -374,9 +380,13 @@ fn embedded_local_api_request(
         state.port,
         payload.as_bytes().len()
     );
-    stream.write_all(request.as_bytes()).map_err(|e| e.to_string())?;
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|e| e.to_string())?;
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).map_err(|e| e.to_string())?;
+    stream
+        .read_to_end(&mut response)
+        .map_err(|e| e.to_string())?;
 
     let split = response
         .windows(4)
@@ -546,11 +556,12 @@ fn open_embedded_browser(
         Some("training") => "training",
         _ => "notes",
     };
-    let parsed: tauri::Url = url
-        .parse()
-        .map_err(|e| format!("无效 URL: {e}"))?;
+    let parsed: tauri::Url = url.parse().map_err(|e| format!("无效 URL: {e}"))?;
 
-    if !matches!(parsed.host_str(), Some("leetcode.cn") | Some("leetcode.com")) {
+    if !matches!(
+        parsed.host_str(),
+        Some("leetcode.cn") | Some("leetcode.com")
+    ) {
         return Err("内置浏览器只允许打开 LeetCode 站点".to_string());
     }
 
@@ -586,11 +597,10 @@ fn open_embedded_browser(
         .append_pair("__lcn_tool_mode", tool_mode);
 
     let api_host = api_host.trim_end_matches('/');
-    let user_script = include_str!("../../tamper-monkey/leetcode-note-drawer.user.js")
-        .replace(
-            "const API_HOST = 'http://127.0.0.1:17877';",
-            &format!("const API_HOST = '{}';", api_host.replace('\'', "")),
-        );
+    let user_script = include_str!("../../tamper-monkey/leetcode-note-drawer.user.js").replace(
+        "const API_HOST = 'http://127.0.0.1:17877';",
+        &format!("const API_HOST = '{}';", api_host.replace('\'', "")),
+    );
     let notes_injection = format!(
         r#"(function() {{
           var u = new URL(location.href);
@@ -627,8 +637,8 @@ fn open_embedded_browser(
         }})();"#
     );
 
-    let topbar_script = EMBED_TOPBAR_SCRIPT
-        .replace("__LCN_TOPBAR_HEIGHT__", &EMBED_TOPBAR_HEIGHT.to_string());
+    let topbar_script =
+        EMBED_TOPBAR_SCRIPT.replace("__LCN_TOPBAR_HEIGHT__", &EMBED_TOPBAR_HEIGHT.to_string());
 
     let mut builder = tauri::WebviewWindowBuilder::new(
         &app,
@@ -688,7 +698,8 @@ fn open_embedded_browser(
         if let Ok(pos) = main.outer_position() {
             let scale = main.scale_factor().unwrap_or(1.0);
             let offset = (64.0 * scale) as i32;
-            let _ = window.set_position(tauri::PhysicalPosition::new(pos.x + offset, pos.y + offset));
+            let _ =
+                window.set_position(tauri::PhysicalPosition::new(pos.x + offset, pos.y + offset));
         }
     }
     let _ = window.show();
@@ -745,7 +756,9 @@ fn wait_for_health(port: u16, timeout: Duration) -> bool {
     while Instant::now() < deadline {
         if let Ok(mut stream) = TcpStream::connect((SERVER_HOST, port)) {
             use std::io::Write;
-            let req = format!("GET /health HTTP/1.1\r\nHost: {SERVER_HOST}:{port}\r\nConnection: close\r\n\r\n");
+            let req = format!(
+                "GET /health HTTP/1.1\r\nHost: {SERVER_HOST}:{port}\r\nConnection: close\r\n\r\n"
+            );
             if stream.write_all(req.as_bytes()).is_ok() {
                 return true;
             }
@@ -756,17 +769,19 @@ fn wait_for_health(port: u16, timeout: Duration) -> bool {
 }
 
 fn spawn_sidecar(app: &tauri::AppHandle, port: u16) -> tauri::Result<()> {
-    let data_dir = app
-        .path()
-        .app_data_dir()
-        .expect("无法获取应用数据目录");
+    let data_dir = app.path().app_data_dir().expect("无法获取应用数据目录");
     std::fs::create_dir_all(&data_dir).ok();
 
     let sidecar = app
         .shell()
         .sidecar(SIDECAR_NAME)
         .expect("sidecar 二进制未找到，请先执行构建脚本")
-        .args(["--port", &port.to_string(), "--data-dir", &data_dir.to_string_lossy()]);
+        .args([
+            "--port",
+            &port.to_string(),
+            "--data-dir",
+            &data_dir.to_string_lossy(),
+        ]);
 
     let (mut rx, child) = sidecar.spawn().expect("启动 sidecar 失败");
 
@@ -830,7 +845,11 @@ fn main() {
 
                 let show = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;
                 let quit = MenuItemBuilder::with_id("quit", "退出").build(app)?;
-                let menu = MenuBuilder::new(app).item(&show).separator().item(&quit).build()?;
+                let menu = MenuBuilder::new(app)
+                    .item(&show)
+                    .separator()
+                    .item(&quit)
+                    .build()?;
                 let _ = tray.set_menu(Some(menu));
 
                 tray.on_menu_event(|app_handle, event| match event.id().as_ref() {
@@ -845,7 +864,12 @@ fn main() {
                 });
 
                 tray.on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, button_state: tauri::tray::MouseButtonState::Up, .. } = event {
+                    if let TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        button_state: tauri::tray::MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
                         if let Some(win) = tray.app_handle().get_webview_window("main") {
                             win.show().ok();
                             win.set_focus().ok();
