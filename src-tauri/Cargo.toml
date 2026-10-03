@@ -1,6 +1,6 @@
 [package]
 name = "leetcode-note-tauri"
-version = "0.2.2"
+version = "0.2.3"
 description = "LeetCode 学习笔记 - Tauri 桌面端"
 authors = ["benson"]
 edition = "2021"
