@@ -48,7 +48,7 @@ export default function App() {
   const navigate = useNavigate()
   const { t } = useI18n()
   const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem(COLLAPSED_KEY) === '1'
+    () => localStorage.getItem(COLLAPSED_KEY) !== '0'
   )
   const [leetcodeAccount, setLeetcodeAccount] = useState(null)
   const [leetcodeStats, setLeetcodeStats] = useState(null)
@@ -263,7 +263,7 @@ export default function App() {
             </NavLink>
           ))}
         </nav>
-        <div ref={accountMenuRef} className={`relative mb-2 flex justify-center ${collapsed ? '' : 'px-3'}`}>
+        <div ref={accountMenuRef} className={`relative mb-2 flex ${collapsed ? 'justify-center' : 'px-3'}`}>
           {leetcodeAccount && accountMenuOpen && (
             <div
               role="menu"
@@ -350,12 +350,23 @@ export default function App() {
             aria-label={leetcodeAccount ? t('打开 LeetCode 账号菜单') : t('绑定 LeetCode 账号')}
             aria-haspopup={leetcodeAccount ? 'menu' : undefined}
             aria-expanded={leetcodeAccount ? accountMenuOpen : undefined}
-            className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-primary-300 hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className={`flex h-10 items-center overflow-hidden text-slate-500 transition hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-100 ${
+              collapsed ? 'w-10 justify-center rounded-full' : 'w-full gap-3 px-2 text-left'
+            }`}
           >
-            {leetcodeAccount?.avatar ? (
-              <img src={leetcodeAccount.avatar} alt={leetcodeAccount.displayName} className="h-full w-full object-cover" />
-            ) : (
-              <UserRound size={18} />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-400">
+              {leetcodeAccount?.avatar ? (
+                <img src={leetcodeAccount.avatar} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <UserRound size={18} />
+              )}
+            </span>
+            {!collapsed && (
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">
+                  {leetcodeAccount?.displayName || t('未登录')}
+                </span>
+              </span>
             )}
           </button>
         </div>

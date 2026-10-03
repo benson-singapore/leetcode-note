@@ -27,6 +27,7 @@ export default {
   '退出失败：': 'Sign-out failed: ',
   '刷新账号信息失败，请稍后重试': 'Failed to refresh account info, please try again',
   '绑定 LeetCode 账号': 'Connect LeetCode account',
+  '未登录': 'Not signed in',
   '打开 LeetCode 账号菜单': 'Open LeetCode account menu',
   'LeetCode 用户': 'LeetCode user',
   '已绑定账号': 'Connected account',
