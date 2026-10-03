@@ -194,6 +194,11 @@ func (p *CLIProvider) ChatStream(ctx context.Context, req ChatRequest, opts Chat
 	if command == "" {
 		return "", fmt.Errorf("未配置 AI CLI 命令，请在设置中选择 CLI 类型")
 	}
+	searchPath := cliSearchPath()
+	resolvedCommand, err := resolveCLIExecutable(command, searchPath)
+	if err != nil {
+		return "", err
+	}
 
 	baseArgs, promptAsArg := p.buildArgs()
 	args := append([]string{}, baseArgs...)
@@ -203,7 +208,8 @@ func (p *CLIProvider) ChatStream(ctx context.Context, req ChatRequest, opts Chat
 		args = append(args, prompt)
 	}
 
-	cmd := exec.CommandContext(ctx, command, args...)
+	cmd := exec.CommandContext(ctx, resolvedCommand, args...)
+	cmd.Env = cliCommandEnv(searchPath)
 	if !promptAsArg {
 		cmd.Stdin = strings.NewReader(prompt)
 	}

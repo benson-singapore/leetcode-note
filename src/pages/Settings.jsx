@@ -742,9 +742,19 @@ function AssistantEditor({ initial, onSave, onClose }) {
                   </Field>
                 </div>
               ) : (
-                <div className="rounded-xl bg-slate-50/80 px-4 py-3">
-                  <p className="text-[11px] font-medium text-slate-500">{t('实际执行命令（模型参数按需自动附加）')}</p>
-                  <p className="mt-1 break-all font-mono text-xs text-slate-400">{cliPreset.preview}</p>
+                <div className="space-y-3 rounded-xl bg-slate-50/80 px-4 py-3">
+                  <Field label={t('CLI 可执行文件路径')} hint={t('留空使用默认命令，并自动搜索常见安装目录；也可以填写完整路径。')}>
+                    <input
+                      className={inputCls}
+                      placeholder={cliPreset.command}
+                      value={form.command}
+                      onChange={(e) => set({ command: e.target.value })}
+                    />
+                  </Field>
+                  <div>
+                    <p className="text-[11px] font-medium text-slate-500">{t('实际执行命令（模型参数按需自动附加）')}</p>
+                    <p className="mt-1 break-all font-mono text-xs text-slate-400">{cliPreset.preview}</p>
+                  </div>
                 </div>
               )}
             </div>
