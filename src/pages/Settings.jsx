@@ -853,10 +853,20 @@ export default function Settings({
   const [assistants, setAssistants] = useState([])
   const [aiDefault, setAiDefault] = useState('')
   const [assistantEditor, setAssistantEditor] = useState(null) // null | {data} 编辑现有 | {data:null} 新增
+  const [assistantToDelete, setAssistantToDelete] = useState(null)
+  const [deletingAssistant, setDeletingAssistant] = useState(false)
   const [testStates, setTestStates] = useState({}) // id -> { loading, result }
   const [msg, setMsg] = useState('')
   const [msgType, setMsgType] = useState('ok')
   const [active, setActive] = useState('binding')
+  useEffect(() => {
+    if (!assistantToDelete || deletingAssistant) return
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setAssistantToDelete(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [assistantToDelete, deletingAssistant])
   const [loginState, setLoginState] = useState('idle') // idle | logging-in | success | failed
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState(null) // { ok, text }
@@ -1323,14 +1333,18 @@ export default function Settings({
     }
   }
 
-  const removeAssistant = async (a) => {
-    if (!window.confirm(t('确定删除 AI 助手「{name}」吗？', { name: a.name }))) return
+  const removeAssistant = async () => {
+    if (!assistantToDelete || deletingAssistant) return
+    setDeletingAssistant(true)
     try {
-      await deleteAssistant(a.id)
+      await deleteAssistant(assistantToDelete.id)
       flash(t('AI 助手已删除'))
+      setAssistantToDelete(null)
       loadAssistants()
     } catch (e) {
       flash(t('删除失败：{error}', { error: e.message }), 'err')
+    } finally {
+      setDeletingAssistant(false)
     }
   }
 
@@ -1876,7 +1890,7 @@ export default function Settings({
                       assistant={a}
                       isDefault={a.id === aiDefault}
                       onEdit={() => setAssistantEditor({ data: a })}
-                      onDelete={() => removeAssistant(a)}
+                      onDelete={() => setAssistantToDelete(a)}
                       onMakeDefault={() => makeDefault(a)}
                       onToggle={() => switchAssistant(a)}
                       onToggleModel={(m) => switchModel(a, m)}
@@ -1894,6 +1908,39 @@ export default function Settings({
                   onSave={saveAssistant}
                   onClose={() => setAssistantEditor(null)}
                 />
+              )}
+
+              {assistantToDelete && createPortal(
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-6">
+                  <button
+                    type="button"
+                    aria-label={t('取消')}
+                    disabled={deletingAssistant}
+                    className="absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-[2px] disabled:cursor-wait"
+                    onClick={() => setAssistantToDelete(null)}
+                  />
+                  <div role="alertdialog" aria-modal="true" aria-labelledby="delete-assistant-title" aria-describedby="delete-assistant-description" className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                        <Trash2 size={20} />
+                      </span>
+                      <h3 id="delete-assistant-title" className="text-base font-semibold text-slate-900">{t('确认删除')}</h3>
+                    </div>
+                    <p id="delete-assistant-description" className="mt-4 text-sm leading-6 text-slate-500">
+                      {t('确定删除 AI 助手「{name}」吗？', { name: assistantToDelete.name })}
+                    </p>
+                    <div className="mt-6 flex justify-end gap-2">
+                      <button type="button" disabled={deletingAssistant} onClick={() => setAssistantToDelete(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50">
+                        {t('取消')}
+                      </button>
+                      <button type="button" disabled={deletingAssistant} onClick={removeAssistant} className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60">
+                        {deletingAssistant && <Loader2 size={14} className="animate-spin" />}
+                        {deletingAssistant ? t('删除中…') : t('确认删除')}
+                      </button>
+                    </div>
+                  </div>
+                </div>,
+                document.body,
               )}
             </section>
           )}
