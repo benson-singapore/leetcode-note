@@ -332,10 +332,6 @@ function DefaultChainSection({ assistants }) {
                       <Trash2 size={15} />
                     </button>
                   </div>
-                  {idx === 0 && (
-                    <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">{t('默认')}
-                    </span>
-                  )}
                 </div>
               )
             })}
