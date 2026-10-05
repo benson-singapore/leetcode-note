@@ -38,6 +38,7 @@ const CLOUDFLARE_VERIFICATION_SCRIPT: &str = r#"(() => {
 })();"#;
 /// 默认端口：浏览器调试时 Vite 代理固定指向它；被占用时自动向后寻找
 const SERVER_PORT_BASE: u16 = 17877;
+const TRAY_POPOVER_HEIGHT: f64 = 460.0;
 
 /// 侧车进程句柄（退出时统一回收）
 struct SidecarChild(std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>);
@@ -906,14 +907,23 @@ fn main() {
                     tauri::WebviewUrl::App("index.html?tray=1".into()),
                 )
                 .title("LeetCode 学习概览")
-                .inner_size(400.0, 650.0)
+                .inner_size(400.0, TRAY_POPOVER_HEIGHT)
                 .resizable(false)
                 .decorations(false)
+                .transparent(true)
                 .always_on_top(true)
                 .skip_taskbar(true)
                 .visible(false)
                 .build()?;
                 popover.set_shadow(true).ok();
+                #[cfg(target_os = "macos")]
+                window_vibrancy::apply_vibrancy(
+                    &popover,
+                    window_vibrancy::NSVisualEffectMaterial::Popover,
+                    Some(window_vibrancy::NSVisualEffectState::Active),
+                    Some(18.0),
+                )
+                .ok();
 
                 let popover_for_events = popover.clone();
                 popover.on_window_event(move |event| {
@@ -941,9 +951,11 @@ fn main() {
                         let scale = tray.app_handle().primary_monitor()
                             .ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0);
                         let width = (400.0 * scale) as i32;
-                        let height = (650.0 * scale) as i32;
-                        let mut x = rect.position.x as i32 + rect.size.width as i32 - width;
-                        let mut y = rect.position.y as i32 + rect.size.height as i32;
+                        let height = (TRAY_POPOVER_HEIGHT * scale) as i32;
+                        let rect_position = rect.position.to_physical::<i32>(scale);
+                        let rect_size = rect.size.to_physical::<i32>(scale);
+                        let mut x = rect_position.x + rect_size.width - width;
+                        let mut y = rect_position.y + rect_size.height;
                         if let Ok(Some(monitor)) = tray.app_handle().primary_monitor() {
                             let pos = monitor.position();
                             let size = monitor.size();

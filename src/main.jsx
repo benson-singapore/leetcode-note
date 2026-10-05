@@ -10,6 +10,7 @@ import './index.css'
 initFontZoomShortcuts()
 
 const isTrayPopover = new URLSearchParams(window.location.search).get('tray') === '1'
+if (isTrayPopover) document.documentElement.classList.add('tray-popover')
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

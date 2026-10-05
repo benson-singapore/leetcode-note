@@ -29,6 +29,12 @@ body {
   letter-spacing: 0.01em;
 }
 
+html.tray-popover,
+html.tray-popover body,
+html.tray-popover #root {
+  background: transparent !important;
+}
+
 ::selection {
   @apply bg-primary-100 text-primary-900;
 }
