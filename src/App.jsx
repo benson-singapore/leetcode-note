@@ -18,6 +18,7 @@ import packageJson from '../package.json'
 import { getSettings, getLeetCodeUserProfile, getLeetCodeSolvedStats, updateSettings } from './api/leetcode'
 import { fetchLatestRelease, fetchReleaseByVersion, isNewerVersion, DOWNLOAD_PAGE_URL } from './utils/releaseCheck'
 import { openInSystemBrowser } from './utils/browserOpen'
+import { isTauri } from './api/client'
 import { useI18n } from './i18n'
 import Dashboard from './pages/Dashboard.jsx'
 import Problems from './pages/Problems.jsx'
@@ -168,6 +169,23 @@ export default function App() {
     window.addEventListener('leetcode-account-changed', loadLeetCodeAccount)
     return () => window.removeEventListener('leetcode-account-changed', loadLeetCodeAccount)
   }, [loadLeetCodeAccount])
+
+  useEffect(() => {
+    if (!isTauri()) return undefined
+    let unlisten
+    let cancelled = false
+    import('@tauri-apps/api/event').then(({ listen }) => listen('tray-navigate', (event) => {
+      const path = typeof event.payload === 'string' ? event.payload : '/'
+      navigate(path)
+    })).then((stop) => {
+      if (cancelled) stop()
+      else unlisten = stop
+    }).catch(() => {})
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
+  }, [navigate])
 
   useEffect(() => {
     if (!accountMenuOpen) return

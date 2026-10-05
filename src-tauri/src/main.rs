@@ -54,6 +54,30 @@ fn get_server_info(state: tauri::State<ServerInfo>) -> ServerInfo {
     state.inner().clone()
 }
 
+#[tauri::command]
+fn open_main_window(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let path = match path.as_str() {
+        "/" | "/problems" | "/problems/review" | "/calendar" | "/settings" => path,
+        _ => return Err("不支持的页面入口".to_string()),
+    };
+
+    if let Some(popover) = app.get_webview_window("tray-popover") {
+        popover.hide().ok();
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+        tauri::Emitter::emit_to(&app, "main", "tray-navigate", path)
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 /// 打开 LeetCode 登录窗口：用户在窗口内正常登录，
 /// 成功跳转回主站后自动抓取 Cookie，通过事件 `leetcode-login-result` 回传给主窗口
 /// region: "cn" 力扣中国 (leetcode.cn)，"com" 国际站 (leetcode.com)，默认 cn
@@ -825,6 +849,8 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             get_server_info,
+            open_main_window,
+            quit_app,
             open_leetcode_login,
             capture_login_cookie,
             close_leetcode_login,
@@ -837,42 +863,63 @@ fn main() {
             open_in_system_browser
         ])
         .setup(move |app| {
-            // 系统托盘
+            // 系统托盘：左键显示 React 实现的学习概览弹窗。
             if let Some(tray) = app.tray_by_id("main-tray") {
-                use tauri::menu::{MenuBuilder, MenuItemBuilder};
                 use tauri::tray::TrayIconEvent;
 
-                let show = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;
-                let quit = MenuItemBuilder::with_id("quit", "退出").build(app)?;
-                let menu = MenuBuilder::new(app)
-                    .item(&show)
-                    .separator()
-                    .item(&quit)
-                    .build()?;
-                let _ = tray.set_menu(Some(menu));
+                let popover = tauri::WebviewWindowBuilder::new(
+                    app,
+                    "tray-popover",
+                    tauri::WebviewUrl::App("index.html?tray=1".into()),
+                )
+                .title("LeetCode 学习概览")
+                .inner_size(400.0, 650.0)
+                .resizable(false)
+                .decorations(false)
+                .always_on_top(true)
+                .skip_taskbar(true)
+                .visible(false)
+                .build()?;
+                popover.set_shadow(true).ok();
 
-                tray.on_menu_event(|app_handle, event| match event.id().as_ref() {
-                    "show" => {
-                        if let Some(win) = app_handle.get_webview_window("main") {
-                            win.show().ok();
-                            win.set_focus().ok();
-                        }
+                let popover_for_events = popover.clone();
+                popover.on_window_event(move |event| {
+                    if let tauri::WindowEvent::Focused(false) = event {
+                        popover_for_events.hide().ok();
                     }
-                    "quit" => app_handle.exit(0),
-                    _ => {}
                 });
 
                 tray.on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
+                        rect,
                         button: tauri::tray::MouseButton::Left,
                         button_state: tauri::tray::MouseButtonState::Up,
                         ..
                     } = event
                     {
-                        if let Some(win) = tray.app_handle().get_webview_window("main") {
-                            win.show().ok();
-                            win.set_focus().ok();
+                        let Some(win) = tray.app_handle().get_webview_window("tray-popover") else {
+                            return;
+                        };
+                        if win.is_visible().unwrap_or(false) {
+                            win.hide().ok();
+                            return;
                         }
+
+                        let scale = tray.app_handle().primary_monitor()
+                            .ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0);
+                        let width = (400.0 * scale) as i32;
+                        let height = (650.0 * scale) as i32;
+                        let mut x = rect.position.x as i32 + rect.size.width as i32 - width;
+                        let mut y = rect.position.y as i32 + rect.size.height as i32;
+                        if let Ok(Some(monitor)) = tray.app_handle().primary_monitor() {
+                            let pos = monitor.position();
+                            let size = monitor.size();
+                            x = x.clamp(pos.x, (pos.x + size.width as i32 - width).max(pos.x));
+                            y = y.clamp(pos.y, (pos.y + size.height as i32 - height).max(pos.y));
+                        }
+                        win.set_position(tauri::PhysicalPosition::new(x, y)).ok();
+                        win.show().ok();
+                        win.set_focus().ok();
                     }
                 });
             }
