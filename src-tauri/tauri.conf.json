@@ -28,7 +28,7 @@
     },
     "trayIcon": {
       "id": "main-tray",
-      "iconPath": "icons/32x32.png",
+      "iconPath": "icons/head-logo.png",
       "iconAsTemplate": true,
       "tooltip": "LeetCode 学习笔记"
     }
