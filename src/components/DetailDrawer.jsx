@@ -817,7 +817,7 @@ function NotesTab({ activeProblem, updateProblem }) {
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary-600 text-white text-[10px] font-bold hover:from-violet-700 hover:to-primary-700 transition-all disabled:opacity-50 shrink-0 shadow-sm"
               title={t('让 AI 根据题目内容、代码实现和当前笔记优化核心笔记')}
             >
-              <Sparkles size={12} />{t('AI 优化')}
+              <Sparkles size={12} />{t('AI解析')}
             </button>
           )}
           {/* 撤销：AI 生成后可回滚，保存落库后消失 */}
