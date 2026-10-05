@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "主窗口默认权限",
-  "windows": ["main"],
+  "description": "主窗口与托盘弹窗权限",
+  "windows": ["main", "tray-popover"],
   "permissions": [
     "core:default",
     "core:window:allow-show",
@@ -14,6 +14,8 @@
     "core:event:default",
     "shell:default",
     "allow-get-server-info",
+    "allow-open-main-window",
+    "allow-quit-app",
     "allow-open-leetcode-login",
     "allow-capture-login-cookie",
     "allow-close-leetcode-login",

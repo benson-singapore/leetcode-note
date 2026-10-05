@@ -47,6 +47,25 @@ export async function request(path, { method = 'GET', body, headers, ...rest } =
   return res.json()
 }
 
+// macOS Tauri popovers can reject direct WebView fetches to the local sidecar
+// with a generic "Load failed". Route the popover's read-only overview calls
+// through Rust instead; browser development keeps using the normal HTTP path.
+export async function getTrayOverview(path) {
+  if (!isTauri()) return request(path)
+  const { invoke } = await import('@tauri-apps/api/core')
+  const response = await invoke('tray_overview_api_request', { path })
+  let payload
+  try {
+    payload = JSON.parse(response.response_text || '{}')
+  } catch {
+    throw new Error('本地服务返回了无效数据')
+  }
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(payload?.message || `本地服务请求失败 (${response.status})`)
+  }
+  return payload
+}
+
 export function get(path, params) {
   const query = params ? `?${new URLSearchParams(params)}` : ''
   return request(`${path}${query}`)

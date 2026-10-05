@@ -6,12 +6,15 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "get_server_info",
+            "open_main_window",
+            "quit_app",
             "open_leetcode_login",
             "capture_login_cookie",
             "close_leetcode_login",
             "open_leetcode_cloudflare_verification",
             "capture_leetcode_cloudflare_cookies",
             "embedded_local_api_request",
+            "tray_overview_api_request",
             "open_embedded_browser",
             "close_embedded_browser",
             "open_in_system_browser",

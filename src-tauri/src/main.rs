@@ -390,6 +390,38 @@ fn embedded_local_api_request(
         return Err("不支持的本地 API 请求方法".to_string());
     }
 
+    forward_sidecar_request(&state, &method, &path, body)
+}
+
+/// 为托盘概览提供受限的本地只读 API。该命令单独授权给 tray-popover，
+/// 不复用给外部 LeetCode WebView 的 API 权限。
+#[tauri::command]
+fn tray_overview_api_request(
+    state: tauri::State<ServerInfo>,
+    path: String,
+) -> Result<EmbeddedApiResponse, String> {
+    const ALLOWED_PATHS: [&str; 5] = [
+        "/api/v1/settings",
+        "/api/v1/user-problems/stats",
+        "/api/v1/reviews/activity-heatmap",
+        "/api/v1/leetcode/user-profile",
+        "/api/v1/leetcode/solved-stats",
+    ];
+    if path.bytes().any(|byte| byte <= 0x20 || byte == 0x7f)
+        || !ALLOWED_PATHS.contains(&path.as_str())
+    {
+        return Err("托盘概览不允许访问此本地 API 路径".to_string());
+    }
+    forward_sidecar_request(&state, "GET", &path, None)
+}
+
+fn forward_sidecar_request(
+    state: &ServerInfo,
+    method: &str,
+    path: &str,
+    body: Option<String>,
+) -> Result<EmbeddedApiResponse, String> {
+
     let payload = body.unwrap_or_default();
     let mut stream = TcpStream::connect((SERVER_HOST, state.port)).map_err(|e| e.to_string())?;
     stream
@@ -857,6 +889,7 @@ fn main() {
             open_leetcode_cloudflare_verification,
             capture_leetcode_cloudflare_cookies,
             embedded_local_api_request,
+            tray_overview_api_request,
             set_embedded_zoom,
             open_embedded_browser,
             close_embedded_browser,

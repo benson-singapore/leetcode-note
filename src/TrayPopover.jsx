@@ -15,13 +15,7 @@ import {
   Target,
   UserRound,
 } from 'lucide-react'
-import {
-  getHeatmap,
-  getLeetCodeSolvedStats,
-  getLeetCodeUserProfile,
-  getSettings,
-  getUserProblemStats,
-} from './api/leetcode'
+import { getTrayOverview } from './api/client'
 
 const DIFFICULTIES = [
   { key: 'Easy', label: '简单', color: 'bg-emerald-500', text: 'text-emerald-700', track: 'bg-emerald-50' },
@@ -70,11 +64,16 @@ export default function TrayPopover() {
     setError('')
     try {
       const [settingsResult, localResult, heatmapResult] = await Promise.allSettled([
-        getSettings(),
-        getUserProblemStats(),
-        getHeatmap(),
+        getTrayOverview('/api/v1/settings'),
+        getTrayOverview('/api/v1/user-problems/stats'),
+        getTrayOverview('/api/v1/reviews/activity-heatmap'),
       ])
-      const settings = settingsResult.status === 'fulfilled' ? unbox(settingsResult.value) : {}
+      if (settingsResult.status === 'rejected') {
+        setAccount(null)
+        setLeetcodeStats(null)
+        throw new Error(`登录信息读取失败：${settingsResult.reason?.message || '无法连接本地服务'}`)
+      }
+      const settings = unbox(settingsResult.value)
       if (localResult.status === 'fulfilled') setLocalStats(unbox(localResult.value))
       else setLocalStats(null)
 
@@ -86,6 +85,11 @@ export default function TrayPopover() {
         ])
         setActiveDays(days.size)
       } else setActiveDays(0)
+      if (localResult.status === 'rejected') {
+        setError(`题库统计读取失败：${localResult.reason?.message || '请求失败'}`)
+      } else if (heatmapResult.status === 'rejected') {
+        setError(`活跃天数读取失败：${heatmapResult.reason?.message || '请求失败'}`)
+      }
 
       if (!settings.leetcode_cookie) {
         setAccount(null)
@@ -94,8 +98,8 @@ export default function TrayPopover() {
       }
 
       const [profileResult, solvedResult] = await Promise.allSettled([
-        getLeetCodeUserProfile(),
-        getLeetCodeSolvedStats(),
+        getTrayOverview('/api/v1/leetcode/user-profile'),
+        getTrayOverview('/api/v1/leetcode/solved-stats'),
       ])
       const profile = profileResult.status === 'fulfilled' ? unbox(profileResult.value) : {}
       setAccount({
