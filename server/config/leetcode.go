@@ -25,24 +25,34 @@ func LeetCodeRequestAuth(accountCookie string) (string, string, error) {
 
 func mergeCookies(accountCookie, verificationCookie string) string {
 	parts := make([]string, 0)
-	seen := make(map[string]struct{})
-	appendCookie := func(raw string) {
+	indexes := make(map[string]int)
+	appendCookie := func(raw string, verification bool) {
 		for _, part := range strings.Split(raw, ";") {
 			part = strings.TrimSpace(part)
 			name, _, ok := strings.Cut(part, "=")
 			if !ok || name == "" {
 				continue
 			}
-			if _, exists := seen[name]; exists {
+			if index, exists := indexes[name]; exists {
+				// Login can capture a stale Cloudflare cookie. A later browser
+				// verification must replace it, while account cookies such as
+				// LEETCODE_SESSION and csrftoken continue to take precedence.
+				if verification && isCloudflareCookie(name) {
+					parts[index] = part
+				}
 				continue
 			}
-			seen[name] = struct{}{}
+			indexes[name] = len(parts)
 			parts = append(parts, part)
 		}
 	}
-	appendCookie(accountCookie)
-	appendCookie(verificationCookie)
+	appendCookie(accountCookie, false)
+	appendCookie(verificationCookie, true)
 	return strings.Join(parts, "; ")
+}
+
+func isCloudflareCookie(name string) bool {
+	return strings.HasPrefix(name, "cf_") || strings.HasPrefix(name, "__cf")
 }
 
 // ExtractLeetCodeCSRF 从 Cookie 字符串中解析 csrftoken，供 GraphQL noj-go 等需 x-csrftoken 的接口使用
