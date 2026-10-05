@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 
 import packageJson from '../../package.json'
+import UserAvatar from '../components/UserAvatar.jsx'
 import { useI18n } from '../i18n'
 import { getSettings, updateSettings, fetchLeetCodeProblem, getLeetCodeUserProfile, getLeetCodeSolvedStats, getLeetCodeSolvedList, importLeetCodeSolved } from '../api/leetcode'
 import {
@@ -1498,8 +1499,8 @@ export default function Settings({
                     aria-expanded={accountMenuOpen}
                     className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-primary-300 hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100"
                   >
-                    {profile?.avatar ? (
-                      <img src={profile.avatar} alt={t('头像')} className="h-full w-full object-cover" />
+                    {hasCookie ? (
+                      <UserAvatar src={profile?.avatar} name={profile?.realName || profile?.username || settings.leetcode_username || t('LeetCode 用户')} alt={t('头像')} />
                     ) : (
                       <UserRound size={24} />
                     )}

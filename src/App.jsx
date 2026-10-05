@@ -26,6 +26,7 @@ import ProblemDetail from './pages/ProblemDetail.jsx'
 import CalendarStats from './pages/CalendarStats.jsx'
 import AIChat from './pages/AIChat.jsx'
 import SettingsPage from './pages/Settings.jsx'
+import UserAvatar from './components/UserAvatar.jsx'
 
 const navItems = [
   { to: '/', label: '数据看板', icon: LayoutDashboard, end: true },
@@ -289,11 +290,7 @@ export default function App() {
             >
               <div className="flex items-center gap-3 px-1 py-1.5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 text-slate-400">
-                  {leetcodeAccount.avatar ? (
-                    <img src={leetcodeAccount.avatar} alt={leetcodeAccount.displayName} className="h-full w-full object-cover" />
-                  ) : (
-                    <UserRound size={21} />
-                  )}
+                  <UserAvatar src={leetcodeAccount.avatar} name={leetcodeAccount.displayName} alt={leetcodeAccount.displayName} />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-800">{leetcodeAccount.displayName}</p>
@@ -373,8 +370,8 @@ export default function App() {
             }`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-400">
-              {leetcodeAccount?.avatar ? (
-                <img src={leetcodeAccount.avatar} alt="" className="h-full w-full object-cover" />
+              {leetcodeAccount ? (
+                <UserAvatar src={leetcodeAccount.avatar} name={leetcodeAccount.displayName} />
               ) : (
                 <UserRound size={18} />
               )}
