@@ -28,6 +28,13 @@ export default {
 
   // AI 优化
   'AI 优化': 'AI improve',
+  'AI 解析核心笔记': 'Generate core notes with AI',
+  '补充要求（选填）': 'Extra instructions (optional)',
+  '可以补充你希望整理的内容或侧重点；留空时 AI 会根据题目、代码和当前笔记自动生成。':
+    'Add content or areas you want to focus on. Leave blank to generate notes from the problem, code, and current notes.',
+  '例如：补充边界情况分析，并说明双指针移动的原因。':
+    'e.g. Add edge case analysis and explain why the two pointers move.',
+  '开始生成': 'Generate notes',
   'AI 优化失败': 'AI improvement failed',
   'AI 优化失败:': 'AI improvement failed:',
   'AI 未返回内容': 'AI returned no content',
@@ -47,6 +54,8 @@ export default {
   '题目内容、代码实现和核心笔记三者俱全。请着重基于当前核心笔记的内容做优化：保留笔记中已有的个人思路与重点，修正错误、补全逻辑、让表达与结构更清晰，并结合代码实现适当补充讲解。':
     'The description, code, and core notes are all present. Improve the core notes: keep your existing ideas and highlights, fix mistakes, fill gaps, and make the structure clearer, adding explanations from the code where useful.',
   '暂无题目内容，无法进行 AI 优化': 'No problem description, so AI improvement is unavailable',
+  '暂无题目内容，请填写补充要求后再进行 AI 解析':
+    'There is no problem description. Add instructions before generating notes.',
   '在此记录你的解题心法…（支持 Markdown：标题、列表、代码块、图片等）':
     'Write down your approach here… (Markdown supported: headings, lists, code blocks, images)',
 

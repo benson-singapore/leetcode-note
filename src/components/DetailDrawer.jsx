@@ -572,6 +572,8 @@ function NotesTab({ activeProblem, updateProblem, onSaved }) {
   const [imageUploading, setImageUploading] = useState(false)
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [imageSourceTab, setImageSourceTab] = useState('file') // 'file' | 'url'
+  const [aiPromptOpen, setAiPromptOpen] = useState(false)
+  const [aiAdditionalInstructions, setAiAdditionalInstructions] = useState('')
   const fileInputRef = useRef(null)
 
   // ===== AI 优化笔记 =====
@@ -588,6 +590,8 @@ function NotesTab({ activeProblem, updateProblem, onSaved }) {
     setImageUrlInput('')
     setImageModalOpen(false)
     setImageSourceTab('file')
+    setAiPromptOpen(false)
+    setAiAdditionalInstructions('')
     setNotesMode(next.trim() ? 'preview' : 'edit')
     // 切换题目时重置 AI 状态与撤销快照
     setAiState('idle')
@@ -680,7 +684,7 @@ function NotesTab({ activeProblem, updateProblem, onSaved }) {
   }
 
   // ===== AI 优化笔记 =====
-  const buildAIOptimizePrompt = () => {
+  const buildAIOptimizePrompt = (additionalInstructions = '') => {
     const title = activeProblem.translatedTitle || activeProblem.title || ''
     const content = stripHtml(
       activeProblem.translatedContent || activeProblem.content || '',
@@ -705,7 +709,9 @@ function NotesTab({ activeProblem, updateProblem, onSaved }) {
       `## 题目内容\n${content || '（暂无）'}`,
       `## 代码实现\n${code ? '```' + '\n' + code + '\n```' : '（暂无）'}`,
       `## 当前核心笔记\n${currentNotes || '（暂无）'}`,
+      `## 用户补充要求\n${additionalInstructions.trim() || '（无）'}`,
       `## 任务\n${task}`,
+      '请将用户补充要求与题目内容、代码实现和已有笔记整合，生成连贯完整的核心笔记。若已有笔记，请保留其中有价值的个人思路并自然补充，不要只把补充要求原样附在末尾。',
       '## 输出要求\n直接输出 Markdown 格式的笔记正文（可使用标题、列表、代码块等），不要输出任何额外解释、前后缀或寒暄。',
     ].join('\n\n')
   }
@@ -716,17 +722,18 @@ function NotesTab({ activeProblem, updateProblem, onSaved }) {
     cancelChat().catch(() => {})
   }
 
-  const handleAIOptimize = async () => {
+  const handleAIOptimize = async (additionalInstructions = '') => {
     if (aiState === 'streaming') return
     const content = stripHtml(
       activeProblem.translatedContent || activeProblem.content || '',
     )
     const currentNotes = (notes || '').trim()
-    if (!content && !currentNotes) {
-      setAiError(t('暂无题目内容，无法进行 AI 优化'))
+    if (!content && !currentNotes && !additionalInstructions.trim()) {
+      setAiError(t('暂无题目内容，请填写补充要求后再进行 AI 解析'))
       return
     }
 
+    setAiPromptOpen(false)
     setAiSnapshot(notes || '') // 记录生成前快照，供撤销
     setAiState('streaming')
     setAiError('')
@@ -739,7 +746,7 @@ function NotesTab({ activeProblem, updateProblem, onSaved }) {
     try {
       await chatStream(
         {
-          message: buildAIOptimizePrompt(),
+          message: buildAIOptimizePrompt(additionalInstructions),
           systemPrompt: AI_OPTIMIZE_SYSTEM_PROMPT,
           // 不指定 provider/model，走设置中的「默认模型链」（含 failover）
         },
@@ -857,7 +864,11 @@ function NotesTab({ activeProblem, updateProblem, onSaved }) {
             <button
               type="button"
               disabled={imageUploading}
-              onClick={handleAIOptimize}
+              onClick={() => {
+                setAiError('')
+                setAiAdditionalInstructions('')
+                setAiPromptOpen(true)
+              }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary-600 text-white text-[10px] font-bold hover:from-violet-700 hover:to-primary-700 transition-all disabled:opacity-50 shrink-0 shadow-sm"
               title={t('让 AI 根据题目内容、代码实现和当前笔记优化核心笔记')}
             >
@@ -922,6 +933,77 @@ function NotesTab({ activeProblem, updateProblem, onSaved }) {
               <Loader2 size={11} className="animate-spin" />{t('AI 生成中…')}
             </span>
           )}
+        </div>
+      )}
+
+      {aiPromptOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/40"
+            aria-label={t('关闭')}
+            onClick={() => setAiPromptOpen(false)}
+          />
+          <div
+            className="relative z-10 w-full max-w-lg rounded-2xl border border-slate-100 bg-white p-5 shadow-2xl animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notes-ai-prompt-title"
+            aria-describedby="notes-ai-prompt-description"
+          >
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h3 id="notes-ai-prompt-title" className="text-sm font-semibold text-slate-800 tracking-tight">
+                  {t('AI 解析核心笔记')}
+                </h3>
+                <p id="notes-ai-prompt-description" className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                  {t('可以补充你希望整理的内容或侧重点；留空时 AI 会根据题目、代码和当前笔记自动生成。')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiPromptOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                aria-label={t('关闭')}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <label htmlFor="notes-ai-additional-instructions" className="mb-2 block text-[11px] font-semibold text-slate-700">
+              {t('补充要求（选填）')}
+            </label>
+            <textarea
+              id="notes-ai-additional-instructions"
+              autoFocus
+              rows={5}
+              value={aiAdditionalInstructions}
+              onChange={(e) => setAiAdditionalInstructions(e.target.value)}
+              placeholder={t('例如：补充边界情况分析，并说明双指针移动的原因。')}
+              className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-xs leading-relaxed outline-none transition focus:ring-2 ring-primary-100"
+            />
+            {aiError && (
+              <p role="alert" className="mt-2 text-[11px] text-rose-600">
+                {aiError}
+              </p>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setAiPromptOpen(false)}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                {t('取消')}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAIOptimize(aiAdditionalInstructions)}
+                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary-600 px-3 py-2 text-[11px] font-semibold text-white shadow-sm hover:from-violet-700 hover:to-primary-700"
+              >
+                <Sparkles size={12} />{t('开始生成')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
