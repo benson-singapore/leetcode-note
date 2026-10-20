@@ -346,8 +346,8 @@ func (r *DailyGoalRepository) LibraryStats() (map[string]int, error) {
 	}
 	out["total"] = total
 	rows, err := r.db.Query(`
-		SELECT COALESCE(NULLIF(progress_status, ''), 'Unpracticed') AS status, COUNT(1)
-		FROM user_problems GROUP BY status
+		SELECT COALESCE(NULLIF(progress_status, ''), 'Unpracticed') AS progress_status, COUNT(1)
+		FROM user_problems GROUP BY COALESCE(NULLIF(progress_status, ''), 'Unpracticed')
 	`)
 	if err != nil {
 		return nil, err
