@@ -51,7 +51,7 @@ export const HLJS_LANGS = {
   dart: 'dart',
 }
 
-export function CodeEditor({ activeProblem, updateProblem }) {
+export function CodeEditor({ activeProblem, updateProblem, onSaved }) {
   const [code, setCode] = useState(activeProblem.code || '')
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
@@ -216,6 +216,7 @@ export function CodeEditor({ activeProblem, updateProblem }) {
         code: code,
       })
       setSaveStatus(t('已保存'))
+      onSaved?.()
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (error) {
       console.error(t('保存代码失败:'), error)

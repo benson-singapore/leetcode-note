@@ -59,6 +59,22 @@ func (r *ReviewRepository) GetReviewsByUserProblemID(userProblemID string) ([]mo
 	return reviews, rows.Err()
 }
 
+// GetLatestReviewByUserProblemID 获取用户题目最近一条复习记录
+func (r *ReviewRepository) GetLatestReviewByUserProblemID(userProblemID string) (*models.Review, error) {
+	var review models.Review
+	err := r.db.QueryRow(`
+		SELECT id, user_problem_id, review_date, status, COALESCE(progress_status, ''), COALESCE(personal_difficulty, 0), COALESCE(comment, ''), COALESCE(code, ''), COALESCE(code_language, ''), created_at
+		FROM reviews WHERE user_problem_id = ? ORDER BY review_date DESC, created_at DESC LIMIT 1
+	`, userProblemID).Scan(&review.ID, &review.UserProblemID, &review.ReviewDate, &review.Status, &review.ProgressStatus, &review.PersonalDifficulty, &review.Comment, &review.Code, &review.CodeLanguage, &review.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &review, nil
+}
+
 // GetLatestReviewByUserProblemOnDate returns the latest check-in created for a user problem on a local date.
 func (r *ReviewRepository) GetLatestReviewByUserProblemOnDate(userProblemID, date string) (*models.Review, error) {
 	var review models.Review

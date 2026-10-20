@@ -28,6 +28,7 @@ import {
   Sparkles,
   Undo2,
   Square,
+  RefreshCw,
 } from 'lucide-react'
 import { FrequencyBars } from './FrequencyBars'
 import { CodeEditor, HLJS_LANGS } from './CodeEditor'
@@ -157,6 +158,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
   const [isLoadingReviews, setIsLoadingReviews] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [refreshingProblem, setRefreshingProblem] = useState(false)
   const [embeddedUrl, setEmbeddedUrl] = useState(null) // null = 内嵌浏览器关闭
   const [embeddedToolMode, setEmbeddedToolMode] = useState('notes')
 
@@ -234,6 +236,36 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
       setReviews([])
     } finally {
       setIsLoadingReviews(false)
+    }
+  }
+
+  const refreshProblemDetail = async () => {
+    if (!activeProblem?.id) return
+    const res = await getProblem(activeProblem.id)
+    const latest = res?.data || res
+    if (!latest?.id) return
+    updateProblem?.(latest)
+    await loadReviews(latest.userProblemId || latest.user_problem_id)
+  }
+
+  const handleRefreshProblem = async () => {
+    if (!activeProblem?.id || refreshingProblem) return
+    setRefreshingProblem(true)
+    try {
+      await refreshProblemDetail()
+    } catch (error) {
+      console.error(t('刷新题目信息失败:'), error)
+    } finally {
+      setRefreshingProblem(false)
+    }
+  }
+
+  // 保存笔记 / 代码后同步题目与训练打卡，首次练习会自动补一条记录
+  const handleProblemSaved = async () => {
+    try {
+      await refreshProblemDetail()
+    } catch (error) {
+      console.error(t('刷新题目信息失败:'), error)
     }
   }
 
@@ -324,6 +356,16 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
               <div className="flex items-center gap-2.5 shrink-0">
                 <button
                   type="button"
+                  onClick={handleRefreshProblem}
+                  disabled={refreshingProblem}
+                  title={t('刷新题目信息')}
+                  aria-label={t('刷新题目信息')}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-sm transition-all hover:border-primary-100 hover:bg-primary-50 hover:text-primary-600 active:scale-90 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <RefreshCw size={16} className={refreshingProblem ? 'animate-spin' : ''} />
+                </button>
+                <button
+                  type="button"
                   onClick={handleViewLeetcode}
                   className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 text-white text-[11px] font-semibold rounded-full hover:bg-primary-700 active:scale-95 transition-all shadow-lg shadow-primary-200"
                 >
@@ -383,12 +425,12 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                   )}
                   {detailTab === 'notes' && (
                     <div className="flex-1 overflow-hidden p-6 custom-scrollbar scroll-smooth min-w-0">
-                      <NotesTab activeProblem={activeProblem} updateProblem={updateProblem} />
+                      <NotesTab activeProblem={activeProblem} updateProblem={updateProblem} onSaved={handleProblemSaved} />
                     </div>
                   )}
                   {detailTab === 'code' && (
                     <div className="flex-1 overflow-hidden p-6 custom-scrollbar scroll-smooth min-w-0">
-                      <CodeEditor activeProblem={activeProblem} updateProblem={updateProblem} />
+                      <CodeEditor activeProblem={activeProblem} updateProblem={updateProblem} onSaved={handleProblemSaved} />
                     </div>
                   )}
                   {detailTab === 'demo' && (
@@ -517,7 +559,7 @@ function DescriptionTab({ activeProblem }) {
   )
 }
 
-function NotesTab({ activeProblem, updateProblem }) {
+function NotesTab({ activeProblem, updateProblem, onSaved }) {
   const { t } = useI18n()
   const [notes, setNotes] = useState(activeProblem.notes || '')
   const [notesMode, setNotesMode] = useState(() =>
@@ -552,7 +594,7 @@ function NotesTab({ activeProblem, updateProblem }) {
     setAiSnapshot(null)
     setAiStreamText('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProblem.id, activeProblem.notes])
+  }, [activeProblem.id])
 
   useEffect(() => {
     if (!(notes || '').trim()) {
@@ -625,6 +667,7 @@ function NotesTab({ activeProblem, updateProblem }) {
       // 保存落库后，清除 AI 撤销快照（不可再撤销）
       setAiSnapshot(null)
       setAiState('idle')
+      onSaved?.()
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (error) {
       console.error(t('保存笔记失败:'), error)

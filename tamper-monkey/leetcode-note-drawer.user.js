@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LeetCode Note Drawer
 // @namespace    http://tampermonkey.net/
-// @version      2026-09-30.4
+// @version      2026-10-20.1
 // @description  Add training check-in and code snapshots to LeetCode problem pages
 // @author       You
 // @match        https://leetcode.cn/problems/**
@@ -653,6 +653,7 @@
             flex-direction: column;
             padding: 14px;
             gap: 20px;
+            overflow-y: auto;
         }
 
         .tm-side-section {
@@ -729,6 +730,32 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        .tm-comment-input {
+            width: 100%;
+            flex: 1;
+            min-height: 96px;
+            resize: vertical;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            padding: 8px;
+            background: #fff;
+            color: var(--text-dark);
+            font-family: inherit;
+            font-size: 11px;
+            line-height: 1.6;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color .2s;
+        }
+
+        .tm-comment-input:focus { border-color: var(--primary-green); }
+        .tm-comment-input::placeholder { color: #b0b0b0; }
+
+        .tm-comment-section {
+            flex: 1 1 auto;
+            min-height: 120px;
         }
 
         .tm-btn-save {
@@ -865,6 +892,11 @@
                     <div class="tm-mastery-btn" data-val="Reviewing">🔄 复习中</div>
                     <div class="tm-mastery-btn" data-val="Mastered">🏁 已完成</div>
                 </div>
+            </div>
+
+            <div class="tm-side-section tm-comment-section">
+                <span class="tm-side-label">训练记录</span>
+                <textarea id="training-comment" class="tm-comment-input" placeholder="记录本次的感受：难度如何、有没有思路、卡在哪里…"></textarea>
             </div>
 
             <div class="tm-side-footer">
@@ -1074,6 +1106,12 @@
         const codeTextarea = iframeDoc.querySelector('#pane-code .tm-code-editor');
         if (codeTextarea) codeTextarea.value = '';
 
+        const commentTextarea = iframeDoc.getElementById('training-comment');
+        if (commentTextarea) {
+            commentTextarea.value = '';
+            commentTextarea.dataset.initialComment = '';
+        }
+
         const win = iframeDoc.defaultView || iframe.contentWindow;
         if (win) win.__originalCode = '';
 
@@ -1214,6 +1252,15 @@
                             }
                         }
 
+                        // 回显最近一次训练记录，保存时写回同一条打卡
+                        const commentTextarea = iframeDoc.getElementById('training-comment');
+                        if (commentTextarea) {
+                            commentTextarea.value = problemData.latestReviewComment || '';
+                            // 记录回显值：为空且没有历史记录时不覆盖系统自动生成的默认文案
+                            commentTextarea.dataset.initialComment = problemData.latestReviewComment || '';
+                            console.log('[LeetCode Note] 训练记录已填充');
+                        }
+
                     } else {
                         console.log('[LeetCode Note] 数据为空或错误');
                         clearIframeContent(iframe);
@@ -1246,6 +1293,9 @@
             saveBtn.onclick = () => {
                 const notes = iframeDoc.querySelector('#pane-note .tm-textarea').value;
                 const code = iframeDoc.querySelector('#pane-code .tm-code-editor').value;
+                const commentField = iframeDoc.getElementById('training-comment');
+                const comment = commentField?.value.trim() || '';
+                const initialComment = commentField?.dataset.initialComment || '';
                 const difficulty = iframeDoc.querySelector('.tm-rate-card.active')?.dataset.val || 0;
                 const status = iframeDoc.querySelector('#mastery-list .tm-mastery-btn.active')?.dataset.val || '';
                 const progressStatus = iframeDoc.querySelector('#progress-status-list .tm-mastery-btn.active')?.dataset.val || 'Reviewing';
@@ -1258,6 +1308,8 @@
                     status,
                     progressStatus
                 };
+                // 只有用户输入过训练记录，或原本已有记录（允许清空）时才同步到打卡
+                if (comment || initialComment) payload.comment = comment;
 
                 GM_xmlhttpRequest({
                     method: 'POST',
@@ -1290,8 +1342,10 @@
             resetBtn.onclick = () => {
                 const noteTextarea = iframeDoc.querySelector('#pane-note .tm-textarea');
                 const codeTextarea = iframeDoc.querySelector('#pane-code .tm-code-editor');
+                const commentTextarea = iframeDoc.getElementById('training-comment');
                 if (noteTextarea) noteTextarea.value = '';
                 if (codeTextarea) codeTextarea.value = '';
+                if (commentTextarea) commentTextarea.value = '';
                 iframeDoc.querySelectorAll('.tm-rate-card.active').forEach(c => c.classList.remove('active'));
                 iframeDoc.querySelectorAll('.tm-mastery-btn.active').forEach(b => b.classList.remove('active'));
                 const defaultProgress = iframeDoc.querySelector('#progress-status-list [data-val="Reviewing"]');

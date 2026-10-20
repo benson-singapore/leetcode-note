@@ -102,6 +102,8 @@ export default {
   '关闭': 'Close',
   '更新个人手感失败:': 'Failed to update the personal rating:',
   '更新完成状态失败:': 'Failed to update the progress status:',
+  '刷新题目信息': 'Refresh problem info',
+  '刷新题目信息失败:': 'Failed to refresh the problem info:',
   '相似题目': 'Similar problems',
   '解析相似题目失败:': 'Failed to parse similar problems:',
 

@@ -45,7 +45,14 @@ func DailyGoalDate(date string) string {
 
 // GetByDate 获取某天今日目标；无目标时返回 nil。
 func (s *DailyGoalService) GetByDate(date string) (*models.DailyGoal, error) {
-	goal, err := s.goalRepo.GetByDate(DailyGoalDate(date))
+	date = DailyGoalDate(date)
+	// 兼容旧数据：当天目标中已有练习痕迹但还没有打卡记录的题目，自动补一条首次练习记录。
+	if date == time.Now().Format("2006-01-02") {
+		if err := s.goalRepo.EnsurePracticeReviews(date); err != nil {
+			log.Printf("[DailyGoal] 补齐首次练习记录失败: %v\n", err)
+		}
+	}
+	goal, err := s.goalRepo.GetByDate(date)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

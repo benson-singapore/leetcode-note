@@ -23,15 +23,20 @@ type SaveUserProblemRequest struct {
 	PersonalDifficulty int    `json:"personalDifficulty"`
 	Status             string `json:"status"`
 	ProgressStatus     string `json:"progressStatus"`
+	// Comment 训练记录；nil 表示本次保存不修改打卡记录，空字符串表示清空
+	Comment *string `json:"comment,omitempty"`
 }
 
 // UserProblemDetailResponse 用户题目详情响应
 type UserProblemDetailResponse struct {
-	Notes              string `json:"notes"`
-	Code               string `json:"code"`
-	PersonalDifficulty int    `json:"personalDifficulty"`
-	Status             string `json:"status"`
-	ProgressStatus     string `json:"progressStatus"`
+	UserProblemID       string `json:"userProblemId,omitempty"`
+	Notes               string `json:"notes"`
+	Code                string `json:"code"`
+	PersonalDifficulty  int    `json:"personalDifficulty"`
+	Status              string `json:"status"`
+	ProgressStatus      string `json:"progressStatus"`
+	LatestReviewID      string `json:"latestReviewId,omitempty"`
+	LatestReviewComment string `json:"latestReviewComment,omitempty"`
 }
 
 // LeetCodeSyncedCodeResponse 力扣站内涵盖已同步代码（GraphQL syncedCode）
@@ -248,6 +253,19 @@ func (c *LeetCodeController) saveUserProblemWithReq(ctx *gin.Context, req *SaveU
 		return
 	}
 
+	// 4. 同步训练记录到最近一条打卡；笔记/代码保存失败不应回滚，这里只记录日志
+	if req.Comment != nil {
+		if err := c.userProblem.SyncLatestReview(
+			userProblem.ID,
+			*req.Comment,
+			req.Status,
+			req.ProgressStatus,
+			req.PersonalDifficulty,
+		); err != nil {
+			log.Printf("[Controller] 同步训练记录失败: %v\n", err)
+		}
+	}
+
 	log.Printf("[Controller] 成功保存用户题目记录: %s\n", userProblem.ID)
 
 	utils.Success(ctx, userProblem)
@@ -255,7 +273,7 @@ func (c *LeetCodeController) saveUserProblemWithReq(ctx *gin.Context, req *SaveU
 
 // SaveUserProblemV2 保存用户题目记录（支持 progressStatus，供脚本等免登录调用）
 // @Summary 保存用户题目记录（V2）
-// @Description 根据 titleSlug 保存用户题目记录，包括笔记、代码、手感、掌握程度 status 与完成状态 progressStatus（默认 Reviewing）
+// @Description 根据 titleSlug 保存用户题目记录，包括笔记、代码、手感、掌握程度 status、完成状态 progressStatus（默认 Reviewing），可选 comment 训练记录（写入最近一条打卡）
 // @Tags LeetCode
 // @Accept json
 // @Produce json
@@ -281,7 +299,7 @@ func (c *LeetCodeController) SaveUserProblemV2(ctx *gin.Context) {
 
 // GetUserProblemDetail 查询用户题目记录详情
 // @Summary 查询用户题目记录详情
-// @Description 根据 titleSlug 查询用户题目记录，返回 notes、code、personalDifficulty、status；不存在则返回空字符串和 0
+// @Description 根据 titleSlug 查询用户题目记录，返回 notes、code、personalDifficulty、status 及最近一条训练记录 latestReviewComment；不存在则返回空字符串和 0
 // @Tags LeetCode
 // @Produce json
 // @Param titleSlug query string true "题目 slug"
@@ -315,12 +333,22 @@ func (c *LeetCodeController) GetUserProblemDetail(ctx *gin.Context) {
 		return
 	}
 
+	latestReviewID := ""
+	latestReviewComment := ""
+	if latest, err := c.userProblem.GetLatestReview(userProblem.ID); err == nil && latest != nil {
+		latestReviewID = latest.ID
+		latestReviewComment = latest.Comment
+	}
+
 	utils.Success(ctx, UserProblemDetailResponse{
-		Notes:              userProblem.Notes,
-		Code:               userProblem.Code,
-		PersonalDifficulty: userProblem.PersonalDifficulty,
-		Status:             userProblem.Status,
-		ProgressStatus:     userProblem.ProgressStatus,
+		UserProblemID:       userProblem.ID,
+		Notes:               userProblem.Notes,
+		Code:                userProblem.Code,
+		PersonalDifficulty:  userProblem.PersonalDifficulty,
+		Status:              userProblem.Status,
+		ProgressStatus:      userProblem.ProgressStatus,
+		LatestReviewID:      latestReviewID,
+		LatestReviewComment: latestReviewComment,
 	})
 }
 

@@ -266,6 +266,75 @@ func (r *DailyGoalRepository) EnsureUserProblem(problemID string) error {
 	return err
 }
 
+// EnsurePracticeReviews 为当天目标中已有练习痕迹但尚无打卡记录的题目补一条训练记录。
+// 用于兼容在自动打卡逻辑上线前已经保存过笔记 / 代码的题目。
+func (r *DailyGoalRepository) EnsurePracticeReviews(date string) error {
+	rows, err := r.db.Query(`
+		SELECT up.id, COALESCE(NULLIF(up.status, ''), 'New'),
+			COALESCE(NULLIF(up.progress_status, ''), 'Reviewing'),
+			COALESCE(up.personal_difficulty, 0), COALESCE(up.code, '')
+		FROM daily_goal_problems dgp
+		JOIN daily_goals dg ON dg.id = dgp.goal_id
+		JOIN user_problems up ON up.problem_id = dgp.problem_id
+		WHERE dg.goal_date = ?
+			AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.user_problem_id = up.id)
+			AND (
+				trim(COALESCE(up.notes, '')) <> ''
+				OR trim(COALESCE(up.code, '')) <> ''
+				OR up.status IN ('Confused', 'Struggling', 'Relearning', 'Stable', 'Mastered')
+			)
+	`, date)
+	if err != nil {
+		return err
+	}
+	type candidate struct {
+		userProblemID      string
+		status             string
+		progressStatus     string
+		personalDifficulty int
+		code               string
+	}
+	candidates := []candidate{}
+	for rows.Next() {
+		var c candidate
+		if err := rows.Scan(&c.userProblemID, &c.status, &c.progressStatus, &c.personalDifficulty, &c.code); err != nil {
+			rows.Close()
+			return err
+		}
+		candidates = append(candidates, c)
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, c := range candidates {
+		if _, err := tx.Exec(`
+			INSERT INTO reviews (id, user_problem_id, review_date, status, progress_status, personal_difficulty, comment, code, code_language, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?)
+		`, uuid.New().String(), c.userProblemID, now.Format("2006-01-02"), c.status, c.progressStatus,
+			c.personalDifficulty, "首次练习自动记录", c.code, now.UTC().Format("2006-01-02 15:04:05.999999999")); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`
+			UPDATE user_problems
+			SET review_count = COALESCE(review_count, 0) + 1, last_review = ?, updated_at = ?
+			WHERE id = ?
+		`, now, now.Format("2006-01-02 15:04:05"), c.userProblemID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // LibraryStats 题库基础信息（今日目标页左侧展示）
 func (r *DailyGoalRepository) LibraryStats() (map[string]int, error) {
 	out := map[string]int{"total": 0, "mastered": 0, "reviewing": 0, "unpracticed": 0}

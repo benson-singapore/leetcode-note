@@ -14,6 +14,7 @@ type UserProblemService struct {
 	userProblemRepo *repository.UserProblemRepository
 	problemRepo     *repository.ProblemRepository
 	tagRepo         *repository.TagRepository
+	reviewRepo      *repository.ReviewRepository
 }
 
 func NewUserProblemService() *UserProblemService {
@@ -21,6 +22,7 @@ func NewUserProblemService() *UserProblemService {
 		userProblemRepo: repository.NewUserProblemRepository(),
 		problemRepo:     repository.NewProblemRepository(),
 		tagRepo:         repository.NewTagRepository(),
+		reviewRepo:      repository.NewReviewRepository(),
 	}
 }
 
@@ -59,6 +61,7 @@ func (s *UserProblemService) CreateUserProblem(req *models.CreateUserProblemRequ
 	if err := s.userProblemRepo.CreateUserProblem(userProblem); err != nil {
 		return nil, fmt.Errorf("failed to create user problem: %w", err)
 	}
+	s.ensureFirstPracticeReview(userProblem)
 
 	return userProblem, nil
 }
@@ -97,6 +100,7 @@ func (s *UserProblemService) UpdateUserProblem(id string, req *models.UpdateUser
 	if err := s.userProblemRepo.UpdateUserProblem(userProblem); err != nil {
 		return nil, fmt.Errorf("failed to update user problem: %w", err)
 	}
+	s.ensureFirstPracticeReview(userProblem)
 
 	return userProblem, nil
 }
@@ -136,6 +140,7 @@ func (s *UserProblemService) UpsertUserProblem(id string, req *models.UpdateUser
 		if err := s.userProblemRepo.UpdateUserProblem(existing); err != nil {
 			return nil, err
 		}
+		s.ensureFirstPracticeReview(existing)
 		return existing, nil
 	}
 	userProblem := &models.UserProblem{
@@ -145,7 +150,121 @@ func (s *UserProblemService) UpsertUserProblem(id string, req *models.UpdateUser
 		Notes:              req.Notes,
 		Code:               req.Code,
 	}
-	return s.userProblemRepo.UpsertUserProblem(id, userProblem)
+	created, err := s.userProblemRepo.UpsertUserProblem(id, userProblem)
+	if err != nil {
+		return nil, err
+	}
+	s.ensureFirstPracticeReview(created)
+	return created, nil
+}
+
+// GetLatestReview 获取用户题目最近一条训练打卡记录；没有记录时返回 nil。
+func (s *UserProblemService) GetLatestReview(userProblemID string) (*models.Review, error) {
+	if strings.TrimSpace(userProblemID) == "" {
+		return nil, nil
+	}
+	return s.reviewRepo.GetLatestReviewByUserProblemID(userProblemID)
+}
+
+// SyncLatestReview 将训练记录内容写回最近一条打卡；尚无打卡时补建一条。
+// 用于「核心笔记」抽屉保存时编辑本次训练描述，不改变已有打卡的日期与代码快照。
+func (s *UserProblemService) SyncLatestReview(userProblemID, comment, status, progressStatus string, personalDifficulty int) error {
+	if strings.TrimSpace(userProblemID) == "" {
+		return nil
+	}
+	latest, err := s.reviewRepo.GetLatestReviewByUserProblemID(userProblemID)
+	if err != nil {
+		return err
+	}
+	if latest == nil {
+		if strings.TrimSpace(comment) == "" {
+			return nil
+		}
+		now := time.Now()
+		if strings.TrimSpace(status) == "" {
+			status = "New"
+		}
+		if strings.TrimSpace(progressStatus) == "" {
+			progressStatus = "Reviewing"
+		}
+		review := &models.Review{
+			ID:                 uuid.New().String(),
+			UserProblemID:      userProblemID,
+			ReviewDate:         now,
+			Status:             status,
+			ProgressStatus:     progressStatus,
+			PersonalDifficulty: personalDifficulty,
+			Comment:            comment,
+			CreatedAt:          now,
+		}
+		if err := s.reviewRepo.CreateReview(review); err != nil {
+			return err
+		}
+		_ = s.userProblemRepo.IncrementReviewCount(userProblemID)
+		if userProblem, err := s.userProblemRepo.GetUserProblemByID(userProblemID); err == nil && userProblem != nil {
+			userProblem.LastReview = &now
+			userProblem.UpdatedAt = now
+			_ = s.userProblemRepo.UpdateUserProblem(userProblem)
+		}
+		return nil
+	}
+
+	latest.Comment = comment
+	if strings.TrimSpace(status) != "" {
+		latest.Status = status
+	}
+	if strings.TrimSpace(progressStatus) != "" {
+		latest.ProgressStatus = progressStatus
+	}
+	latest.PersonalDifficulty = personalDifficulty
+	return s.reviewRepo.UpdateReview(latest)
+}
+
+// ensureFirstPracticeReview 首次产生练习痕迹（笔记、代码、掌握程度或手感）时，
+// 自动补一条训练打卡记录，避免「已经做过但训练记录为空」。
+func (s *UserProblemService) ensureFirstPracticeReview(userProblem *models.UserProblem) {
+	if userProblem == nil || userProblem.ID == "" {
+		return
+	}
+	hasPractice := strings.TrimSpace(userProblem.Notes) != "" ||
+		strings.TrimSpace(userProblem.Code) != "" ||
+		(strings.TrimSpace(userProblem.Status) != "" && userProblem.Status != "Unpracticed") ||
+		userProblem.PersonalDifficulty > 0
+	if !hasPractice {
+		return
+	}
+	count, err := s.reviewRepo.GetReviewCountByUserProblemID(userProblem.ID)
+	if err != nil || count > 0 {
+		return
+	}
+
+	now := time.Now()
+	status := userProblem.Status
+	if strings.TrimSpace(status) == "" {
+		status = "New"
+	}
+	progressStatus := userProblem.ProgressStatus
+	if strings.TrimSpace(progressStatus) == "" {
+		progressStatus = "Reviewing"
+	}
+	review := &models.Review{
+		ID:                 uuid.New().String(),
+		UserProblemID:      userProblem.ID,
+		ReviewDate:         now,
+		Status:             status,
+		ProgressStatus:     progressStatus,
+		PersonalDifficulty: userProblem.PersonalDifficulty,
+		Comment:            "首次练习自动记录",
+		Code:               userProblem.Code,
+		CreatedAt:          now,
+	}
+	if err := s.reviewRepo.CreateReview(review); err != nil {
+		return
+	}
+	userProblem.ReviewCount++
+	userProblem.LastReview = &now
+	userProblem.UpdatedAt = now
+	_ = s.userProblemRepo.UpdateUserProblem(userProblem)
 }
 
 // GetUserProblemByProblemID 根据 problem_id 获取用户题目记录
