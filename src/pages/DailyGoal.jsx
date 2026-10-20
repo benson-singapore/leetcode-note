@@ -85,6 +85,7 @@ export default function DailyGoal() {
   const saved = useMemo(readSavedConfig, [])
 
   const [goal, setGoal] = useState(null)
+  const [currentDate, setCurrentDate] = useState(todayYMD)
   const [options, setOptions] = useState({ stats: {}, tags: [], counts: {} })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -105,14 +106,14 @@ export default function DailyGoal() {
   const [manualInput, setManualInput] = useState('')
 
   const dateLabel = useMemo(() => {
-    const d = new Date(`${todayYMD()}T00:00:00`)
+    const d = new Date(`${currentDate}T00:00:00`)
     return d.toLocaleDateString(language === 'en' ? 'en-US' : 'zh-CN', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       weekday: 'long',
     })
-  }, [language])
+  }, [currentDate, language])
 
   const loadData = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true)
@@ -138,16 +139,39 @@ export default function DailyGoal() {
     }
   }, [])
 
+  const refreshCurrentDate = useCallback(() => {
+    const date = todayYMD()
+    setCurrentDate(date)
+    setGoal((current) => (current?.goal_date === date ? current : null))
+    loadData(true)
+  }, [loadData])
+
   useEffect(() => {
     loadData()
   }, [loadData])
 
+  // 切换本地自然日时加载新日期的目标；新的一天没有记录时列表自然为空。
+  useEffect(() => {
+    let timeoutId
+    const scheduleNextDayRefresh = () => {
+      const now = new Date()
+      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 250)
+      timeoutId = window.setTimeout(() => {
+        refreshCurrentDate()
+        scheduleNextDayRefresh()
+      }, Math.max(nextMidnight.getTime() - now.getTime(), 1000))
+    }
+
+    scheduleNextDayRefresh()
+    return () => window.clearTimeout(timeoutId)
+  }, [refreshCurrentDate])
+
   // 从题库详情页返回时，完成状态可能已变化，重新同步一次
   useEffect(() => {
-    const onFocus = () => loadData(true)
+    const onFocus = refreshCurrentDate
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [loadData])
+  }, [refreshCurrentDate])
 
   useEffect(() => {
     localStorage.setItem(CONFIG_KEY, JSON.stringify({ count, tags: selectedTags, difficulties: selectedDifficulties, notes }))
@@ -579,7 +603,7 @@ export default function DailyGoal() {
               )}
               <button
                 type="button"
-                onClick={() => loadData(true)}
+                onClick={refreshCurrentDate}
                 disabled={refreshing}
                 className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-[11px] text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
               >
