@@ -222,6 +222,12 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
     setEmbeddedUrl(url)
   }
 
+  const handleOpenSimilarQuestion = (titleSlug) => {
+    if (!titleSlug) return
+    setEmbeddedToolMode('notes')
+    setEmbeddedUrl(`https://leetcode.cn/problems/${encodeURIComponent(titleSlug)}/`)
+  }
+
   const loadReviews = async (userProblemId = activeProblem?.userProblemId) => {
     if (!userProblemId) {
       setReviews([])
@@ -420,7 +426,10 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                 <div className="flex-1 overflow-hidden flex flex-col min-w-0">
                   {detailTab === 'desc' && (
                     <div className="flex-1 overflow-y-auto p-6 custom-scrollbar scroll-smooth min-w-0">
-                      <DescriptionTab activeProblem={activeProblem} />
+                      <DescriptionTab
+                        activeProblem={activeProblem}
+                        onOpenSimilarQuestion={handleOpenSimilarQuestion}
+                      />
                     </div>
                   )}
                   {detailTab === 'notes' && (
@@ -491,7 +500,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
   )
 }
 
-function DescriptionTab({ activeProblem }) {
+function DescriptionTab({ activeProblem, onOpenSimilarQuestion }) {
   const { t } = useI18n()
   const constraints = activeProblem.constraints || []
   return (
@@ -555,7 +564,10 @@ function DescriptionTab({ activeProblem }) {
         </div>
       )}
 
-      <SimilarQuestionsSection activeProblem={activeProblem} />
+      <SimilarQuestionsSection
+        activeProblem={activeProblem}
+        onOpenSimilarQuestion={onOpenSimilarQuestion}
+      />
     </div>
   )
 }
@@ -1623,7 +1635,7 @@ function ReviewSection({
   )
 }
 
-function SimilarQuestionsSection({ activeProblem }) {
+function SimilarQuestionsSection({ activeProblem, onOpenSimilarQuestion }) {
   const { t } = useI18n()
   let similarQuestions = []
 
@@ -1650,12 +1662,11 @@ function SimilarQuestionsSection({ activeProblem }) {
       </label>
       <div className="space-y-1.5">
         {similarQuestions.slice(0, 5).map((q, idx) => (
-          <a
+          <button
             key={idx}
-            href={`https://leetcode.cn/problems/${q.titleSlug}/`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md border border-slate-100 bg-slate-50 hover:bg-primary-50 hover:border-primary-200 transition-all group"
+            type="button"
+            onClick={() => onOpenSimilarQuestion?.(q.titleSlug)}
+            className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left rounded-md border border-slate-100 bg-slate-50 hover:bg-primary-50 hover:border-primary-200 transition-all group"
           >
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-bold text-slate-700 group-hover:text-primary-700 truncate">
@@ -1674,7 +1685,7 @@ function SimilarQuestionsSection({ activeProblem }) {
             >
               {q.difficulty}
             </span>
-          </a>
+          </button>
         ))}
       </div>
     </div>
