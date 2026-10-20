@@ -59,8 +59,8 @@ func (p *CLIProvider) buildArgs() (args []string, promptAsArg bool) {
 		}
 		return args, true
 	case CLIKindClaude:
-		// claude -p --output-format stream-json --verbose [--model X] "prompt"
-		args = []string{"-p", "--output-format", "stream-json", "--verbose"}
+		// partial messages stream token deltas instead of waiting for the final assistant message
+		args = []string{"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages"}
 		if model != "" {
 			args = append(args, "--model", model)
 		}
@@ -145,6 +145,13 @@ type claudeEvent struct {
 	Type    string `json:"type"`
 	Subtype string `json:"subtype"`
 	Result  string `json:"result"`
+	Event   *struct {
+		Type  string `json:"type"`
+		Delta *struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"delta"`
+	} `json:"event"`
 	Message *struct {
 		Content []struct {
 			Type string `json:"type"`
@@ -153,19 +160,24 @@ type claudeEvent struct {
 	} `json:"message"`
 }
 
-// parseClaudeLine 解析 claude stream-json，返回增量文本
-func parseClaudeLine(line string) (string, error) {
+// parseClaudeLine 解析 claude stream-json，返回文本增量及其是否为部分消息
+func parseClaudeLine(line string) (string, bool, error) {
 	if !strings.HasPrefix(strings.TrimSpace(line), "{") {
-		return "", nil
+		return "", false, nil
 	}
 	var ev claudeEvent
 	if err := json.Unmarshal([]byte(line), &ev); err != nil {
-		return "", nil
+		return "", false, nil
 	}
 	switch ev.Type {
+	case "stream_event":
+		if ev.Event != nil && ev.Event.Type == "content_block_delta" &&
+			ev.Event.Delta != nil && ev.Event.Delta.Type == "text_delta" && ev.Event.Delta.Text != "" {
+			return ev.Event.Delta.Text, true, nil
+		}
 	case "assistant":
 		if ev.Message == nil {
-			return "", nil
+			return "", false, nil
 		}
 		var sb strings.Builder
 		for _, block := range ev.Message.Content {
@@ -174,7 +186,7 @@ func parseClaudeLine(line string) (string, error) {
 			}
 		}
 		if sb.Len() > 0 {
-			return sb.String() + "\n", nil
+			return sb.String() + "\n", false, nil
 		}
 	case "result":
 		if ev.Subtype != "success" {
@@ -182,11 +194,11 @@ func parseClaudeLine(line string) (string, error) {
 			if msg == "" {
 				msg = "claude 执行失败: " + ev.Subtype
 			}
-			return "", fmt.Errorf("%s", msg)
+			return "", false, fmt.Errorf("%s", msg)
 		}
 		// 成功的 result 是完整汇总，assistant 事件已流式输出，忽略避免重复
 	}
-	return "", nil
+	return "", false, nil
 }
 
 func (p *CLIProvider) ChatStream(ctx context.Context, req ChatRequest, opts ChatOptions, onDelta StreamFunc) (string, error) {
@@ -230,6 +242,7 @@ func (p *CLIProvider) ChatStream(ctx context.Context, req ChatRequest, opts Chat
 	}
 
 	var full strings.Builder
+	claudeStreamed := false
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 	for scanner.Scan() {
@@ -242,11 +255,12 @@ func (p *CLIProvider) ChatStream(ctx context.Context, req ChatRequest, opts Chat
 		line := scanner.Text()
 
 		var delta string
+		var partial bool
 		switch p.kind {
 		case CLIKindCodex:
 			delta, err = parseCodexLine(line)
 		case CLIKindClaude:
-			delta, err = parseClaudeLine(line)
+			delta, partial, err = parseClaudeLine(line)
 		default:
 			delta = line + "\n"
 		}
@@ -254,6 +268,14 @@ func (p *CLIProvider) ChatStream(ctx context.Context, req ChatRequest, opts Chat
 			_ = cmd.Process.Kill()
 			_ = cmd.Wait()
 			return full.String(), fmt.Errorf("AI CLI 执行失败: %v, stderr: %s", err, strings.TrimSpace(stderr.String()))
+		}
+		if p.kind == CLIKindClaude {
+			if partial {
+				claudeStreamed = true
+			} else if claudeStreamed {
+				// The final assistant event repeats text already emitted as deltas.
+				continue
+			}
 		}
 		if delta == "" {
 			continue

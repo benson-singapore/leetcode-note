@@ -122,6 +122,11 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
   const [aiStreamText, setAiStreamText] = useState('')
   const [aiError, setAiError] = useState('')
   const aiAbortRef = useRef(false)
+  const streamTextareaRef = useRef(null)
+  useEffect(() => {
+    if (aiState !== 'streaming' || !streamTextareaRef.current) return
+    streamTextareaRef.current.scrollTop = streamTextareaRef.current.scrollHeight
+  }, [aiStreamText, aiState])
   // 演示全屏预览（Modal，替代被浏览器拦截的 window.open）
   const [demoFullscreen, setDemoFullscreen] = useState(false)
 
@@ -484,8 +489,6 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
       </div>
     )
   }
-
-  const streamPreview = extractHtml(aiStreamText)
 
   // ===== 列表视图（默认）：满屏展示方案列表 =====
   return (
@@ -851,11 +854,21 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                     {aiState === 'streaming' ? (
                       <div className="flex-1 flex flex-col min-h-0 bg-slate-950 p-3">
                         <div className="flex items-center gap-2 text-violet-300 text-[10px] font-bold mb-2 shrink-0">
-                          <Loader2 size={12} className="animate-spin" />{t('AI 正在生成演示 HTML…')}
+                          <Loader2 size={12} className="animate-spin" />
+                          <span>{t('AI 正在生成演示 HTML…')}</span>
+                          <span className="ml-auto text-slate-400 font-medium">
+                            {t('已接收 {count} 个字符', { count: aiStreamText.length })}
+                          </span>
                         </div>
-                        <pre className="flex-1 overflow-auto custom-scrollbar m-0 font-mono text-[10px] leading-relaxed text-emerald-300 whitespace-pre-wrap break-all">
-                          {streamPreview || aiStreamText}
-                        </pre>
+                        <textarea
+                          ref={streamTextareaRef}
+                          aria-label={t('AI 演示生成内容')}
+                          className="flex-1 min-h-0 w-full overflow-auto custom-scrollbar m-0 p-2 bg-transparent font-mono text-[10px] leading-relaxed text-emerald-300 outline-none resize-none"
+                          spellCheck={false}
+                          placeholder={t('正在等待 AI 返回内容…')}
+                          value={aiStreamText}
+                          readOnly
+                        />
                       </div>
                     ) : demoMode === 'edit' ? (
                       <textarea
