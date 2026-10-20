@@ -255,6 +255,7 @@ export default function DailyGoal() {
 
   const handleGenerate = async () => {
     if (generating) return
+    const replacing = (goal?.items?.length ?? 0) > 0
     setGenerating(true)
     setMessage('')
     try {
@@ -266,7 +267,7 @@ export default function DailyGoal() {
         date: todayYMD(),
       })
       setGoal(res?.data ?? res ?? null)
-      setMessage(t('AI 已生成今日目标'))
+      setMessage(replacing ? t('AI 已重新选题并替换今日目标') : t('AI 已生成今日目标'))
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -281,19 +282,21 @@ export default function DailyGoal() {
       .map((item) => item.trim())
       .filter(Boolean)
     if (!numbers.length || adding) return
+    const replacing = (goal?.items?.length ?? 0) > 0
     setAdding(true)
     setMessage('')
     try {
+      // 按题号添加时直接替换今日目标，避免与上一次的题目混在一起。
       const res = await createDailyGoal({
         problem_numbers: numbers,
         date: todayYMD(),
         title: '今日目标',
-        append: true,
+        append: false,
       })
       setManualInput('')
       await loadData(true)
       if (res?.data || res) setGoal(res?.data ?? res)
-      setMessage(t('题目已加入今日目标'))
+      setMessage(replacing ? t('已用新题号替换今日目标') : t('题目已加入今日目标'))
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -531,6 +534,8 @@ export default function DailyGoal() {
           <h3 className="mb-1 text-xs font-semibold text-slate-600">{t('按题号添加')}</h3>
           <p className="mb-3 text-[11px] leading-relaxed text-slate-400">
             {t('支持题号或 slug，本地没有的题目会自动从 LeetCode 同步。')}
+            <br />
+            {t('添加后会替换今日目标中已有的题目。')}
           </p>
           <form onSubmit={handleManualAdd} className="flex gap-2">
             <input
