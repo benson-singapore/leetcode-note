@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -63,6 +65,11 @@ func cliSearchPath() []string {
 		// npm installs made through nvm commonly put Codex in one of these
 		// version-specific bin directories.
 		if versionPaths, err := filepath.Glob(filepath.Join(home, ".nvm", "versions", "node", "*", "bin")); err == nil {
+			// Glob sorts paths lexically, which puts v12 before v24. Prefer the
+			// highest installed nvm version when adding fallback paths.
+			sort.Slice(versionPaths, func(i, j int) bool {
+				return nodeVersionGreater(versionPaths[i], versionPaths[j])
+			})
 			for _, path := range versionPaths {
 				add(path)
 			}
@@ -70,6 +77,56 @@ func cliSearchPath() []string {
 	}
 
 	return paths
+}
+
+// preferNewestNVMNodePath makes the Codex CLI use the newest installed nvm
+// runtime. The app launcher may already have put an old nvm version first in
+// PATH, and Codex can fail during parsing before it can report that.
+func preferNewestNVMNodePath(searchPath []string) []string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return searchPath
+	}
+	versionPaths, err := filepath.Glob(filepath.Join(home, ".nvm", "versions", "node", "*", "bin"))
+	if err != nil {
+		return searchPath
+	}
+	sort.Slice(versionPaths, func(i, j int) bool {
+		return nodeVersionGreater(versionPaths[i], versionPaths[j])
+	})
+	for _, dir := range versionPaths {
+		nodePath := filepath.Join(dir, "node")
+		if _, err := exec.LookPath(nodePath); err != nil {
+			continue
+		}
+		prioritized := make([]string, 0, len(searchPath)+1)
+		prioritized = append(prioritized, dir)
+		for _, path := range searchPath {
+			if path != dir {
+				prioritized = append(prioritized, path)
+			}
+		}
+		return prioritized
+	}
+	return searchPath
+}
+
+func nodeVersionGreater(leftPath, rightPath string) bool {
+	left := strings.Split(strings.TrimPrefix(filepath.Base(filepath.Dir(leftPath)), "v"), ".")
+	right := strings.Split(strings.TrimPrefix(filepath.Base(filepath.Dir(rightPath)), "v"), ".")
+	for i := 0; i < 3; i++ {
+		leftPart, rightPart := 0, 0
+		if i < len(left) {
+			leftPart, _ = strconv.Atoi(left[i])
+		}
+		if i < len(right) {
+			rightPart, _ = strconv.Atoi(right[i])
+		}
+		if leftPart != rightPart {
+			return leftPart > rightPart
+		}
+	}
+	return leftPath > rightPath
 }
 
 func resolveCLIExecutable(command string, searchPath []string) (string, error) {

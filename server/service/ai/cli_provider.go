@@ -209,7 +209,11 @@ func (p *CLIProvider) ChatStream(ctx context.Context, req ChatRequest, opts Chat
 	}
 
 	cmd := exec.CommandContext(ctx, resolvedCommand, args...)
-	cmd.Env = cliCommandEnv(searchPath)
+	commandPath := searchPath
+	if p.kind == CLIKindCodex {
+		commandPath = preferNewestNVMNodePath(searchPath)
+	}
+	cmd.Env = cliCommandEnv(commandPath)
 	if !promptAsArg {
 		cmd.Stdin = strings.NewReader(prompt)
 	}
