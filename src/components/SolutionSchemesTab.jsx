@@ -108,6 +108,8 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
   const [demoText, setDemoText] = useState('') // 当前选中方案的演示 HTML（可编辑缓冲）
   const [demoDirty, setDemoDirty] = useState(false)
   const [demoMode, setDemoMode] = useState('edit') // edit | preview
+  // 用户是否手动切过「编辑 / 预览」（切换方案时重置）；未手动切换时，异步到达的演示内容可自动切到预览
+  const demoModeTouchedRef = useRef(false)
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
   // 自定义方案草稿（name/code，切换方案时重置）
@@ -120,6 +122,8 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
   const [aiStreamText, setAiStreamText] = useState('')
   const [aiError, setAiError] = useState('')
   const aiAbortRef = useRef(false)
+  // 演示全屏预览（Modal，替代被浏览器拦截的 window.open）
+  const [demoFullscreen, setDemoFullscreen] = useState(false)
 
   const load = useCallback(async () => {
     if (!problemId) return
@@ -158,7 +162,9 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
     setConfirmKey(null)
     setDraftDirty(false)
     setDemoDirty(false)
+    setDemoFullscreen(false)
     setSaveStatus('')
+    demoModeTouchedRef.current = false
     if (selectedKey === DEFAULT_KEY) {
       setDraft({ name: '', code: '' })
       setDemoText(defaultDemo)
@@ -180,6 +186,10 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
   useEffect(() => {
     if (selectedKey === DEFAULT_KEY && !demoDirty) {
       setDemoText(defaultDemo)
+      // 演示内容异步到达时，若用户未手动切换模式，则默认进入预览
+      if (!demoModeTouchedRef.current) {
+        setDemoMode((defaultDemo || '').trim() ? 'preview' : 'edit')
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultDemo])
@@ -307,17 +317,8 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
     }
   }
 
-  const handleOpenDemoWindow = () => {
-    const html = demoText || '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><body><p>' + t('暂无演示内容') + '</p></body></html>'
-    const previewUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }))
-    const previewWindow = window.open(previewUrl, '_blank')
-    if (!previewWindow) {
-      URL.revokeObjectURL(previewUrl)
-      setSaveStatus(t('浏览器阻止了新窗口，请允许弹出窗口后重试'))
-      setTimeout(() => setSaveStatus(''), 3000)
-      return
-    }
-    previewWindow.opener = null
+  const handleOpenDemoFullscreen = () => {
+    setDemoFullscreen(true)
   }
 
   // ===== AI 生成演示 =====
@@ -453,15 +454,20 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
     }
   }, [schemes, activeProblem?.code, defaultDemo])
 
-  // 键盘 ESC 关闭抽屉
+  // 键盘 ESC：先关闭全屏演示 Modal，再关闭方案抽屉
   useEffect(() => {
-    if (!selected) return
+    if (!selected && !demoFullscreen) return
     const onKey = (e) => {
-      if (e.key === 'Escape') setSelectedKey(null)
+      if (e.key !== 'Escape') return
+      if (demoFullscreen) {
+        setDemoFullscreen(false)
+        return
+      }
+      setSelectedKey(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selected])
+  }, [selected, demoFullscreen])
 
   // 抽屉布局：代码区 / 演示区的显示与隐藏（都隐藏时自动进入纯编辑态，此时只显示演示区避免空白）
   const [showCode, setShowCode] = useState(true)
@@ -657,7 +663,10 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                       type="button"
                       role="tab"
                       aria-selected={demoMode === 'edit'}
-                      onClick={() => setDemoMode('edit')}
+                      onClick={() => {
+                        demoModeTouchedRef.current = true
+                        setDemoMode('edit')
+                      }}
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
                         demoMode === 'edit'
                           ? 'bg-white text-primary-700 shadow-sm'
@@ -670,7 +679,11 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                       type="button"
                       role="tab"
                       aria-selected={demoMode === 'preview'}
-                      onClick={() => demoText.trim() && setDemoMode('preview')}
+                      onClick={() => {
+                        if (!demoText.trim()) return
+                        demoModeTouchedRef.current = true
+                        setDemoMode('preview')
+                      }}
                       disabled={!demoText.trim()}
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                         demoMode === 'preview'
@@ -767,9 +780,9 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
                   </div>}
                   {defaultOnly && <button
                     type="button"
-                    onClick={handleOpenDemoWindow}
-                    title={t('在新窗口中打开 HTML 演示')}
-                    aria-label={t('在新窗口中打开 HTML 演示')}
+                    onClick={handleOpenDemoFullscreen}
+                    title={t('全屏查看 HTML 演示')}
+                    aria-label={t('全屏查看 HTML 演示')}
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 transition-colors shrink-0"
                   >
                     <Maximize2 size={14} />
@@ -874,6 +887,54 @@ export function SolutionSchemesTab({ activeProblem, updateProblem, defaultOnly =
             </div>
           </div>,
           defaultOnly ? (document.getElementById('detail-demo-host') || document.body) : document.body
+        )}
+
+      {/* ===== 演示全屏预览 Modal（避免 window.open 被浏览器拦截） ===== */}
+      {demoFullscreen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-3 sm:p-6 animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('HTML 演示全屏预览')}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setDemoFullscreen(false)
+            }}
+          >
+            <div className="relative w-full h-full max-w-[1600px] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 shrink-0">
+                <Maximize2 size={14} className="text-primary-500 shrink-0" />
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  {displayName(selected)} · {t('HTML 演示')}
+                </span>
+                <div className="flex-1" />
+                <span className="hidden sm:inline text-[10px] font-medium text-slate-400">{t('按 Esc 关闭')}</span>
+                <button
+                  type="button"
+                  onClick={() => setDemoFullscreen(false)}
+                  title={t('关闭演示')}
+                  aria-label={t('关闭演示')}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 active:scale-90 transition-all shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              {demoText.trim() ? (
+                <iframe
+                  title={t('解题方案演示')}
+                  className="flex-1 w-full min-h-0 border-0 bg-white"
+                  sandbox="allow-scripts allow-same-origin"
+                  srcDoc={demoText}
+                />
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <Sparkles size={28} className="text-slate-300" />
+                  <p className="text-sm font-medium">{t('暂无演示内容')}</p>
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
         )}
     </>
   )
