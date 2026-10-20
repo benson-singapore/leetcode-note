@@ -183,6 +183,58 @@ type ActivityDayProblem struct {
 	ReviewCount        int    `json:"reviewCount"`
 }
 
+// DailyGoal 今日目标（每日一组题目与选题配置）
+type DailyGoal struct {
+	ID        string          `json:"id"`
+	GoalDate  string          `json:"goal_date"`
+	Title     string          `json:"title"`
+	Config    string          `json:"config"`
+	Total     int             `json:"total"`
+	Completed int             `json:"completed"`
+	Items     []DailyGoalItem `json:"items"`
+	CreatedAt string          `json:"created_at"`
+	UpdatedAt string          `json:"updated_at"`
+}
+
+// DailyGoalItem 今日目标中的题目；完成状态与 user_problems 实时同步
+type DailyGoalItem struct {
+	ID              string `json:"id"`
+	GoalID          string `json:"goal_id"`
+	ProblemID       string `json:"problem_id"`
+	SortOrder       int    `json:"sort_order"`
+	LcID            string `json:"lc_id"`
+	LcFrontendID    int    `json:"lc_frontend_id"`
+	Title           string `json:"title"`
+	TranslatedTitle string `json:"translated_title"`
+	Difficulty      string `json:"difficulty"`
+	TopicTags       string `json:"topic_tags"`
+	UserProblemID   string `json:"user_problem_id"`
+	Status          string `json:"status"`
+	ProgressStatus  string `json:"progress_status"`
+	BaselineStatus  string `json:"baseline_status"`
+	Completed       bool   `json:"completed"`
+}
+
+// DailyGoalCandidate 供 AI 选题使用的最小题目信息
+type DailyGoalCandidate struct {
+	ProblemID       string
+	LcID            string
+	LcFrontendID    int
+	Title           string
+	TranslatedTitle string
+	Difficulty      string
+	TopicTags       string
+	ProgressStatus  string
+}
+
+// DailyGoalConfig 今日目标选题配置
+type DailyGoalConfig struct {
+	Count        int      `json:"count"`
+	Tags         []string `json:"tags"`
+	Difficulties []string `json:"difficulties"`
+	Notes        string   `json:"notes"`
+}
+
 // User 用户账号表
 type User struct {
 	ID             string     `json:"id"`

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ArrowDownAZ,
   ArrowUpAZ,
@@ -158,6 +159,7 @@ export default function Problems({ reviewMode = false }) {
   const [activeProblemId, setActiveProblemId] = useState(null)
   const [activeProblem, setActiveProblem] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // 内置 LeetCode 题库浏览器（null = 关闭）
   const [embeddedUrl, setEmbeddedUrl] = useState(null)
@@ -302,6 +304,16 @@ export default function Problems({ reviewMode = false }) {
       })
       .finally(() => setDetailLoading(false))
   }
+
+  // 支持从今日目标等页面通过 /problems?open=<problemId> 直接打开题目抽屉
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId) return
+    handleOpenProblem({ id: openId })
+    setSearchParams({}, { replace: true })
+    // 仅处理首次进入时的 open 参数
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 打开 LeetCode 题库（按设置决定内置浏览器 / 系统浏览器）
   const handleOpenLeetcode = async () => {

@@ -114,6 +114,29 @@ CREATE TABLE IF NOT EXISTS ai_messages (
   FOREIGN KEY (session_id) REFERENCES ai_sessions(id) ON DELETE CASCADE
 );
 
+-- 今日目标表：按自然日保存每日练习目标与选题配置
+CREATE TABLE IF NOT EXISTS daily_goals (
+  id TEXT PRIMARY KEY,
+  goal_date TEXT NOT NULL UNIQUE,
+  title TEXT DEFAULT '今日目标',
+  config TEXT DEFAULT '{}',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 今日目标题目表：记录某天目标包含的题目；完成状态通过 user_problems 实时同步
+CREATE TABLE IF NOT EXISTS daily_goal_problems (
+  id TEXT PRIMARY KEY,
+  goal_id TEXT NOT NULL,
+  problem_id TEXT NOT NULL,
+  sort_order INTEGER DEFAULT 0,
+  baseline_status TEXT DEFAULT 'Unpracticed',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (goal_id) REFERENCES daily_goals(id) ON DELETE CASCADE,
+  FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
+  UNIQUE(goal_id, problem_id)
+);
+
 -- 索引优化查询性能
 CREATE INDEX IF NOT EXISTS idx_user_problems_problem_id ON user_problems(problem_id);
 CREATE INDEX IF NOT EXISTS idx_user_problems_status ON user_problems(status);
@@ -124,3 +147,6 @@ CREATE INDEX IF NOT EXISTS idx_reviews_user_problem_id ON reviews(user_problem_i
 CREATE INDEX IF NOT EXISTS idx_reviews_review_date ON reviews(review_date);
 CREATE INDEX IF NOT EXISTS idx_ai_messages_session ON ai_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_solution_schemes_problem_id ON solution_schemes(problem_id);
+CREATE INDEX IF NOT EXISTS idx_daily_goals_date ON daily_goals(goal_date);
+CREATE INDEX IF NOT EXISTS idx_daily_goal_problems_goal ON daily_goal_problems(goal_id);
+CREATE INDEX IF NOT EXISTS idx_daily_goal_problems_problem ON daily_goal_problems(problem_id);

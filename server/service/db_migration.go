@@ -121,8 +121,43 @@ func MigrateDatabase() error {
 		log.Printf("[Migration] 创建 solution_schemes 表失败: %v\n", err)
 	}
 
+	if err := createDailyGoalTables(db); err != nil {
+		log.Printf("[Migration] 创建 daily_goals 表失败: %v\n", err)
+	}
+	if err := addColumnIfNotExists(db, "daily_goal_problems", "baseline_status", "TEXT DEFAULT 'Unpracticed'"); err != nil {
+		log.Printf("[Migration] 添加 daily_goal_problems.baseline_status 失败: %v\n", err)
+	}
+
 	log.Println("[Migration] 数据库迁移完成")
 	return nil
+}
+
+func createDailyGoalTables(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS daily_goals (
+			id TEXT PRIMARY KEY,
+			goal_date TEXT NOT NULL UNIQUE,
+			title TEXT DEFAULT '今日目标',
+			config TEXT DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS daily_goal_problems (
+			id TEXT PRIMARY KEY,
+			goal_id TEXT NOT NULL,
+			problem_id TEXT NOT NULL,
+			sort_order INTEGER DEFAULT 0,
+			baseline_status TEXT DEFAULT 'Unpracticed',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (goal_id) REFERENCES daily_goals(id) ON DELETE CASCADE,
+			FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
+			UNIQUE(goal_id, problem_id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_daily_goals_date ON daily_goals(goal_date);
+		CREATE INDEX IF NOT EXISTS idx_daily_goal_problems_goal ON daily_goal_problems(goal_id);
+		CREATE INDEX IF NOT EXISTS idx_daily_goal_problems_problem ON daily_goal_problems(problem_id);
+	`)
+	return err
 }
 
 func createSolutionSchemesTable(db *sql.DB) error {

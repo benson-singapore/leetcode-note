@@ -24,6 +24,7 @@ func RegisterRoutes(r *gin.Engine, apiService *apiaccess.Manager) {
 	imageCtrl := controller.NewImageController()
 	settingsCtrl := controller.NewSettingsController(apiService)
 	aiCtrl := controller.NewAIController()
+	dailyGoalCtrl := controller.NewDailyGoalController()
 
 	swaggerUI := httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json"))
 	r.GET("/swagger/*any", func(c *gin.Context) {
@@ -128,6 +129,16 @@ func RegisterRoutes(r *gin.Engine, apiService *apiaccess.Manager) {
 			}
 		}
 
+		// 今日目标路由
+		goals := v1.Group("/daily-goals")
+		{
+			goals.GET("/today", dailyGoalCtrl.GetToday)
+			goals.GET("/options", dailyGoalCtrl.GetOptions)
+			goals.POST("/generate", dailyGoalCtrl.GenerateAI)
+			goals.POST("", dailyGoalCtrl.Create)
+			goals.DELETE("/today", dailyGoalCtrl.ClearToday)
+		}
+
 		// AI 路由
 		ai := v1.Group("/ai")
 		{
@@ -147,7 +158,7 @@ func RegisterRoutes(r *gin.Engine, apiService *apiaccess.Manager) {
 			ai.PUT("/assistants/:id/models/:modelId/enabled", aiCtrl.ToggleModel)
 			ai.POST("/assistants/:id/test", aiCtrl.TestAssistant)
 
-			ai.POST("/chat", aiCtrl.Chat)            // SSE 流式对话
+			ai.POST("/chat", aiCtrl.Chat)              // SSE 流式对话
 			ai.POST("/chat/cancel", aiCtrl.CancelChat) // 取消当前生成
 			ai.GET("/sessions", aiCtrl.ListSessions)
 			ai.POST("/sessions", aiCtrl.CreateSession)

@@ -11,6 +11,7 @@ import detailDrawer from './locales/detailDrawer'
 import solutionSchemes from './locales/solutionSchemes'
 import heatmap from './locales/heatmap'
 import codeEditor from './locales/codeEditor'
+import dailyGoal from './locales/dailyGoal'
 
 export const LANGUAGE_KEY = 'app.ui_language'
 export const LANGUAGE_CHANGED_EVENT = 'app-language-changed'
@@ -29,6 +30,7 @@ const DICTIONARY = {
   ...solutionSchemes,
   ...heatmap,
   ...codeEditor,
+  ...dailyGoal,
 }
 
 function readStoredLanguage() {

@@ -13,6 +13,7 @@ import {
   RefreshCw,
   LogOut,
   BarChart3,
+  Target,
 } from 'lucide-react'
 import packageJson from '../package.json'
 import { getSettings, getLeetCodeUserProfile, getLeetCodeSolvedStats, updateSettings } from './api/leetcode'
@@ -21,6 +22,7 @@ import { openInSystemBrowser } from './utils/browserOpen'
 import { isTauri } from './api/client'
 import { useI18n } from './i18n'
 import Dashboard from './pages/Dashboard.jsx'
+import DailyGoal from './pages/DailyGoal.jsx'
 import Problems from './pages/Problems.jsx'
 import ProblemDetail from './pages/ProblemDetail.jsx'
 import CalendarStats from './pages/CalendarStats.jsx'
@@ -30,6 +32,7 @@ import UserAvatar from './components/UserAvatar.jsx'
 
 const navItems = [
   { to: '/', label: '数据看板', icon: LayoutDashboard, end: true },
+  { to: '/daily-goal', label: '今日目标', icon: Target, end: true },
   { to: '/problems', label: '题库', icon: BookOpen, end: true },
   { to: '/problems/review', label: '复习', icon: History, end: true },
   { to: '/calendar', label: '日历统计', icon: CalendarDays, end: true },
@@ -406,6 +409,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Outlet />}>
             <Route index element={<Dashboard />} />
+            <Route path="daily-goal" element={<DailyGoal />} />
             <Route path="problems" element={<Problems key="list" />} />
             <Route path="problems/review" element={<Problems key="review" reviewMode />} />
             <Route path="problems/:id" element={<ProblemDetail />} />

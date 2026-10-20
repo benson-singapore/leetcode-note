@@ -2,6 +2,7 @@
 export default {
   // 侧边栏导航
   '数据看板': 'Dashboard',
+  '今日目标': "Today's Goal",
   '题库': 'Problems',
   '复习': 'Review',
   '日历统计': 'Calendar',

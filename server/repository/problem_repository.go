@@ -98,6 +98,19 @@ func (r *ProblemRepository) GetProblemByLcID(lcID string) (*models.Problem, erro
 	return &problem, nil
 }
 
+// GetProblemByFrontendID 根据 LeetCode 前端题号获取题目
+func (r *ProblemRepository) GetProblemByFrontendID(frontendID int) (*models.Problem, error) {
+	var problem models.Problem
+	err := r.db.QueryRow(`
+		SELECT id, lc_id, lc_frontend_id, title, title_slug, translated_title, difficulty, content, translated_content, category_title, topic_tags, code_snippets, example_testcases, sample_test_case, likes, dislikes, is_paid_only, stats, pass_rate, frequency, description, examples, constraints, COALESCE(similar_questions, ''), COALESCE(position_level_tags, ''), COALESCE(has_html_demo, 0), created_at, updated_at
+		FROM problems WHERE lc_frontend_id = ? LIMIT 1
+	`, frontendID).Scan(&problem.ID, &problem.LcID, &problem.LcFrontendID, &problem.Title, &problem.TitleSlug, &problem.TranslatedTitle, &problem.Difficulty, &problem.Content, &problem.TranslatedContent, &problem.CategoryTitle, &problem.TopicTags, &problem.CodeSnippets, &problem.ExampleTestcases, &problem.SampleTestCase, &problem.Likes, &problem.Dislikes, &problem.IsPaidOnly, &problem.Stats, &problem.PassRate, &problem.Frequency, &problem.Description, &problem.Examples, &problem.Constraints, &problem.SimilarQuestions, &problem.PositionLevelTags, &problem.HasHtmlDemo, &problem.CreatedAt, &problem.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &problem, nil
+}
+
 // GetProblemByTitleSlug 根据 titleSlug 获取题目
 func (r *ProblemRepository) GetProblemByTitleSlug(titleSlug string) (*models.Problem, error) {
 	var problem models.Problem
