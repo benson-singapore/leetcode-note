@@ -231,6 +231,37 @@ func (r *UserProblemRepository) GetProblemsCreatedOnDate(date string) ([]Problem
 	return out, rows.Err()
 }
 
+// ActivityProblemKey identifies a problem and its user-specific record for date-detail queries.
+type ActivityProblemKey struct {
+	ProblemID     string
+	UserProblemID string
+}
+
+// GetProblemKeysCreatedOnDate lists problems created on a local calendar date without summary fields.
+func (r *UserProblemRepository) GetProblemKeysCreatedOnDate(date string) ([]ActivityProblemKey, error) {
+	rows, err := r.db.Query(`
+		SELECT p.id, COALESCE(up.id, '')
+		FROM problems p
+		LEFT JOIN user_problems up ON up.problem_id = p.id
+		WHERE strftime('%Y-%m-%d', p.created_at, 'localtime') = ?
+		ORDER BY p.lc_frontend_id ASC, p.lc_id ASC
+	`, date)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	keys := []ActivityProblemKey{}
+	for rows.Next() {
+		var key ActivityProblemKey
+		if err := rows.Scan(&key.ProblemID, &key.UserProblemID); err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	return keys, rows.Err()
+}
+
 // GetDailyCreatedProblemCountsBetween 按自然日统计区间内新创建的题目条数（从 problems 表）
 func (r *UserProblemRepository) GetDailyCreatedProblemCountsBetween(startDate, endDate string) (map[string]int, error) {
 	rows, err := r.db.Query(`

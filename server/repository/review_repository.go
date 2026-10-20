@@ -59,6 +59,56 @@ func (r *ReviewRepository) GetReviewsByUserProblemID(userProblemID string) ([]mo
 	return reviews, rows.Err()
 }
 
+// GetLatestReviewByUserProblemOnDate returns the latest check-in created for a user problem on a local date.
+func (r *ReviewRepository) GetLatestReviewByUserProblemOnDate(userProblemID, date string) (*models.Review, error) {
+	var review models.Review
+	err := r.db.QueryRow(`
+		SELECT id, user_problem_id, review_date, status, COALESCE(progress_status, ''),
+			COALESCE(personal_difficulty, 0), COALESCE(comment, ''), COALESCE(code, ''),
+			COALESCE(code_language, ''), created_at
+		FROM reviews
+		WHERE user_problem_id = ? AND strftime('%Y-%m-%d', created_at, 'localtime') = ?
+		ORDER BY created_at DESC, id DESC
+		LIMIT 1
+	`, userProblemID, date).Scan(
+		&review.ID, &review.UserProblemID, &review.ReviewDate, &review.Status,
+		&review.ProgressStatus, &review.PersonalDifficulty, &review.Comment,
+		&review.Code, &review.CodeLanguage, &review.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &review, nil
+}
+
+// GetProblemKeysReviewedOnDate returns unique problems with a check-in on a local date.
+func (r *ReviewRepository) GetProblemKeysReviewedOnDate(date string) ([]ActivityProblemKey, error) {
+	rows, err := r.db.Query(`
+		SELECT DISTINCT up.problem_id, up.id
+		FROM reviews r
+		JOIN user_problems up ON up.id = r.user_problem_id
+	WHERE strftime('%Y-%m-%d', r.created_at, 'localtime') = ?
+		ORDER BY up.problem_id ASC, up.id ASC
+	`, date)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	keys := []ActivityProblemKey{}
+	for rows.Next() {
+		var key ActivityProblemKey
+		if err := rows.Scan(&key.ProblemID, &key.UserProblemID); err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	return keys, rows.Err()
+}
+
 // DeleteReview 删除复习记录
 func (r *ReviewRepository) DeleteReview(id string) error {
 	_, err := r.db.Exec("DELETE FROM reviews WHERE id = ?", id)

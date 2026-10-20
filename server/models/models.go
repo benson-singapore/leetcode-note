@@ -235,6 +235,65 @@ type DailyGoalConfig struct {
 	Notes        string   `json:"notes"`
 }
 
+// CalendarQuestionDetail 按日历日期返回的题目详情，包含题目正文与用户答题数据。
+type CalendarQuestionDetail struct {
+	Problem     Problem            `json:"problem"`
+	UserProblem *UserProblemAnswer `json:"user_problem,omitempty"`
+	CheckIn     *Review            `json:"check_in,omitempty"`
+}
+
+// CalendarReviewDetail 按题目聚合某日的复习打卡记录。
+type CalendarReviewDetail struct {
+	Problem     Problem           `json:"problem"`
+	UserProblem UserProblemAnswer `json:"user_problem"`
+	CheckIn     *Review           `json:"check_in"`
+}
+
+// DailyGoalItemDetail 今日目标中的完整题目、用户答题与当日打卡数据。
+type DailyGoalItemDetail struct {
+	Item        DailyGoalItem      `json:"item"`
+	Problem     Problem            `json:"problem"`
+	UserProblem *UserProblemAnswer `json:"user_problem,omitempty"`
+	CheckIn     *Review            `json:"check_in,omitempty"`
+}
+
+// DailyGoalDetails 返回目标统计及带完整题目、答题数据的目标项。
+type DailyGoalDetails struct {
+	ID        string                `json:"id"`
+	GoalDate  string                `json:"goal_date"`
+	Title     string                `json:"title"`
+	Config    string                `json:"config"`
+	Total     int                   `json:"total"`
+	Completed int                   `json:"completed"`
+	Items     []DailyGoalItemDetail `json:"items"`
+	CreatedAt string                `json:"created_at"`
+	UpdatedAt string                `json:"updated_at"`
+}
+
+// CalendarDayDetails 日历单日聚合详情。
+type CalendarDayDetails struct {
+	Date      string                   `json:"date"`
+	Problems  []CalendarQuestionDetail `json:"problems"`
+	Reviews   []CalendarReviewDetail   `json:"reviews"`
+	DailyGoal *DailyGoalDetails        `json:"daily_goal"`
+}
+
+// UserProblemAnswer 是面向详情响应的答题记录，不重复嵌套完整题目对象。
+type UserProblemAnswer struct {
+	ID                 string     `json:"id"`
+	ProblemID          string     `json:"problem_id"`
+	PersonalDifficulty int        `json:"personal_difficulty"`
+	Status             string     `json:"status"`
+	ProgressStatus     string     `json:"progress_status"`
+	ReviewCount        int        `json:"review_count"`
+	Notes              string     `json:"notes"`
+	Code               string     `json:"code"`
+	LastReview         *time.Time `json:"last_review"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	HasHtmlDemo        int        `json:"has_html_demo"`
+}
+
 // User 用户账号表
 type User struct {
 	ID             string     `json:"id"`

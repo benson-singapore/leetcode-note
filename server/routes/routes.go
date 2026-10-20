@@ -25,6 +25,7 @@ func RegisterRoutes(r *gin.Engine, apiService *apiaccess.Manager) {
 	settingsCtrl := controller.NewSettingsController(apiService)
 	aiCtrl := controller.NewAIController()
 	dailyGoalCtrl := controller.NewDailyGoalController()
+	calendarCtrl := controller.NewCalendarController()
 
 	swaggerUI := httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json"))
 	r.GET("/swagger/*any", func(c *gin.Context) {
@@ -37,6 +38,9 @@ func RegisterRoutes(r *gin.Engine, apiService *apiaccess.Manager) {
 
 	v1 := r.Group("/api/v1")
 	{
+		// 日历单日详情：当日新题、复习打卡与每日目标完整数据
+		v1.GET("/calendar/day", calendarCtrl.GetDay)
+
 		// 设置路由（原 auth/leetcode-cookie 迁移至此）
 		v1.GET("/settings", settingsCtrl.GetAllSettings)
 		v1.GET("/api-service", settingsCtrl.GetAPIServiceInfo)
