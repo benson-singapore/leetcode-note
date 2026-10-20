@@ -96,6 +96,10 @@ frontend-check: ## 前端检查：vite build
 server-fmt: ## Go 代码格式化
 	@cd server && gofmt -l -w . && echo "✅ 格式化完成"
 
+.PHONY: swagger
+swagger: ## 根据 Go 路由生成 Swagger API 文档（server/docs/swagger.json）
+	@cd server && go run ./cmd/swagger
+
 # ============ 数据/清理 ============
 
 .PHONY: clean

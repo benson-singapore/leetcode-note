@@ -1,10 +1,15 @@
 package routes
 
 import (
+	"net/http"
+	"strings"
+
 	"leetcode-note-sidecar/apiaccess"
 	"leetcode-note-sidecar/controller"
+	"leetcode-note-sidecar/docs"
 
 	"github.com/gin-gonic/gin"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 // RegisterRoutes registers the API routes shared by the loopback sidecar and
@@ -19,6 +24,15 @@ func RegisterRoutes(r *gin.Engine, apiService *apiaccess.Manager) {
 	imageCtrl := controller.NewImageController()
 	settingsCtrl := controller.NewSettingsController(apiService)
 	aiCtrl := controller.NewAIController()
+
+	swaggerUI := httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json"))
+	r.GET("/swagger/*any", func(c *gin.Context) {
+		if strings.Trim(c.Param("any"), "/") == "doc.json" {
+			c.Data(http.StatusOK, "application/json; charset=utf-8", docs.SwaggerJSON())
+			return
+		}
+		swaggerUI.ServeHTTP(c.Writer, c.Request)
+	})
 
 	v1 := r.Group("/api/v1")
 	{
