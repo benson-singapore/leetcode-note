@@ -14,6 +14,12 @@
       "name": "api-service"
     },
     {
+      "name": "calendar"
+    },
+    {
+      "name": "daily-goals"
+    },
+    {
       "name": "images"
     },
     {
@@ -874,6 +880,245 @@
         ],
         "summary": "Get a p i service info",
         "operationId": "getAPIServiceInfoSettingsController",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer API token"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calendar/day": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Get day",
+        "operationId": "getDayCalendarController",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "description": "日期 YYYY-MM-DD",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer API token"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/daily-goals": {
+      "post": {
+        "tags": [
+          "daily-goals"
+        ],
+        "summary": "Create",
+        "operationId": "createDailyGoalController",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer API token"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/daily-goals/generate": {
+      "post": {
+        "tags": [
+          "daily-goals"
+        ],
+        "summary": "Generate a i",
+        "operationId": "generateAIDailyGoalController",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer API token"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/daily-goals/options": {
+      "get": {
+        "tags": [
+          "daily-goals"
+        ],
+        "summary": "Get options",
+        "operationId": "getOptionsDailyGoalController",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer API token"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/daily-goals/today": {
+      "delete": {
+        "tags": [
+          "daily-goals"
+        ],
+        "summary": "Clear today",
+        "operationId": "clearTodayDailyGoalController",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "description": "日期 YYYY-MM-DD，默认今天",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer API token"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "daily-goals"
+        ],
+        "summary": "Get today",
+        "operationId": "getTodayDailyGoalController",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "description": "日期 YYYY-MM-DD，默认今天",
+            "type": "string"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",

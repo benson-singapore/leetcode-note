@@ -99,6 +99,12 @@ func generate(routesList gin.RoutesInfo) swaggerDoc {
 		for _, match := range pathParameter.FindAllStringSubmatch(route.Path, -1) {
 			parameters = append(parameters, parameter{Name: match[1], In: "path", Required: true, Type: "string"})
 		}
+		switch route.Path {
+		case "/api/v1/calendar/day":
+			parameters = append(parameters, parameter{Name: "date", In: "query", Required: true, Description: "日期 YYYY-MM-DD", Type: "string"})
+		case "/api/v1/daily-goals/today":
+			parameters = append(parameters, parameter{Name: "date", In: "query", Required: false, Description: "日期 YYYY-MM-DD，默认今天", Type: "string"})
+		}
 		op := operation{
 			Tags:        []string{tag},
 			Summary:     humanizeHandler(route.Handler),
