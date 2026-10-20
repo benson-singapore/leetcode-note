@@ -469,6 +469,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
                   activeProblem={activeProblem}
                   onOpenTraining={handleOpenTraining}
                   reviews={reviews}
+                  setReviews={setReviews}
                   isLoadingReviews={isLoadingReviews}
                 />
                 <div className="h-px bg-slate-50"></div>
@@ -1143,10 +1144,29 @@ function TagsSection({ activeProblem }) {
   )
 }
 
+function formatReviewCreatedAt(review) {
+  if (review?.created_at) {
+    const createdAt = new Date(review.created_at)
+    if (!Number.isNaN(createdAt.getTime())) {
+      return createdAt.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    }
+  }
+
+  // 老记录可能没有创建时间，只显示记录日期，避免将日期误当成 UTC 时间。
+  return String(review?.review_date || '').slice(0, 10).replace(/-/g, '/')
+}
+
 function ReviewSection({
   activeProblem,
   onOpenTraining,
   reviews,
+  setReviews,
   isLoadingReviews,
 }) {
   const { t } = useI18n()
@@ -1211,7 +1231,7 @@ function ReviewSection({
       setReviews((current) =>
         current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
       )
-      setSelectedReview((current) => (current?.id === updated.id ? { ...current, ...updated } : current))
+      handleCloseReview()
     } catch (error) {
       console.error(t('保存打卡记录失败:'), error)
       setSaveError(error.message || t('保存失败，请重试'))
@@ -1278,13 +1298,7 @@ function ReviewSection({
               <div className="bg-white p-4 rounded-xl border border-slate-50 shadow-sm group-hover:border-primary-100 transition-all">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-[10px] font-semibold text-slate-500 uppercase font-mono">
-                    {new Date(rev.review_date).toLocaleString('zh-CN', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatReviewCreatedAt(rev)}
                   </span>
                   <span
                     className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
@@ -1331,13 +1345,7 @@ function ReviewSection({
                   </h2>
                   <p className="mt-1 text-[11px] text-slate-400">{t('代码快照')}
                     <span className="ml-1.5 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500">
-                      {new Date(selectedReview.created_at || selectedReview.review_date).toLocaleString('zh-CN', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatReviewCreatedAt(selectedReview)}
                       · 创建后编辑不计入统计
                     </span>
                   </p>
@@ -1406,13 +1414,7 @@ function ReviewSection({
 
               <div className="flex-1 overflow-auto custom-scrollbar px-4 pt-1.5 pb-4">
                 <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                  创建于 {new Date(selectedReview.created_at || selectedReview.review_date).toLocaleString('zh-CN', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  创建于 {formatReviewCreatedAt(selectedReview)}
                 </p>
 
                 <section className="mt-3.5 flex flex-col gap-2.5">
