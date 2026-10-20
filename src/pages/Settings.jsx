@@ -54,6 +54,7 @@ import {
   updateDefaultChain,
 } from '../api/ai'
 import { get, post, isTauri, resolveBase } from '../api/client'
+import { openInSystemBrowser } from '../utils/browserOpen'
 import pluginScriptRaw from '../../tamper-monkey/leetcode-note-drawer.user.js?raw'
 
 const formatLeetCodeError = (error, fallback) => {
@@ -82,6 +83,7 @@ const isCloudflareChallengeError = (error) => {
 const NAV = [
   { id: 'binding', label: '账号绑定', icon: Link2 },
   { id: 'ai', label: 'AI 助手', icon: Sparkles },
+  { id: 'api', label: 'API 服务', icon: Globe },
   { id: 'general', label: '通用设置', icon: SlidersHorizontal },
   { id: 'plugin', label: '插件同步', icon: Puzzle },
   { id: 'about', label: '关于', icon: Info },
@@ -897,6 +899,10 @@ export default function Settings({
   const [importedTotal, setImportedTotal] = useState(null) // 累计从 LeetCode 导入的题数
   const [serverHost, setServerHost] = useState('')
   const [copied, setCopied] = useState(false)
+  const [apiServiceInfo, setApiServiceInfo] = useState(null)
+  const [apiServiceBusy, setApiServiceBusy] = useState(false)
+  const [apiTokenVisible, setApiTokenVisible] = useState(false)
+  const [apiTokenCopied, setApiTokenCopied] = useState(false)
 
   // 解析后台服务地址（Tauri 下取 sidecar 动态端口，浏览器调试默认 17877）
   useEffect(() => {
@@ -1097,6 +1103,7 @@ export default function Settings({
 
   useEffect(() => {
     getSettings().then((res) => setSettings(res.data || res)).catch(() => {})
+    get('/api/v1/api-service').then((res) => setApiServiceInfo(res?.data ?? res)).catch(() => {})
     loadAssistants()
   }, [])
 
@@ -1191,6 +1198,43 @@ export default function Settings({
     } catch (e) {
       flash(t('保存失败：{error}', { error: e.message }), 'err')
     }
+  }
+
+  const toggleApiService = async (enabled) => {
+    const value = enabled ? 'true' : 'false'
+    setApiServiceBusy(true)
+    try {
+      await updateSettings({ api_service_enabled: value })
+      setSettings((prev) => ({ ...prev, api_service_enabled: value }))
+      const response = await get('/api/v1/api-service')
+      const info = response?.data ?? response
+      setApiServiceInfo(info)
+      flash(enabled ? t('API 服务已开启') : t('API 服务已关闭'))
+    } catch (error) {
+      try {
+        const response = await get('/api/v1/api-service')
+        setApiServiceInfo(response?.data ?? response)
+      } catch {}
+      flash(t('API 服务设置失败：{error}', { error: error.message || error }), 'err')
+    } finally {
+      setApiServiceBusy(false)
+    }
+  }
+
+  const copyApiToken = async () => {
+    if (!apiServiceInfo?.token) return
+    try {
+      await navigator.clipboard.writeText(apiServiceInfo.token)
+    } catch {
+      const input = document.createElement('textarea')
+      input.value = apiServiceInfo.token
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+    }
+    setApiTokenCopied(true)
+    setTimeout(() => setApiTokenCopied(false), 2000)
   }
 
   // 监听登录窗口回传的 Cookie 事件（仅 Tauri 环境）
@@ -1953,6 +1997,91 @@ export default function Settings({
                 </div>,
                 document.body,
               )}
+            </section>
+          )}
+
+          {/* 对外 API 服务 */}
+          {active === 'api' && (
+            <section className="space-y-5">
+              <SectionHeader
+                title={t('API 服务')}
+                desc={t('授权其他设备或程序通过 HTTP API 访问本应用的 Go 服务')}
+              />
+              <Card
+                icon={Globe}
+                iconBg="bg-violet-600"
+                title={t('外部 API 服务')}
+                desc={t('开启后会在独立端口提供当前 Go 服务的 API，并自动生成 Swagger 接口文档。')}
+              >
+                <div className="space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{t('允许外部程序访问 API')}</p>
+                      <p className="mt-1 text-xs text-slate-500">{t('默认关闭；开启后监听本机网络接口')}</p>
+                    </div>
+                    <label className="inline-flex cursor-pointer items-center gap-3">
+                      <span className={`rounded-full border px-3 py-1 text-[11px] font-medium ${apiServiceInfo?.enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+                        {apiServiceInfo?.enabled ? t('运行中') : t('已关闭')}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={apiServiceInfo?.enabled ?? settings.api_service_enabled === 'true'}
+                        disabled={apiServiceBusy || apiServiceInfo === null}
+                        onChange={(event) => toggleApiService(event.target.checked)}
+                        className="h-4 w-4 accent-primary-600"
+                      />
+                    </label>
+                  </div>
+
+                  {apiServiceInfo?.enabled && (
+                    <>
+                      <div className="rounded-xl border border-slate-100 bg-white p-4">
+                        <div className="mb-3">
+                          <p className="text-sm font-medium text-slate-800">{t('Swagger 接口文档')}</p>
+                          <p className="mt-1 text-xs text-slate-500">{t('选择本机地址或局域网地址打开文档')}</p>
+                        </div>
+                        <div className="space-y-3">
+                          {(apiServiceInfo.addresses || []).map((address) => (
+                            <div key={address.host} className="grid gap-2 rounded-lg bg-slate-50 p-3 text-xs md:grid-cols-[100px_minmax(0,1fr)]">
+                              <span className="font-medium text-slate-500">{address.host === '127.0.0.1' ? t('本机') : t('局域网')}</span>
+                              <div className="min-w-0 space-y-1.5">
+                                <a href={address.swagger_url} target="_blank" rel="noreferrer" onClick={(event) => { event.preventDefault(); openInSystemBrowser(address.swagger_url) }} className="block truncate font-mono text-primary-700 hover:underline">{address.swagger_url}</a>
+                                <p className="truncate font-mono text-slate-500">{t('API 地址')}：{address.api_url}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {apiServiceInfo.token && (
+                        <div className="rounded-xl border border-slate-100 bg-white p-4">
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-slate-800">{t('API 授权令牌')}</p>
+                            <div className="flex items-center gap-2">
+                              <button type="button" onClick={() => setApiTokenVisible((visible) => !visible)} className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100">
+                                {apiTokenVisible ? t('隐藏') : t('显示')}
+                              </button>
+                              <button type="button" onClick={copyApiToken} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-primary-700 hover:bg-primary-50">
+                                {apiTokenCopied ? <Check size={13} /> : <Copy size={13} />}
+                                {apiTokenCopied ? t('已复制到剪贴板') : t('复制令牌')}
+                              </button>
+                            </div>
+                          </div>
+                          <code className="block overflow-x-auto rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700">
+                            {apiTokenVisible ? apiServiceInfo.token : '•'.repeat(32)}
+                          </code>
+                          <p className="mt-2 text-[11px] leading-5 text-slate-400">{t('请求 API 时请在 Authorization 请求头中填写 Bearer 令牌；Swagger 页面可通过 Authorize 按钮设置。')}</p>
+                        </div>
+                      )}
+
+                      <p className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50/70 p-3 text-xs leading-5 text-amber-800">
+                        <ShieldCheck size={14} className="mt-0.5 shrink-0" />
+                        {t('开启后，能访问本机网络端口的设备可连接此服务。请妥善保管授权令牌，并避免将端口暴露到不可信网络。')}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </Card>
             </section>
           )}
 

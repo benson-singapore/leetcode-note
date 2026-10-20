@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"leetcode-note-sidecar/apiaccess"
 	"leetcode-note-sidecar/config"
 	"leetcode-note-sidecar/routes"
 	"leetcode-note-sidecar/service"
@@ -21,6 +22,7 @@ func main() {
 	// 启动参数（由 Tauri 传入）
 	var (
 		port    = flag.Int("port", 17877, "HTTP 监听端口")
+		apiPort = flag.Int("api-port", 17878, "外部 API 服务端口")
 		dataDir = flag.String("data-dir", "", "数据目录（SQLite 与演示 HTML 存放处），默认为可执行文件所在目录")
 		dev     = flag.Bool("dev", false, "开发模式（允许 0.0.0.0，便于本地调试）")
 	)
@@ -43,6 +45,9 @@ func main() {
 	if err := service.MigrateDatabase(); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
+	if *apiPort < 1 || *apiPort > 65535 {
+		log.Fatalf("Invalid API port: %d", *apiPort)
+	}
 
 	// 本地应用：生产模式仅绑定 127.0.0.1
 	gin.SetMode(gin.ReleaseMode)
@@ -55,8 +60,18 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	// 注册路由
-	routes.RegisterRoutes(r)
+	// 注册路由。可选的外部 API listener 使用相同路由，但额外要求 Bearer 令牌。
+	apiService := apiaccess.NewManager(*apiPort)
+	routes.RegisterRoutes(r, apiService)
+	apiService.SetHandler(r)
+	if enabled, err := config.GetSetting("api_service_enabled"); err != nil {
+		log.Printf("Unable to read API service setting: %v", err)
+	} else if enabled == "true" {
+		if err := apiService.SetEnabled(true); err != nil {
+			log.Printf("Unable to start external API service: %v", err)
+			_ = config.SetSetting("api_service_enabled", "false")
+		}
+	}
 
 	addr := fmt.Sprintf("127.0.0.1:%d", *port)
 	if *dev {

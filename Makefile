@@ -4,8 +4,9 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-# 可覆盖变量：PORT=17877 TARGET=aarch64-apple-darwin make sidecar
+# 可覆盖变量：PORT=17877 API_PORT=17878 TARGET=aarch64-apple-darwin make sidecar
 PORT ?= 17877
+API_PORT ?= 17878
 DATA_DIR ?= $(CURDIR)/server/data
 
 # ============ 依赖安装 ============
@@ -37,7 +38,7 @@ dev: ## 桌面端开发（sidecar 编译 + vite + tauri 窗口）
 dev-web: ## 浏览器调试前端（自动起 sidecar + Vite，退出时一并结束）
 	@mkdir -p $(DATA_DIR)
 	@trap 'kill 0' EXIT INT TERM; \
-	cd server && go run . --port $(PORT) --data-dir $(DATA_DIR) --dev & \
+	cd server && go run . --port $(PORT) --api-port $(API_PORT) --data-dir $(DATA_DIR) --dev & \
 	SIDECAR_PID=$$!; \
 	for i in $$(seq 1 30); do curl -sf http://127.0.0.1:$(PORT)/health >/dev/null 2>&1 && break; sleep 0.5; done ; \
 	npm run dev
@@ -45,7 +46,7 @@ dev-web: ## 浏览器调试前端（自动起 sidecar + Vite，退出时一并�
 .PHONY: run-sidecar
 run-sidecar: ## 单独运行 Go sidecar（端口 PORT，默认 17877）
 	@mkdir -p $(DATA_DIR)
-	@cd server && go run . --port $(PORT) --data-dir $(DATA_DIR) --dev
+	@cd server && go run . --port $(PORT) --api-port $(API_PORT) --data-dir $(DATA_DIR) --dev
 
 # ============ 构建 ============
 

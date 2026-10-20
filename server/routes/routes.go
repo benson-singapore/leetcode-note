@@ -1,14 +1,15 @@
 package routes
 
 import (
+	"leetcode-note-sidecar/apiaccess"
 	"leetcode-note-sidecar/controller"
 
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterRoutes 注册所有路由
-// 本地应用无登录态，全部接口仅监听 127.0.0.1 供 Tauri WebView 与油猴脚本调用
-func RegisterRoutes(r *gin.Engine) {
+// RegisterRoutes registers the API routes shared by the loopback sidecar and
+// the optional Bearer-protected external API listener.
+func RegisterRoutes(r *gin.Engine, apiService *apiaccess.Manager) {
 	problemCtrl := controller.NewProblemController()
 	userProblemCtrl := controller.NewUserProblemController()
 	reviewCtrl := controller.NewReviewController()
@@ -16,13 +17,14 @@ func RegisterRoutes(r *gin.Engine) {
 	displayCtrl := controller.NewProblemDisplayController()
 	tagCtrl := controller.NewTagController()
 	imageCtrl := controller.NewImageController()
-	settingsCtrl := controller.NewSettingsController()
+	settingsCtrl := controller.NewSettingsController(apiService)
 	aiCtrl := controller.NewAIController()
 
 	v1 := r.Group("/api/v1")
 	{
 		// 设置路由（原 auth/leetcode-cookie 迁移至此）
 		v1.GET("/settings", settingsCtrl.GetAllSettings)
+		v1.GET("/api-service", settingsCtrl.GetAPIServiceInfo)
 		v1.PUT("/settings", settingsCtrl.UpdateSettings)
 		v1.GET("/settings/:key", settingsCtrl.GetSetting)
 		v1.PUT("/settings/:key", settingsCtrl.UpdateSetting)
