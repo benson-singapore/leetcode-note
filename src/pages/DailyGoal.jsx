@@ -32,10 +32,27 @@ const DIFFICULTIES = {
 }
 
 const STATUS_MAP = {
-  Unpracticed: { label: '未开始', color: 'bg-slate-100 text-slate-500' },
-  New: { label: '未开始', color: 'bg-slate-100 text-slate-500' },
+  Unpracticed: { label: '未练习', color: 'bg-slate-100 text-slate-500' },
+  New: { label: '未练习', color: 'bg-slate-100 text-slate-500' },
   Reviewing: { label: '复习中', color: 'bg-violet-50 text-violet-600' },
   Mastered: { label: '已精通', color: 'bg-emerald-50 text-emerald-700' },
+}
+
+const MASTERY_MAP = {
+  Confused: { label: '一脸懵逼😳', color: 'bg-red-50 text-red-600' },
+  New: { label: '未掌握', color: 'bg-blue-50 text-blue-600' },
+  Struggling: { label: '半生不熟', color: 'bg-orange-50 text-orange-600' },
+  Relearning: { label: '需重练', color: 'bg-yellow-50 text-yellow-700' },
+  Stable: { label: '很稳', color: 'bg-cyan-50 text-cyan-700' },
+  Mastered: { label: '已精通', color: 'bg-emerald-50 text-emerald-700' },
+}
+
+const PERSONAL_RATINGS = {
+  1: '⚡',
+  2: '👌',
+  3: '🤔',
+  4: '🤯',
+  5: '💀',
 }
 
 const COUNT_PRESETS = [3, 5, 7, 10]
@@ -47,22 +64,6 @@ function todayYMD() {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-function parseTags(raw) {
-  if (!raw) return []
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-    if (!Array.isArray(parsed)) return []
-    return parsed
-      .map((tag) => {
-        if (typeof tag === 'string') return tag
-        return tag.translatedName || tag.nameTranslated || tag.name || ''
-      })
-      .filter(Boolean)
-  } catch {
-    return String(raw).split(',').map((tag) => tag.trim()).filter(Boolean)
-  }
 }
 
 function readSavedConfig() {
@@ -213,6 +214,7 @@ export default function DailyGoal() {
           ...item,
           status: next.status ?? item.status,
           progress_status: progressStatus,
+          personal_difficulty: next.personalDifficulty ?? item.personal_difficulty,
           completed:
             progressStatus === 'Mastered'
               ? true
@@ -660,10 +662,11 @@ export default function DailyGoal() {
           <section className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card">
             <div className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-7 py-3.5 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-400">
               <div className="col-span-1">#</div>
-              <div className="col-span-4">{t('题名')}</div>
-              <div className="col-span-2 text-center">{t('知识点')}</div>
+              <div className="col-span-3">{t('题名')}</div>
               <div className="col-span-1 text-center">{t('难度')}</div>
               <div className="col-span-2 text-center">{t('完成状态')}</div>
+              <div className="col-span-1 text-center">{t('手感')}</div>
+              <div className="col-span-2 text-center">{t('打卡状态')}</div>
               <div className="col-span-2 pr-2 text-right">{t('操作')}</div>
             </div>
 
@@ -701,7 +704,8 @@ export default function DailyGoal() {
                     label: item.progress_status || '未知',
                     color: 'bg-slate-100 text-slate-500',
                   }
-                  const itemTags = parseTags(item.topic_tags)
+                  const mastery = MASTERY_MAP[item.status]
+                  const masteryEmoji = PERSONAL_RATINGS[item.personal_difficulty]
                   return (
                     <div
                       key={item.id}
@@ -718,20 +722,12 @@ export default function DailyGoal() {
                         )}
                         <span className="truncate">{item.lc_id}</span>
                       </div>
-                      <div className="col-span-4 min-w-0 pr-4">
+                      <div className="col-span-3 min-w-0 pr-4">
                         <p className={`truncate text-xs transition-colors group-hover:text-primary-800 ${
                           item.completed ? 'text-slate-400 line-through' : 'text-slate-700'
                         }`}>
                           {item.translated_title || item.title}
                         </p>
-                      </div>
-                      <div className="col-span-2 flex flex-wrap justify-center gap-1 overflow-hidden">
-                        {itemTags.slice(0, 2).map((tag) => (
-                          <span key={tag} className="max-w-[5.5rem] truncate rounded bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500">
-                            {tag}
-                          </span>
-                        ))}
-                        {itemTags.length === 0 && <span className="text-[10px] text-slate-300">—</span>}
                       </div>
                       <div className="col-span-1 flex justify-center">
                         <span className={`rounded border px-2 py-0.5 text-[10px] font-medium ${difficulty.color}`}>
@@ -742,6 +738,18 @@ export default function DailyGoal() {
                         <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${status.color}`}>
                           {t(status.label)}
                         </span>
+                      </div>
+                      <div className="col-span-1 flex justify-center text-sm">
+                        {masteryEmoji || '—'}
+                      </div>
+                      <div className="col-span-2 flex justify-center">
+                        {mastery ? (
+                          <span className={`max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-medium ${mastery.color}`}>
+                            {t(mastery.label)}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-300">—</span>
+                        )}
                       </div>
                       <div className="col-span-2 flex items-center justify-end gap-2 pr-1">
                         <span className="text-[11px] font-medium text-primary-600 opacity-0 transition group-hover:opacity-100">

@@ -51,6 +51,7 @@ func (r *DailyGoalRepository) GetByDate(date string) (*models.DailyGoal, error) 
 			p.difficulty, COALESCE(p.topic_tags, ''),
 			COALESCE(up.id, ''), COALESCE(up.status, ''),
 			COALESCE(NULLIF(up.progress_status, ''), 'Unpracticed'),
+			COALESCE(up.personal_difficulty, 0),
 			COALESCE(dgp.baseline_status, 'Unpracticed'),
 			EXISTS(
 				SELECT 1 FROM reviews r
@@ -76,6 +77,7 @@ func (r *DailyGoalRepository) GetByDate(date string) (*models.DailyGoal, error) 
 			&item.LcID, &item.LcFrontendID, &item.Title, &item.TranslatedTitle,
 			&item.Difficulty, &item.TopicTags,
 			&item.UserProblemID, &item.Status, &item.ProgressStatus,
+			&item.PersonalDifficulty,
 			&item.BaselineStatus, &reviewedToday,
 		); err != nil {
 			return nil, err

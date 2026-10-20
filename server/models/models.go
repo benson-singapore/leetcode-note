@@ -198,21 +198,22 @@ type DailyGoal struct {
 
 // DailyGoalItem 今日目标中的题目；完成状态与 user_problems 实时同步
 type DailyGoalItem struct {
-	ID              string `json:"id"`
-	GoalID          string `json:"goal_id"`
-	ProblemID       string `json:"problem_id"`
-	SortOrder       int    `json:"sort_order"`
-	LcID            string `json:"lc_id"`
-	LcFrontendID    int    `json:"lc_frontend_id"`
-	Title           string `json:"title"`
-	TranslatedTitle string `json:"translated_title"`
-	Difficulty      string `json:"difficulty"`
-	TopicTags       string `json:"topic_tags"`
-	UserProblemID   string `json:"user_problem_id"`
-	Status          string `json:"status"`
-	ProgressStatus  string `json:"progress_status"`
-	BaselineStatus  string `json:"baseline_status"`
-	Completed       bool   `json:"completed"`
+	ID                 string `json:"id"`
+	GoalID             string `json:"goal_id"`
+	ProblemID          string `json:"problem_id"`
+	SortOrder          int    `json:"sort_order"`
+	LcID               string `json:"lc_id"`
+	LcFrontendID       int    `json:"lc_frontend_id"`
+	Title              string `json:"title"`
+	TranslatedTitle    string `json:"translated_title"`
+	Difficulty         string `json:"difficulty"`
+	TopicTags          string `json:"topic_tags"`
+	UserProblemID      string `json:"user_problem_id"`
+	Status             string `json:"status"`
+	ProgressStatus     string `json:"progress_status"`
+	PersonalDifficulty int    `json:"personal_difficulty"`
+	BaselineStatus     string `json:"baseline_status"`
+	Completed          bool   `json:"completed"`
 }
 
 // DailyGoalCandidate 供 AI 选题使用的最小题目信息
