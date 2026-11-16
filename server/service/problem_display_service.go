@@ -19,6 +19,7 @@ type DisplayProblem struct {
 	ID                 string        `json:"id"`
 	UserProblemID      string        `json:"userProblemId"`
 	LcID               string        `json:"lcId"`
+	LcFrontendID       int           `json:"lcFrontendId"`
 	Title              string        `json:"title"`
 	TitleSlug          string        `json:"titleSlug"`
 	Difficulty         string        `json:"difficulty"`
@@ -51,6 +52,7 @@ type DisplayProblemList struct {
 	ID                 string   `json:"id"`
 	UserProblemID      string   `json:"userProblemId"`
 	LcID               string   `json:"lcId"`
+	LcFrontendID       int      `json:"lcFrontendId"`
 	Title              string   `json:"title"`
 	TranslatedTitle    string   `json:"translatedTitle"`
 	Difficulty         string   `json:"difficulty"`
@@ -231,6 +233,7 @@ func (s *ProblemDisplayService) convertToDisplayProblem(problem *models.Problem)
 		ID:                 problem.ID,
 		UserProblemID:      userProblemID,
 		LcID:               problem.LcID,
+		LcFrontendID:       problem.LcFrontendID,
 		Title:              problem.Title,
 		TitleSlug:          problem.TitleSlug,
 		Difficulty:         problem.Difficulty,
@@ -299,6 +302,7 @@ func (s *ProblemDisplayService) convertToDisplayProblemList(problem *models.Prob
 		ID:                 problem.ID,
 		UserProblemID:      userProblemID,
 		LcID:               problem.LcID,
+		LcFrontendID:       problem.LcFrontendID,
 		Title:              problem.Title,
 		TranslatedTitle:    problem.TranslatedTitle,
 		Difficulty:         problem.Difficulty,
@@ -308,10 +312,10 @@ func (s *ProblemDisplayService) convertToDisplayProblemList(problem *models.Prob
 		Status:             status,
 		Tags:               tagNames,
 		// 优先使用 user_problems.has_html_demo，其次回落到 problems.has_html_demo
-		HasHtmlDemo:        userHasHtmlDemo != 0 || problem.HasHtmlDemo != 0,
-		ReviewCount:        reviewCount,
-		ProgressStatus:     progressStatus,
-		CreatedAt:          problem.CreatedAt,
+		HasHtmlDemo:    userHasHtmlDemo != 0 || problem.HasHtmlDemo != 0,
+		ReviewCount:    reviewCount,
+		ProgressStatus: progressStatus,
+		CreatedAt:      problem.CreatedAt,
 	}
 
 	return displayProblem, nil

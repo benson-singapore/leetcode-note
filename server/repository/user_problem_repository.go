@@ -173,6 +173,7 @@ type ProblemCreatedOnDateRow struct {
 	ProblemID          string
 	UserProblemID      string
 	LcID               string
+	LcFrontendID       int
 	Title              string
 	TranslatedTitle    string
 	Difficulty         string
@@ -190,6 +191,7 @@ func (r *UserProblemRepository) GetProblemsCreatedOnDate(date string) ([]Problem
 			p.id,
 			COALESCE(up.id, ''),
 			p.lc_id,
+			COALESCE(p.lc_frontend_id, 0),
 			p.title,
 			COALESCE(p.translated_title, ''),
 			p.difficulty,
@@ -215,6 +217,7 @@ func (r *UserProblemRepository) GetProblemsCreatedOnDate(date string) ([]Problem
 			&row.ProblemID,
 			&row.UserProblemID,
 			&row.LcID,
+			&row.LcFrontendID,
 			&row.Title,
 			&row.TranslatedTitle,
 			&row.Difficulty,

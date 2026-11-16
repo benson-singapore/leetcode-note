@@ -749,7 +749,7 @@ export default function DailyGoal() {
                         ) : (
                           <Circle size={13} className="shrink-0 text-slate-200" />
                         )}
-                        <span className="truncate">{item.lc_id}</span>
+                        <span className="truncate">{item.lc_frontend_id || item.lc_id}</span>
                       </div>
                       <div className="col-span-3 min-w-0 pr-4">
                         <p className={`truncate text-xs transition-colors group-hover:text-primary-800 ${

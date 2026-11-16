@@ -295,6 +295,7 @@ func (s *UserProblemService) GetActivityDayCreatedProblems(date string) ([]model
 			ID:                 row.ProblemID,
 			UserProblemID:      row.UserProblemID,
 			LcID:               row.LcID,
+			LcFrontendID:       row.LcFrontendID,
 			Title:              row.Title,
 			TranslatedTitle:    row.TranslatedTitle,
 			Difficulty:         row.Difficulty,

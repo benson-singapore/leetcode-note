@@ -154,6 +154,7 @@ func (s *ReviewService) GetActivityDayProblems(date string) ([]models.ActivityDa
 			ID:                 row.ProblemID,
 			UserProblemID:      row.UserProblemID,
 			LcID:               row.LcID,
+			LcFrontendID:       row.LcFrontendID,
 			Title:              row.Title,
 			TranslatedTitle:    row.TranslatedTitle,
 			Difficulty:         row.Difficulty,

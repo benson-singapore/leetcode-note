@@ -173,6 +173,7 @@ type ActivityDayProblem struct {
 	ID                 string `json:"id"`
 	UserProblemID      string `json:"userProblemId"`
 	LcID               string `json:"lcId"`
+	LcFrontendID       int    `json:"lcFrontendId"`
 	Title              string `json:"title"`
 	TranslatedTitle    string `json:"translatedTitle"`
 	Difficulty         string `json:"difficulty"`

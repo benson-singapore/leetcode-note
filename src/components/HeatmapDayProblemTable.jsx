@@ -82,7 +82,7 @@ export function HeatmapDayProblemTable({
             }`}
           >
             <div className="col-span-1 font-mono text-[11px] font-normal tabular-nums text-slate-300 group-hover:text-primary-500">
-              {p.lcId}
+              {p.lcFrontendId || p.lcId}
             </div>
             <div className="col-span-4 flex items-center overflow-hidden pr-4">
               <span className="truncate text-[13px] font-normal text-slate-700 transition-colors group-hover:text-primary-800">

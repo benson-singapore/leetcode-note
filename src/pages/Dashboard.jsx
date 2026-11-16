@@ -65,7 +65,7 @@ function ProblemList({ problems, renderExtra }) {
           key={p.userProblemId || p.id}
           className="relative z-0 flex items-start gap-2 border-b border-slate-50 pb-2 text-xs font-normal text-slate-700 last:border-0"
         >
-          <span className="w-10 shrink-0 font-mono text-slate-400">{p.lcId}</span>
+          <span className="w-10 shrink-0 font-mono text-slate-400">{p.lcFrontendId || p.lcId}</span>
           <span className="min-w-0 flex-1 truncate" title={p.translatedTitle || p.title}>
             {p.translatedTitle || p.title}
           </span>

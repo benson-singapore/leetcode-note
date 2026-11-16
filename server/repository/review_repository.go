@@ -204,6 +204,7 @@ type ProblemReviewedOnDateRow struct {
 	ProblemID          string
 	UserProblemID      string
 	LcID               string
+	LcFrontendID       int
 	Title              string
 	TranslatedTitle    string
 	Difficulty         string
@@ -221,6 +222,7 @@ func (r *ReviewRepository) GetProblemsReviewedOnDate(date string) ([]ProblemRevi
 			p.id,
 			up.id,
 			p.lc_id,
+			COALESCE(p.lc_frontend_id, 0),
 			p.title,
 			COALESCE(p.translated_title, ''),
 			p.difficulty,
@@ -248,6 +250,7 @@ func (r *ReviewRepository) GetProblemsReviewedOnDate(date string) ([]ProblemRevi
 			&row.ProblemID,
 			&row.UserProblemID,
 			&row.LcID,
+			&row.LcFrontendID,
 			&row.Title,
 			&row.TranslatedTitle,
 			&row.Difficulty,

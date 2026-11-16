@@ -152,10 +152,10 @@ func (r *ProblemRepository) buildProblemsDisplayWhereClauses(searchQuery, diffic
 	clauses := []string{"1=1"}
 
 	if searchQuery != "" {
-		// 前端逻辑：title（不区分大小写包含） 或 lcId（包含）
+		// 按标题或公开题号搜索
 		*args = append(*args, "%"+strings.ToLower(searchQuery)+"%")
 		*args = append(*args, "%"+searchQuery+"%")
-		clauses = append(clauses, "(LOWER(p.title) LIKE ? OR p.lc_id LIKE ?)")
+		clauses = append(clauses, "(LOWER(p.title) LIKE ? OR CAST(CASE WHEN p.lc_frontend_id > 0 THEN p.lc_frontend_id ELSE p.lc_id END AS TEXT) LIKE ?)")
 	}
 
 	if difficulty != "" && difficulty != "All" {
@@ -228,13 +228,13 @@ func (r *ProblemRepository) GetProblemsForDisplayList(page, pageSize int, search
 				WHEN 'Medium' THEN 2
 				WHEN 'Hard' THEN 3
 				ELSE 99
-			END %s, CAST(p.lc_id AS INTEGER) %s, p.id %s
+			END %s, COALESCE(NULLIF(p.lc_frontend_id, 0), CAST(p.lc_id AS INTEGER)) %s, p.id %s
 		`, dir, dir, dir)
 	case "createdAt":
-		orderBy = fmt.Sprintf(`p.created_at %s, CAST(p.lc_id AS INTEGER) %s, p.id %s`, dir, dir, dir)
+		orderBy = fmt.Sprintf(`p.created_at %s, COALESCE(NULLIF(p.lc_frontend_id, 0), CAST(p.lc_id AS INTEGER)) %s, p.id %s`, dir, dir, dir)
 	default:
 		// lcId / 兜底
-		orderBy = fmt.Sprintf(`CAST(p.lc_id AS INTEGER) %s, p.created_at %s, p.id %s`, dir, dir, dir)
+		orderBy = fmt.Sprintf(`COALESCE(NULLIF(p.lc_frontend_id, 0), CAST(p.lc_id AS INTEGER)) %s, p.created_at %s, p.id %s`, dir, dir, dir)
 	}
 
 	offset := (page - 1) * pageSize

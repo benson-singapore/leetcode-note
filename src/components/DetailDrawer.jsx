@@ -314,7 +314,7 @@ export function DetailDrawer({ activeProblem, updateProblem, onDeleted, onClose,
             <div className="px-8 py-5 border-b border-slate-100 bg-gradient-to-br from-primary-50/60 via-white to-white flex items-center justify-between gap-4 shrink-0 sticky top-0 z-10">
               <div className="flex items-center gap-4 min-w-0">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 font-mono text-sm font-bold text-white shadow-lg shadow-primary-200">
-                  #{activeProblem.lcId}
+                  #{activeProblem.lcFrontendId || activeProblem.lcId}
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2.5">

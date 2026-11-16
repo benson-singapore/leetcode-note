@@ -676,7 +676,7 @@ export default function Problems({ reviewMode = false }) {
                       }`}
                     >
                       <div className="col-span-1 flex min-w-0 items-center gap-1 font-mono text-[11px] font-normal text-slate-300 group-hover:text-primary-500">
-                        <span className="truncate">{p.lcId}</span>
+                        <span className="truncate">{p.lcFrontendId || p.lcId}</span>
                         {p.hasHtmlDemo ? (
                           <span
                             className="inline-flex shrink-0 text-primary-500 group-hover:text-primary-600"
