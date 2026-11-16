@@ -68,8 +68,7 @@ fn open_main_window(app: tauri::AppHandle, path: String) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
         window.show().map_err(|e| e.to_string())?;
         window.set_focus().map_err(|e| e.to_string())?;
-        tauri::Emitter::emit_to(&app, "main", "tray-navigate", path)
-            .map_err(|e| e.to_string())?;
+        tauri::Emitter::emit_to(&app, "main", "tray-navigate", path).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -422,7 +421,6 @@ fn forward_sidecar_request(
     path: &str,
     body: Option<String>,
 ) -> Result<EmbeddedApiResponse, String> {
-
     let payload = body.unwrap_or_default();
     let mut stream = TcpStream::connect((SERVER_HOST, state.port)).map_err(|e| e.to_string())?;
     stream
@@ -696,13 +694,29 @@ fn open_embedded_browser(
     let topbar_script =
         EMBED_TOPBAR_SCRIPT.replace("__LCN_TOPBAR_HEIGHT__", &EMBED_TOPBAR_HEIGHT.to_string());
 
+    // 根据主窗口所在屏幕的可用区域设置大小，避免较小屏幕上窗口超出屏幕。
+    let monitor = app
+        .get_webview_window("main")
+        .and_then(|main| main.current_monitor().ok().flatten());
+    let (width, height) = monitor
+        .as_ref()
+        .map(|monitor| {
+            let area = monitor.work_area();
+            let scale = monitor.scale_factor();
+            (
+                (area.size.width as f64 / scale * 0.90).min(1800.0),
+                (area.size.height as f64 / scale * 0.90).min(1100.0),
+            )
+        })
+        .unwrap_or((1600.0, 1000.0));
+
     let mut builder = tauri::WebviewWindowBuilder::new(
         &app,
         EMBED_BROWSER_WINDOW,
         tauri::WebviewUrl::External(target),
     )
     .title("LeetCode 内嵌浏览")
-    .inner_size(1280.0, 860.0)
+    .inner_size(width, height)
     .min_inner_size(720.0, 560.0)
     .center()
     // 先不显示，定位到与主窗口错开的位置后再显示，避免闪一下居中再跳位
@@ -749,14 +763,13 @@ fn open_embedded_browser(
         eprintln!("[embed] 设置默认缩放失败: {error}");
     }
 
-    // 相对主窗口错开显示（右下偏移），避免与主界面完全重叠
-    if let Some(main) = app.get_webview_window("main") {
-        if let Ok(pos) = main.outer_position() {
-            let scale = main.scale_factor().unwrap_or(1.0);
-            let offset = (64.0 * scale) as i32;
-            let _ =
-                window.set_position(tauri::PhysicalPosition::new(pos.x + offset, pos.y + offset));
-        }
+    // 在主窗口所在屏幕的可用区域居中显示。
+    if let Some(monitor) = monitor {
+        let area = monitor.work_area();
+        let scale = monitor.scale_factor();
+        let x = area.position.x + ((area.size.width as f64 - width * scale) / 2.0) as i32;
+        let y = area.position.y + ((area.size.height as f64 - height * scale) / 2.0) as i32;
+        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
     }
     let _ = window.show();
 
@@ -948,8 +961,13 @@ fn main() {
                             return;
                         }
 
-                        let scale = tray.app_handle().primary_monitor()
-                            .ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0);
+                        let scale = tray
+                            .app_handle()
+                            .primary_monitor()
+                            .ok()
+                            .flatten()
+                            .map(|m| m.scale_factor())
+                            .unwrap_or(1.0);
                         let width = (400.0 * scale) as i32;
                         let height = (TRAY_POPOVER_HEIGHT * scale) as i32;
                         let rect_position = rect.position.to_physical::<i32>(scale);
