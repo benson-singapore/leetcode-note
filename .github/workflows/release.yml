@@ -20,10 +20,10 @@ jobs:
       matrix:
         include:
           - label: macOS Apple Silicon
-            os: macos-14
+            os: macos-15
             target: aarch64-apple-darwin
           - label: macOS Intel
-            os: macos-14
+            os: macos-15
             target: x86_64-apple-darwin
           - label: Windows x64
             os: windows-latest
